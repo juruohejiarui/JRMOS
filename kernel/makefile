@@ -50,7 +50,7 @@ OBJCOPY_FLAGS=$(OBJCOPY_FLAGS_ARCH) -O binary
 
 include ./.depend
 
-all: system_tmp ../Tools/kallsyms.o
+all: system_tmp ./Tools/kallsyms.o
 	@$(LD) $(LDFLAGS) -o system $(ALLOBJS) ./Tools/kallsyms.o -T $(ARCH_DIR)/kernel.lds 
 	@echo "[LD] system"
 	@$(OBJCOPY) $(OBJCOPY_FLAGS) system kernel.bin

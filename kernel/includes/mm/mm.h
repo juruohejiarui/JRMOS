@@ -1,18 +1,11 @@
 #ifndef __MM_MM_H__
 #define __MM_MM_H__
 
-#include <lib/list.h>
+#include <mm/desc.h>
 
-struct mm_Page {
-	List list;
-	u64 physAddr;
-	u32 ord;
-	u32 attr;
-} __attribute__ ((packed));
-
-typedef struct mm_Page mm_Page;
 void mm_init();
 
-void mm_allocPage(u64 log2Size);
+void *mm_kmalloc(u64 size, u64 attr, void (*desc)(void *));
+int mm_kfree(void *addr);
 
 #endif

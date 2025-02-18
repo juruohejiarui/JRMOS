@@ -44,7 +44,7 @@ void searchFile(const std::string &path) {
 				std::string cmd = std::format("gcc -MM {0} -I./includes/ | tee -a .depend > /dev/null", filePath);
 				system(cmd.c_str());
 				system(std::format("echo \"\\t@\\$(CC) -E \\$(C_INCLUDE_PATH) {0} > {1}\" >> .depend", filePath, tmpPath).c_str());
-				system(std::format("echo \"\\t\\$(ASM) \\$(ASM_FLAGS) -o {0} {1}\" >> .depend", objPath, tmpPath).c_str());
+				system(std::format("echo \"\\t@\\$(ASM) \\$(ASM_FLAGS) -o {0} {1}\" >> .depend", objPath, tmpPath).c_str());
 				system(std::format("echo \"\\t@echo \"[ASM] {0}\"\" >> .depend", filePath).c_str());
 
 				objList.push_back(objPath);

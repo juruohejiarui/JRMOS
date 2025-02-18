@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "mm.h": "c",
+        "desc.h": "c",
+        "uefi.h": "c",
+        "dmas.h": "c"
+    }
+}
