@@ -1,0 +1,5 @@
+/disk.img
+*.o
+*.STMP
+/kernel/Tools/rely
+.depend
