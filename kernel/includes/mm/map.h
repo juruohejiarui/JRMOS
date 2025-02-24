@@ -19,6 +19,6 @@
 void mm_map_initCache();
 hal_mm_PageTbl *mm_map_allocTbl();
 
-int *mm_map_freeTbl(hal_mm_PageTbl *tbl);
+int mm_map_freeTbl(hal_mm_PageTbl *tbl);
 
 #endif

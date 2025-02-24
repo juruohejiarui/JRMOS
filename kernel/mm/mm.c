@@ -25,6 +25,9 @@ void mm_init() {
     mm_dmas_init();
     // from now on, printk can be used
     printk(WHITE, BLACK, "mm: edStruct: %#018lx\n", mm_memStruct.edStruct);
+    for (int i = 0; i < mm_nrMemMapEntries; i++) {
+        printk(YELLOW, BLACK, "[%2d]: addr:%#018lx len:%#018lx attr:%#010lx\n", i, mm_memMapEntries[i].addr, mm_memMapEntries[i].size, mm_memMapEntries[i].attr);
+    }
 }
 mm_Page *mm_divPageGrp(mm_Page *grpHdr) {
     if (!grpHdr->ord) return NULL;

@@ -203,13 +203,13 @@ static __always_inline__ int _sprintf(char *buf, const char *fmt, va_list args) 
 static void _scroll(void) {
     int x, y;
     unsigned int *addr = position.fbAddr, 
-                *addr2 = position.fbAddr + screen_charWidth * screen_info->pixelPreLine,
+                *addr2 = position.fbAddr + screen_charHeight * screen_info->pixelPreLine,
                 *bufAddr = _bufAddr,
-                *bufAddr2 = _bufAddr + screen_charWidth * screen_info->pixelPreLine;
-    u64 offPerLine = screen_charWidth * screen_info->pixelPreLine;
+                *bufAddr2 = _bufAddr + screen_charHeight * screen_info->pixelPreLine;
+    u64 offPerLine = screen_charHeight * screen_info->pixelPreLine;
     for (int i = 0; i < position.yPos - 1; i++) {
-        u32 size = max(_lineLen[i + 1], _lineLen[i]) * screen_charHeight * sizeof(u32);
-        for (int j = 0, off = 0; j < screen_charWidth; j++, off += screen_info->pixelPreLine) {
+        u32 size = max(_lineLen[i + 1], _lineLen[i]) * screen_charWidth * sizeof(u32);
+        for (int j = 0, off = 0; j < screen_charHeight; j++, off += screen_info->pixelPreLine) {
             if (_bufAddr == NULL) {
                 memcpy(addr2 + off, addr + off, size);
             } else {
@@ -222,8 +222,8 @@ static void _scroll(void) {
         bufAddr += offPerLine;    bufAddr2 += offPerLine;
         _lineLen[i] = _lineLen[i + 1];
     }
-    memset(addr, 0, screen_info->pixelPreLine * screen_charWidth * sizeof(u32));
-    if (_bufAddr != NULL) memset(bufAddr, 0, screen_info->pixelPreLine * screen_charWidth * sizeof(u32));
+    memset(addr, 0, screen_info->pixelPreLine * screen_charHeight * sizeof(u32));
+    if (_bufAddr != NULL) memset(bufAddr, 0, screen_info->pixelPreLine * screen_charHeight * sizeof(u32));
     _lineLen[position.yPos - 1] = 0;
 }
 
@@ -232,12 +232,12 @@ static void _drawchar(unsigned int fcol, unsigned int bcol, int px, int py, char
     int testVal; u64 off;
     unsigned int *addr, *bufAddr;
     unsigned char *fontp = font_ascii[ch];
-        for (y = 0; y < screen_charWidth; y++, fontp++) {
+        for (y = 0; y < screen_charHeight; y++, fontp++) {
             off = screen_info->pixelPreLine * (py + y) + px;
             addr = position.fbAddr + off;
             bufAddr = _bufAddr + off;
             testVal = 0x80;
-            for (x = 0; x < screen_charHeight; x++, addr++, bufAddr++, testVal >>= 1) {
+            for (x = 0; x < screen_charWidth; x++, addr++, bufAddr++, testVal >>= 1) {
                 *addr = ((*fontp & testVal) ? fcol : bcol);
                 if (_bufAddr != NULL)
                     *bufAddr = ((*fontp & testVal) ? fcol : bcol);
@@ -249,7 +249,7 @@ void putchar(unsigned int fcol, unsigned int bcol, char ch) {
     int i;
     if (ch == '\n') {
         position.yPos++, position.xPos = 0;
-        if (position.yPos >= min(96, position.yRes / screen_charWidth)) {
+        if (position.yPos >= min(96, position.yRes / screen_charHeight)) {
             _scroll();
 			position.yPos--;
         }
@@ -257,7 +257,7 @@ void putchar(unsigned int fcol, unsigned int bcol, char ch) {
         position.xPos = 0;
     } else if (ch == '\b') {
         if (position.xPos) position.xPos--;
-        else position.yPos--, position.xPos = position.xRes / screen_charHeight;
+        else position.yPos--, position.xPos = position.xRes / screen_charWidth;
     } else if (ch == '\t') {
         do {
             putchar(fcol, bcol, ' ');
@@ -265,7 +265,7 @@ void putchar(unsigned int fcol, unsigned int bcol, char ch) {
     } else {
         if (position.xPos == position.xRes / screen_charHeight)
             putchar(fcol, bcol, '\n');
-        _drawchar(fcol, bcol, screen_charHeight * position.xPos, screen_charWidth * position.yPos, ch);
+        _drawchar(fcol, bcol, screen_charWidth * position.xPos, screen_charHeight * position.yPos, ch);
         position.xPos++;
         _lineLen[position.yPos] = max(_lineLen[position.yPos], position.xPos);
     }
@@ -285,9 +285,9 @@ void clearScreen() {
 	u64 prevState = intr_state();
 	if (prevState) intr_mask();
     SpinLock_lock(&_printLck);
-	memset(position.fbAddr, 0, (position.yPos + 1) * screen_charWidth * screen_info->pixelPreLine * sizeof(u32));
+	memset(position.fbAddr, 0, (position.yPos + 1) * screen_charHeight * screen_info->pixelPreLine * sizeof(u32));
    	if (_bufAddr != NULL)
-		memset(_bufAddr, 0, (position.yPos + 1) * screen_charWidth * screen_info->pixelPreLine * sizeof(u32));
+		memset(_bufAddr, 0, (position.yPos + 1) * screen_charHeight * screen_info->pixelPreLine * sizeof(u32));
 	memset(_lineLen, 0, 4096 * sizeof(u32));
 	position.xPos = 0, position.yPos = 0;
 	SpinLock_unlock(&_printLck);
@@ -301,5 +301,5 @@ void printk(unsigned int fcol, unsigned int bcol, const char *fmt, ...) {
     va_start(args, fmt);
     len = _sprintf(buf, fmt, args);
     va_end(args);
-    if (task_getLevel() == task_level_Kernel) _printStr(fcol, bcol, buf, len);
+    _printStr(fcol, bcol, buf, len);
 }

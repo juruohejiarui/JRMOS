@@ -3,7 +3,7 @@
 #include <init/init.h>
 #include <mm/mm.h>
 
-u8 hal_init_stk[task_krlStkSize] __attribute__((__section__ (".data.Init_stack") )) = {};
+u8 hal_init_stk[task_krlStkSize] __attribute__((__section__ (".data.hal_init_stack") )) = {};
 
 // this is the function called by head.S
 void hal_init_init() {
@@ -13,6 +13,8 @@ void hal_init_init() {
 	screen_init();
 	
 	mm_init();
+
+	int i = 1 / 0;
 
 	while (1) ;
 }

@@ -4,7 +4,7 @@
 #include <lib/dtypes.h>
 #include <task/constant.h>
 
-extern u8 hal_init_stk[task_krlStkSize] __attribute__((__section__ (".data.Init_stack") ));
+extern u8 hal_init_stk[task_krlStkSize] __attribute__((__section__ (".data.hal_init_stack") ));
 
 void hal_init_init();
 
