@@ -22,33 +22,33 @@ SECTIONS
 	. = 0xffff800000000000 + 0x100000;
 	.text :
 	{
-		_text = .;
+		mm_symbol_text = .;
 		KEEP(*hal/amd64/init/head.o(.text))
 		*(.text)
 
-		_etext = .;
+		mm_symbol_etext = .;
 	}
 	. = ALIGN(8);
 	.data :
 	{
-		_data = .;
+		mm_symbol_data = .;
 		*(.data)
 		
-		_edata = .;
+		mm_symbol_edata = .;
 	}
 	.rodata : {
-		_rodata = .;
+		mm_symbol_rodata = .;
 		*(.rodata)
-		_erodata = .;
+		mm_symbol_erodata = .;
 	}
 	. = ALIGN(32768);
-	.data.Init_stack : { *(.data.Init_stack) }
+	.data.hal_init_stk : { *(.data.hal_init_stk) }
 	.bss :
 	{
-		_bss = .;
+		mm_symbol_bss = .;
 		*(.bss)
-		_ebss = .;
+		mm_symbol_ebss = .;
 	}
 
-	_end = .;
+	mm_symbol_end = .;
 }

@@ -57,7 +57,7 @@ void searchFile(const std::string &path) {
 			std::string subPath = path;
 			subPath.push_back('/');
 			subPath.append(ptr->d_name);
-			if (path == "./hal" && subPath != "./hal/" + archName) continue;
+			if ((path == "./hal" && subPath != "./hal/" + archName) || !strcmp(ptr->d_name, "Tools")) continue;
 			searchFile(subPath);
 		}
 	}

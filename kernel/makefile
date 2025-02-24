@@ -50,23 +50,23 @@ OBJCOPY_FLAGS=$(OBJCOPY_FLAGS_ARCH) -O binary
 
 include ./.depend
 
-all: system_tmp ./Tools/kallsyms.o
-	@$(LD) $(LDFLAGS) -o system $(ALLOBJS) ./Tools/kallsyms.o -T $(ARCH_DIR)/kernel.lds 
+all: system_tmp ./Tools/hal/kallsyms.o
+	@$(LD) $(LD_FLAGS) -o system $(ALLOBJS) ./Tools/hal/kallsyms.o -T $(ARCH_DIR)/kernel.lds 
 	@echo "[LD] system"
 	@$(OBJCOPY) $(OBJCOPY_FLAGS) system kernel.bin
 	@echo "[OBJDUMP] kernel.bin"
 
 system_tmp: $(ALLOBJS)
-	@$(LD) $(LDFLAGS) $(LDFLAGS_ARCH) -o system_tmp $(ALLOBJS) -T $(ARCH_DIR)/kernel.lds 
+	@$(LD) $(LD_FLAGS) $(LDFLAGS_ARCH) -o system_tmp $(ALLOBJS) -T $(ARCH_DIR)/kernel.lds 
 	@echo "[LD] system_tmp"
 
-./Tools/kallsyms.o: ./Tools/kallsyms.c system_tmp
-	@$(C_HOST) -o ./Tools/kallsyms ./Tools/kallsyms.c
-	@$(NM) -n system_tmp | ./Tools/kallsyms > ./Tools/kallsyms.S
-	@$(CC) -c ./Tools/kallsyms.S -o ./Tools/kallsyms.o -Wl,--no-warn-rwx-segments
+./Tools/hal/kallsyms.o: ./Tools/hal/kallsyms.c system_tmp
+	@$(C_HOST) -o ./Tools/hal/kallsyms ./Tools/hal/kallsyms.c
+	@$(NM) -n system_tmp | ./Tools/hal/kallsyms > ./Tools/hal/kallsyms.S
+	@$(CC) -c ./Tools/hal/kallsyms.S -o ./Tools/hal/kallsyms.o -Wl,--no-warn-rwx-segments
 	@echo "[GEN] kallsyms.o"
 
 clean:
 	rm -rf $(ALLTMPS)
-	rm system system_tmp kernel.bin ./Tools/kallsyms.o ./Tools/kallsyms.S ./Tools/kallsyms
+	rm system system_tmp kernel.bin ./Tools/hal/kallsyms.o ./Tools/hal/kallsyms.S ./Tools/hal/kallsyms
 	rm .depend

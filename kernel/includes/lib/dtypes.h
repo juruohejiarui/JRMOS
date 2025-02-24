@@ -29,9 +29,9 @@ typedef double f64;
 #define Page_2MSize		(1ul << Page_2MShift)
 #define Page_1GSize		(1ul << Page_1GShift)
 
-#define Page_4KMask		(Page_4KSize - 1)
-#define Page_2MMask		(Page_2MSize - 1)
-#define Page_1GMask		(Page_1GSize - 1)
+#define Page_4KMask		(~(Page_4KSize - 1))
+#define Page_2MMask		(~(Page_2MSize - 1))
+#define Page_1GMask		(~(Page_1GSize - 1))
 
 
 #endif

@@ -6,39 +6,39 @@
 #include <lib/rbtree.h>
 #include <hal/task/structs.h>
 
-typedef struct Task_ThreadStruct Task_ThreadStruct;
-typedef struct Task_MemStruct Task_MemStruct;
+typedef struct task_ThreadStruct task_ThreadStruct;
+typedef struct task_MemStruct task_MemStruct;
 
-typedef void (*Task_SignalHandler)(u64 signal);
+typedef void (*task_SignalHandler)(u64 signal);
 
-struct Task_ThreadStruct {
+struct task_ThreadStruct {
 	
 } __attribute__ ((packed));
 
-struct Task_MemStruct {
+struct task_MemStruct {
 	u64 allocVirtMem;
 	u64 allocMem;
 } __attribute__ ((packed));
 
-struct Task_TaskStruct {
+struct task_TaskStruct {
 	u32 cpuId, priority;
 	u64 pid;
 	u64 vRuntime, resRuntime;
 
-	Task_ThreadStruct *thread;
-	Task_MemStruct *mem;
+	task_ThreadStruct *thread;
+	task_MemStruct *mem;
 
 	List list;
 	RBNode rbNode;
  
-	hal_TaskStruct hal;
+	hal_task_TaskStruct hal;
 } __attribute__ ((packed));
 
-typedef struct Task_TaskStruct Task_TaskStruct;
+typedef struct task_TaskStruct task_TaskStruct;
 
-typedef union Task_Union {
-	Task_TaskStruct task;
-	u8 krlStk[Task_krlStkSize];
-} Task_union;
+typedef union task_Union {
+	task_TaskStruct task;
+	u8 krlStk[task_krlStkSize];
+} task_union;
 
 #endif

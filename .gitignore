@@ -2,4 +2,9 @@
 *.o
 *.STMP
 /kernel/Tools/rely
+/kernel/hal/*/Tools/kallsyms
+/kernel/hal/*/Tools/kallsyms.S
+/kernel/system
+/kernel/system_tmp
+/kernel/kernel.bin
 .depend

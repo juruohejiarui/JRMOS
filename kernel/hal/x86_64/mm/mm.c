@@ -1,4 +1,5 @@
 #include <hal/mm/mm.h>
+#include <mm/mm.h>
 #include <hal/hardware/uefi.h>
 
 void hal_mm_loadmap() {

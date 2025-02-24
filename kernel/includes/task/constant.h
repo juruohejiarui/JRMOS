@@ -3,11 +3,13 @@
 
 #include <lib/dtypes.h>
 
-#define Task_krlStkSize	(32768ul)
+#define task_krlStkSize	(32768ul)
 // 8 MB
-#define Task_UsrStkSize	(1ull << 23)
+#define task_usrStkSize	(1ull << 23)
 
-#define Task_krlAddrSt	(0xffff800000000000ul)
-#define Task_dmasAddrSt	(0xffff880000000000ul)
+#define task_krlAddrSt	(0xffff800000000000ul)
+
+#define task_level_Kernel   0x0
+#define task_level_User     0x3
 
 #endif

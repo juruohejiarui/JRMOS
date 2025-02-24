@@ -2,14 +2,24 @@
 #define __MM_DESC_H__
 
 #include <lib/list.h>
+#include <task/constant.h>
+#include <hal/mm/mm.h>
 
 #define mm_Attr_Shared      0x1u
 #define mm_Attr_Shared2U    0x2u
 #define mm_Attr_Firmware    0x4u
 #define mm_Attr_HeadPage	0x8u
 #define mm_Attr_Allocated	0x10u
+#define mm_Attr_Coverage	0x20u
 
-#define mm_KernelAddr	((void *)0x100000ul)
+#define mm_kernelAddr	((void *)(task_krlAddrSt + 0x100000ul))
+
+#ifndef hal_mm_pageSize
+#define mm_pageSize		hal_mm_pageSize
+#define mm_pageShift	hal_mm_pageShift
+#else
+#error no definition of hal_mm_pageSize and hal_mm_pageShift for this arch!
+#endif
 
 extern char mm_symbol_text;
 extern char mm_symbol_etext;
@@ -34,6 +44,8 @@ struct mm_MemMap {
 
 typedef struct mm_MemMap mm_MemMap;
 
+typedef struct mm_Page mm_Page;
+
 typedef struct mm_Zone {
 	u64 phyAddrSt, phyAddrEd;
 	mm_Page *page;
@@ -42,19 +54,18 @@ typedef struct mm_Zone {
 	u64 totFree, totUsing;
 } mm_Zone;
 
+#define mm_maxNrMemMapEntries 32
+extern u32 mm_nrMemMapEntries;
+extern mm_MemMap mm_memMapEntries[mm_maxNrMemMapEntries];
+
 typedef struct mm_MemStruct {
-	mm_Zone *zones;
+	mm_Zone zones[mm_maxNrMemMapEntries];
 	u64 nrZones;
 	mm_Page *pages;
 	u64 nrPages;
 	u64 totMem;
 } mm_MemStruct;
 
-#define mm_maxNrMemMapEntries 32
-extern u32 mm_nrMemMapEntries;
-extern mm_MemMap mm_memMapEntries[mm_maxNrMemMapEntries];
-extern mm_MemStruct mm_memStruct;
-
-typedef struct mm_Page mm_Page;
+extern mm_MemStruct mm_memStruct; 
  
 #endif

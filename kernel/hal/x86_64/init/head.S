@@ -1,9 +1,10 @@
 #include <hal/linkage.h>
 #include <hal/hardware/cpu.h>
 
-.globl hw_CPU_cpuInfo
-.globl hal_Init_initSMP
-.globl hal_Init_init
+// .globl hw_CPU_cpuInfo
+// .globl hal_init_initSMP
+.globl hal_init_init
+.globl hal_init_stk
 
 .section .text
 
@@ -32,31 +33,31 @@ ENTRY(_start)
     movq $0x1b, %rcx
     rdmsr
     bt $8, %rax
-    jnc setSMPInfo
+    // jnc setSMPInfo
 
     movq stkPtr(%rip), %rsp
 	lidt idtPointer(%rip)
     jmp setSmpTmpStkEnd
 
-setSMPInfo:
-	// movq 0x7e00, %rsp
-	// callq testT
-    movq $0xb, %rax
-    xorq %rcx, %rcx
-    cpuid
-    leaq SMP_cpuInfo(%rip), %rax
-setSMPInfo_LoopStart:
-    cmpl (%rax), %edx
-    jz setSMPInfo_LoopEnd
-    addq $616, %rax
-    jmp setSMPInfo_LoopStart
-setSMPInfo_LoopEnd:
-	// set stack pointer
-    movq 0x10(%rax), %rsi
-	// set idt pointer
-	lidt 0x2E(%rax)
-    addq $32768, %rsi
-    movq %rsi, %rsp
+// setSMPInfo:
+// 	// movq 0x7e00, %rsp
+// 	// callq testT
+//     movq $0xb, %rax
+//     xorq %rcx, %rcx
+//     cpuid
+//     leaq SMP_cpuInfo(%rip), %rax
+// setSMPInfo_LoopStart:
+//     cmpl (%rax), %edx
+//     jz setSMPInfo_LoopEnd
+//     addq $616, %rax
+//     jmp setSMPInfo_LoopStart
+// setSMPInfo_LoopEnd:
+// 	// set stack pointer
+//     movq 0x10(%rax), %rsi
+// 	// set idt pointer
+// 	lidt 0x2E(%rax)
+//     addq $32768, %rsi
+//     movq %rsi, %rsp
 setSmpTmpStkEnd:
 
     movq $0x101000, %rax
@@ -77,10 +78,10 @@ entry64:
     movq %rax, %gs
     movq %rax, %ss
 
-    movq $0x1b, %rcx
-    rdmsr
-    bt $8, %rax
-    jnc SMPEntry
+    // movq $0x1b, %rcx
+    // rdmsr
+    // bt $8, %rax
+    // jnc SMPEntry
 
     movq stkPtr(%rip), %rsp
 
@@ -146,18 +147,18 @@ setupTSS64:
     pushq %rax
     lretq
 
-SMPEntry:
-    movq %rsi, %rsp
-    leaq startSMP(%rip), %rax
-    pushq $0x08
-    pushq %rax
-    lretq
+// SMPEntry:
+//     movq %rsi, %rsp
+//     leaq startSMP(%rip), %rax
+//     pushq $0x08
+//     pushq %rax
+//     lretq
 
-goToSmpKernel:
-    .quad hal_Init_initSMP
+// goToSmpKernel:
+    // .quad hal_Init_initSMP
 
 goToKernel:
-    .quad hal_Init_init
+    .quad hal_init_init
 
 ignoreInt:
     cld
@@ -208,7 +209,7 @@ intMsg:
     .asciz "Unknown interrupt or fault at RIP\n"
 
 stkPtr:
-	.quad Init_stack + 32768
+	.quad hal_init_stk + 32768
 
 // initial page table
 .align 8

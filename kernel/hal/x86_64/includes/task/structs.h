@@ -3,7 +3,7 @@
 
 #include <lib/dtypes.h>
 
-typedef struct hal_TaskStruct {
+typedef struct hal_task_TaskStruct {
 
-} hal_TaskStruct;
+} hal_task_TaskStruct;
 #endif
