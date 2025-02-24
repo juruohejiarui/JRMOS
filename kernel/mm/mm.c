@@ -1,4 +1,5 @@
 #include <mm/mm.h>
+#include <mm/dmas.h>
 #include <hal/mm/mm.h>
 #include <screen/screen.h>
 
@@ -17,10 +18,13 @@ void mm_init() {
         
         if (entry->addr + entry->size <= (u64)mm_kernelAddr - task_krlAddrSt) continue;
         if (entry->addr <= (u64)mm_kernelAddr - task_krlAddrSt && (u64)&mm_symbol_end - task_krlAddrSt < entry->addr + entry->size)
-            krlZoneId = mm_memStruct.nrZones;
+            mm_memStruct.nrZones = mm_memStruct.nrZones;
     }
+    mm_memStruct.edStruct = (u64)&mm_symbol_end;
 
-    
+    mm_dmas_init();
+    // from now on, printk can be used
+    printk(WHITE, BLACK, "mm: edStruct: %#018lx\n", mm_memStruct.edStruct);
 }
 mm_Page *mm_divPageGrp(mm_Page *grpHdr) {
     if (!grpHdr->ord) return NULL;

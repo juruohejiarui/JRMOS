@@ -60,10 +60,11 @@ extern mm_MemMap mm_memMapEntries[mm_maxNrMemMapEntries];
 
 typedef struct mm_MemStruct {
 	mm_Zone zones[mm_maxNrMemMapEntries];
-	u64 nrZones;
+	u32 nrZones, krlZoneId;
 	mm_Page *pages;
 	u64 nrPages;
 	u64 totMem;
+	u64 edStruct;
 } mm_MemStruct;
 
 extern mm_MemStruct mm_memStruct; 

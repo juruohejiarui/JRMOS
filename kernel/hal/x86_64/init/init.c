@@ -9,6 +9,10 @@ u8 hal_init_stk[task_krlStkSize] __attribute__((__section__ (".data.Init_stack")
 void hal_init_init() {
 	// get the information from uefi table
 	hal_hw_uefi_init();
+
+	screen_init();
 	
 	mm_init();
+
+	while (1) ;
 }

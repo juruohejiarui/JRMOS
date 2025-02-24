@@ -14,7 +14,7 @@ static u64 nrTblGrp, nrTbl;
 static void _initCache() {
     nrTblGrp = 1;
     nrTbl = (1ul << nrTblCacheShift);
-    _tblGrpCache[0] = mm_allocPages(nrTblCacheShift, mm_Attr_Shared);
+    // _tblGrpCache[0] = mm_allocPages(nrTblCacheShift, mm_Attr_Shared);
 }
 
 void mm_map_initCache() {

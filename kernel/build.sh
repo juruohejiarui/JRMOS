@@ -16,4 +16,4 @@ ln -s ../hal/${ARCH}/Tools/ ./Tools/hal
 g++ ./Tools/rely.cpp -o ./Tools/rely --std=c++20
 ./Tools/rely -arch ${ARCH}
 
-make all -j$(nproc) ARCH=${ARCH}
+make all ARCH=${ARCH}

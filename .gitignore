@@ -1,6 +1,7 @@
 /disk.img
 *.o
 *.STMP
+*.log
 /kernel/Tools/rely
 /kernel/hal/*/Tools/kallsyms
 /kernel/hal/*/Tools/kallsyms.S

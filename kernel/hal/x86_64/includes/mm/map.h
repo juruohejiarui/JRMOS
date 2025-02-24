@@ -22,6 +22,8 @@
 #define hal_mm_pudIdxMask   (hal_mm_pgdSize - Page_1GSize)
 #define hal_mm_pgdIdxMask   ((1ul << 48) - hal_mm_pgdSize)
 
+#define hal_mm_nrPageTblEntries 512
+
 #define HAL_MM_MAP
 #define HAL_MM_UNMAP
 

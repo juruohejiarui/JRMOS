@@ -7,6 +7,14 @@
 #define screen_charWidth	8
 #define screen_charHeight	16
 
+#define RED		0xff0000
+#define GREEN	0x00ff00
+#define BLUE	0x1010ff
+#define BLACK	0x000000
+#define YELLOW	0xffff00
+#define ORANGE	0xff3000
+#define WHITE	0xffffff
+
 typedef struct screen_Info {
 	u32 horRes;
 	u32 verRes;
@@ -20,6 +28,6 @@ typedef struct screen_Info {
 extern screen_Info *screen_info;
 void screen_init();
 
-void log_printk(unsigned int fcol, unsigned int bcol, const char *fmt, ...);
+void printk(unsigned int fcol, unsigned int bcol, const char *fmt, ...);
 
 #endif

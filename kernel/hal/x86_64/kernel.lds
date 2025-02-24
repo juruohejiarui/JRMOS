@@ -20,10 +20,10 @@ SECTIONS
 {
 
 	. = 0xffff800000000000 + 0x100000;
-	.text :
+	.mm_symbol_text :
 	{
 		mm_symbol_text = .;
-		KEEP(*hal/amd64/init/head.o(.text))
+		KEEP(*hal/x86_64/init/head.o(.text))
 		*(.text)
 
 		mm_symbol_etext = .;

@@ -3,9 +3,5 @@
 
 #include <lib/dtypes.h>
 
-struct hal_intr_Info {
-    
-};
 
-typedef struct hal_intr_Info hal_intr_Info;
 #endif

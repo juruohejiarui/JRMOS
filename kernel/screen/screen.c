@@ -100,7 +100,7 @@ static char *_number(char *str, i64 num, int base, int size, int precision, int 
     return str;
 }
 // get the string using FMT and ARGS, output to BUF and return the length of the output
-int sprintf(char *buf, const char *fmt, va_list args) {
+static __always_inline__ int _sprintf(char *buf, const char *fmt, va_list args) {
     char *str = buf, *s;
     int flags, len, qlf, i, fld_w, prec;
     while (*fmt != '\0') {
@@ -271,7 +271,7 @@ void putchar(unsigned int fcol, unsigned int bcol, char ch) {
     }
 }
 
-void printStr(unsigned int fcol, unsigned int bcol, const char *str, int len) {
+static __always_inline__ void _printStr(unsigned int fcol, unsigned int bcol, const char *str, int len) {
     // close the interrupt if it is open now
 	u64 prevState = intr_state();
 	if (prevState) intr_mask();
@@ -299,7 +299,7 @@ void printk(unsigned int fcol, unsigned int bcol, const char *fmt, ...) {
     int len = 0, i;
     va_list args;
     va_start(args, fmt);
-    len = sprintf(buf, fmt, args);
+    len = _sprintf(buf, fmt, args);
     va_end(args);
-    if (task_getLevel() == task_level_Kernel) printStr(fcol, bcol, buf, len);
+    if (task_getLevel() == task_level_Kernel) _printStr(fcol, bcol, buf, len);
 }
