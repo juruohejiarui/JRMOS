@@ -12,7 +12,9 @@ void hal_init_init() {
 
 	screen_init();
 	
-	mm_init();
+	int res = mm_init();
+
+	printk(WHITE, BLACK, "res: %#018lx * %#018lx\n", hal_hw_uefi_info->screenInfo.pixelPreLine, hal_hw_uefi_info->screenInfo.verRes);
 
 	int i = 1 / 0;
 

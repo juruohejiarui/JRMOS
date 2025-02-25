@@ -33,5 +33,6 @@ typedef double f64;
 #define Page_2MMask		(~(Page_2MSize - 1))
 #define Page_1GMask		(~(Page_1GSize - 1))
 
+#define container(memberAddr, type, memberIden) ((type *)(((u64)(memberAddr))-((u64)&(((type *)0)->memberIden))))
 
 #endif

@@ -139,8 +139,8 @@ setupTSS64:
     movq %rdx, 0x58(%rdi)
 
     // enable the tss
-    mov $0x50, %ax
-    ltr %ax
+    // mov $0x50, %ax
+    // ltr %ax
 
     movq goToKernel(%rip), %rax
     pushq $0x08

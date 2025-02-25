@@ -10,15 +10,16 @@
 #define mm_Attr_Firmware    0x4u
 #define mm_Attr_HeadPage	0x8u
 #define mm_Attr_Allocated	0x10u
-#define mm_Attr_Coverage	0x20u
+#define mm_Attr_MMU			0x20u
+#define mm_Attr_System		0x40u
 
 #define mm_kernelAddr	((void *)(task_krlAddrSt + 0x100000ul))
 
-#ifndef hal_mm_pageSize
+#ifdef HAL_MM_PAGESIZE
 #define mm_pageSize		hal_mm_pageSize
 #define mm_pageShift	hal_mm_pageShift
 #else
-#error no definition of hal_mm_pageSize and hal_mm_pageShift for this arch!
+#error no definition of hal_mm_pageSize and hal_mm_pageSize for this arch!
 #endif
 
 extern char mm_symbol_text;
@@ -31,8 +32,8 @@ extern char mm_symbol_end;
 
 struct mm_Page {
 	List list;
-	u64 physAddr;
-	u32 ord;
+	u16 buddyId;
+	u16 ord;
 	u32 attr;
 } __attribute__ ((packed));
 
@@ -47,8 +48,8 @@ typedef struct mm_MemMap mm_MemMap;
 typedef struct mm_Page mm_Page;
 
 typedef struct mm_Zone {
-	u64 phyAddrSt, phyAddrEd;
 	mm_Page *page;
+	u64 phyAddrSt, phyAddrEd;
 	u64 pageLen;
 	u64 availSt;
 	u64 totFree, totUsing;
@@ -62,7 +63,6 @@ typedef struct mm_MemStruct {
 	mm_Zone zones[mm_maxNrMemMapEntries];
 	u32 nrZones, krlZoneId;
 	mm_Page *pages;
-	u64 nrPages;
 	u64 totMem;
 	u64 edStruct;
 } mm_MemStruct;

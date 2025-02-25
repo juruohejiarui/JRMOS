@@ -27,7 +27,7 @@ endif
 ifeq ($(ARCH_HOST),x86_64)
 	C_FLAGS_ARCH=-m64
 	ASM_FLAGS_ARCH=--64
-	LD_FLAGS_ARCH=-b elf64-x86-64
+	LD_FLAGS_ARCH=-b elf64-x86-64 -b elf64-x86-64
 	OBJCOPY_FLAGS_ARCH=-I elf64-x86-64 -S -R ".eh_frame" -R ".comment"
 endif
 

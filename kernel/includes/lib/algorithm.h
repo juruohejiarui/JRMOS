@@ -22,7 +22,7 @@
 #define downAlign(a, b) ({ \
     __typeof__(a) ta = (a); \
     __typeof__(b) tb = (b); \
-    (ta) / (tb); \
+    (ta) / (tb) * (tb); \
 })
 
 #endif
