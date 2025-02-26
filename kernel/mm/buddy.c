@@ -15,22 +15,21 @@ static struct BuddyStruct {
 
 static SpinLock _buddyLck;
 
-#define _isRight(page) ((page)->buddyId & 1)
-#define _leftSon(buddyId) ((buddyId) << 1)
-#define _rightSon(buddyId) ((buddyId) << 1 | 1)
-
 static __always_inline__ int _getBit(mm_Page *page) {
-    u64 bitId = (mm_getPhyAddr(page) >> (mm_pageShift + page->ord)) - _isRight(page);
+    if (page->buddyId == 1) return 1;
+    u64 bitId = (mm_getPhyAddr(page) >> (mm_pageShift + page->ord + 1));
     return (_buddy.revBit[page->ord][bitId / sizeof(u64)] >> (bitId % sizeof(u64))) & 1;
 }
 
 static __always_inline__ void _revBit(mm_Page *page) {
-    u64 bitId = (mm_getPhyAddr(page) >> (mm_pageShift + page->ord)) - _isRight(page);
+    if (page->buddyId == 1) return ;
+    u64 bitId = (mm_getPhyAddr(page) >> (mm_pageShift + page->ord + 1));
+    printk(WHITE, BLACK, "_revBit(): page:%#081lx ord=%d, bitId=%#018lx\n", mm_getPhyAddr(page), page->ord, bitId);
     bit_rev(&_buddy.revBit[page->ord][bitId / sizeof(u64)], (bitId % sizeof(u64)));
 }
 
 static __always_inline__ mm_Page *_getBuddy(mm_Page *page) {
-    return _isRight(page) ? page - (1ul << page->ord) : page + (1ul << page->ord);
+    return mm_buddy_isRight(page) ? page - (1ul << page->ord) : page + (1ul << page->ord);
 }
 
 int mm_buddy_init() {
@@ -52,8 +51,9 @@ int mm_buddy_init() {
         printk(WHITE, BLACK, "mm: buddy: bitmap #%d: %#018lx, size=%#018lx\n", i, _buddy.revBit[i], ali);
     }
 
-    for (int i = 0; i <= mm_buddy_mxOrd; i++) {
+    for (int i = 0; i <= mm_buddy_mxOrd; i++)
         List_init(&_buddy.freeLst[i]);
+    for (int i = 0; i < mm_memStruct.nrZones; i++) {
         mm_Zone *zone = &mm_memStruct.zones[i];
         for (u64 addr = zone->availSt; addr < zone->phyAddrEd; ) {
             u32 ord = addr ? min(mm_buddy_mxOrd, bit_ffs64(addr) - mm_pageShift - 1) : mm_buddy_mxOrd;
@@ -61,9 +61,88 @@ int mm_buddy_init() {
             mm_Page *page = mm_getDesc(addr);
             page->buddyId = 1;
             page->attr |= mm_Attr_HeadPage;
-            
+            page->ord = ord;
+            List_insBefore(&page->list, &_buddy.freeLst[ord]);
+            addr += (1ul << (ord + mm_pageShift));
         }
     }
     
+    return res_SUCC;
+}
+
+void mm_buddy_debug() {
+    printk(WHITE, BLACK, "mm: buddy:\n");
+    for (int i = 0; i <= mm_buddy_mxOrd; i++) {
+        printk(YELLOW, BLACK, "[%2d] ", i);
+        for (List *list = _buddy.freeLst[i].next; list != &_buddy.freeLst[i]; list = list->next) {
+            mm_Page *page = container(list, mm_Page, list);
+            printk(WHITE, BLACK, "%#018x,", mm_getPhyAddr(page));
+        }
+        printk(WHITE, BLACK, "\n");
+    }
+}
+
+mm_Page *mm_allocPages(u64 log2Size, u32 attr) {
+    int intrState = intr_state();
+    intr_mask();
+    SpinLock_lock(&_buddyLck);
+    mm_Page *resPage = NULL;
+    if (log2Size > mm_buddy_mxOrd) goto Fail;
+
+    for (int ord = log2Size; ord <= mm_buddy_mxOrd; ord++) {
+        if (List_isEmpty(&_buddy.freeLst[ord])) continue;
+        resPage = container(_buddy.freeLst[ord].next, mm_Page, list);
+        resPage->ord = ord;
+        break;
+    }
+    if (resPage == NULL) goto Fail;
+
+    List_del(&resPage->list);
+    _revBit(resPage);
+    for (int i = resPage->ord; i > log2Size; i--) {
+        mm_Page *rPage = mm_divPageGrp(resPage);
+        rPage->attr |= mm_Attr_HeadPage;
+        rPage->ord = i - 1;
+        _revBit(rPage);
+        List_insBefore(&rPage->list, &_buddy.freeLst[i - 1]);
+    }
+    resPage->attr = attr | mm_Attr_HeadPage | mm_Attr_Allocated;
+    SpinLock_unlock(&_buddyLck);
+    if (!intrState) intr_unmask();
+    return resPage;
+    Fail:
+    
+    SpinLock_unlock(&_buddyLck);
+    if (!intrState) intr_unmask();
+    printk(RED, BLACK, "mm: buddy: failed to allocate page group with size=2^%d,attr=%#010x\n", log2Size, attr);
+    return NULL;
+}
+
+int mm_freePages(mm_Page *pages) {
+    if (~pages->attr & (mm_Attr_HeadPage | mm_Attr_Allocated)) return res_FAIL;
+
+    int intrState = intr_state();
+    intr_mask();
+    SpinLock_lock(&_buddyLck);
+    
+    pages->attr &= ~mm_Attr_Allocated;
+    for (int i = pages->ord; i <= mm_buddy_mxOrd; i++) {
+        _revBit(pages);
+        if (_getBit(pages)) break;
+        mm_Page *bud = _getBuddy(pages);
+        List_del(&bud->list);
+        if (mm_buddy_isRight(pages)) {
+            pages->buddyId = pages->ord = 0;
+            pages->attr &= ~mm_Attr_HeadPage;
+            pages = bud;
+        }
+        pages->buddyId = mm_buddy_parent(pages->buddyId);
+        pages->ord++;
+    }
+    List_insBehind(&pages->list, &_buddy.freeLst[pages->ord]);
+    
+    SpinLock_unlock(&_buddyLck);
+    if (!intrState) intr_unmask();
+
     return res_SUCC;
 }

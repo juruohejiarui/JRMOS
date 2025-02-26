@@ -7,8 +7,9 @@ osName=$(uname -s)
 if [ "$osName" = "Darwin" ]; then
 	echo "under MacOS"
 	ovmfPath="./OVMF_CODE_4M.fd"
-	paramArch="-cpu Skylake-Client \
-		-vga cirrus"
+	paramArch="-cpu Haswell \
+		-vga virtio \
+		-accel tcg"
 else
 	echo "under Linux"
 	ovmfPath="/usr/share/OVMF/OVMF_CODE_4M.fd"

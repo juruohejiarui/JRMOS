@@ -16,20 +16,21 @@ static u64 _nrTblGrp, _nrTbl;
 
 static SpinLock _cacheLck;
 
-static void _initCache() {
+static int _initCache() {
     _nrTblGrp = 1;
     _nrTbl = (1ul << nrTblCacheShift);
-    // _tblGrpCache[0] = mm_allocPages(nrTblCacheShift, mm_Attr_Shared);
+    return (_tblGrpCache[0] = mm_allocPages(nrTblCacheShift, mm_Attr_Shared)) ? res_SUCC : res_FAIL;
+    
 }
 
-void mm_map_initCache() {
+int mm_map_initCache() {
     _nrTblGrp = 1;
     SpinLock_init(&_cacheLck);
-    _initCache();
+    return _initCache();
 }
 hal_mm_PageTbl *mm_map_allocTbl() {
     int intrState = intr_state();
-    if (!intrState) intr_mask();
+    intr_mask();
     SpinLock_lock(&_cacheLck);
 
     if (!_nrTblGrp) _initCache();
@@ -51,18 +52,19 @@ int mm_map_freeTbl(hal_mm_PageTbl *tbl) {
         return res_FAIL;
     }
     int intrState = intr_state();
-    if (!intrState) intr_mask();
+    intr_mask();
     SpinLock_lock(&_cacheLck);
 
     // directly free the table if there is enough cache
     if (_nrTbl == nrTblCache) {
         SpinLock_unlock(&_cacheLck);
         return 0;
-        // return mm_freePages(pg);
+        return mm_freePages(pg);
     }
     _tblGrpCache[_nrTblGrp++] = pg;
     _nrTbl++;
 
+    // release the lock and interrupt
     SpinLock_unlock(&_cacheLck);
     if (!intrState) intr_unmask();
 

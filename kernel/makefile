@@ -3,6 +3,13 @@ CPP_HOST=g++
 C_STD=c11
 CPP_STD=c++20
 
+rely: ./Tools/rely
+	@./Tools/rely -arch $(ARCH)
+	@echo [SCRIPT] build rely
+./Tools/rely: ./Tools/rely.cpp
+	@g++ ./Tools/rely.cpp -o ./Tools/rely --std=$(CPP_STD)
+	@echo "[HOSTCPP] ./Tools/rely.cpp"
+
 ARCH_HOST=$(shell uname -m)
 
 C_INCLUDE_PATH=-I./includes
@@ -68,5 +75,5 @@ system_tmp: $(ALLOBJS)
 
 clean:
 	rm -rf $(ALLTMPS)
-	rm system system_tmp kernel.bin ./Tools/hal/kallsyms.o ./Tools/hal/kallsyms.S ./Tools/hal/kallsyms
+	rm system system_tmp kernel.bin ./Tools/hal/kallsyms.o ./Tools/hal/kallsyms.S ./Tools/hal/kallsyms ./Tools/rely
 	rm .depend

@@ -16,7 +16,7 @@
 #error no definition of hal_mm_unmap for this arch!
 #endif
 
-void mm_map_initCache();
+int mm_map_initCache();
 hal_mm_PageTbl *mm_map_allocTbl();
 
 int mm_map_freeTbl(hal_mm_PageTbl *tbl);

@@ -13,7 +13,9 @@ fi
 ln -s ../hal/${ARCH}/includes/ ./includes/hal
 ln -s ../hal/${ARCH}/Tools/ ./Tools/hal
 
-g++ ./Tools/rely.cpp -o ./Tools/rely --std=c++20
-./Tools/rely -arch ${ARCH}
-
-make all -j$(nproc) ARCH=${ARCH}
+make rely ARCH=${ARCH}
+if [ $? -ne 0 ]; then
+	echo "failed to build rely."
+else
+	make all -j$(nproc) ARCH=${ARCH}
+fi

@@ -69,7 +69,6 @@ int main(int argc, char **argv) {
 		return -1;
 	}
 	archName = std::string(argv[2]);
-	printf("arch : %s\n", archName.c_str());
 	system("rm includes/hal");
 	system(std::format("ln -s ../hal/{0}/includes includes/hal", archName).c_str());
 	system("echo \"\" > .depend");

@@ -263,7 +263,7 @@ void putchar(unsigned int fcol, unsigned int bcol, char ch) {
             putchar(fcol, bcol, ' ');
         } while (position.xPos & 3);
     } else {
-        if (position.xPos == position.xRes / screen_charHeight)
+        if (position.xPos == position.xRes / screen_charWidth)
             putchar(fcol, bcol, '\n');
         _drawchar(fcol, bcol, screen_charWidth * position.xPos, screen_charHeight * position.yPos, ch);
         position.xPos++;

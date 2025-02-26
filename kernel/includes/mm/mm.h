@@ -12,5 +12,7 @@ static __always_inline__ u64 mm_getPhyAddr(mm_Page *desc) { return (((u64)desc -
 
 mm_Page *mm_init_allocPage(u64 num, u32 attr);
 
+void *mm_kmalloc(u64 size, u32 attr, void (*destructor)(void *));
+int mm_kfree(void *addr, u32 attr);
 
 #endif
