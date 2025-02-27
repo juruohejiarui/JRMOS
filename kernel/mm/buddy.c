@@ -11,6 +11,7 @@
 static struct BuddyStruct {
     u64 *revBit[mm_buddy_mxOrd + 1];
     List freeLst[mm_buddy_mxOrd + 1];
+    u64 tot, totUsage;
 } _buddy;
 
 static SpinLock _buddyLck;
@@ -24,7 +25,7 @@ static __always_inline__ int _getBit(mm_Page *page) {
 static __always_inline__ void _revBit(mm_Page *page) {
     if (page->buddyId == 1) return ;
     u64 bitId = (mm_getPhyAddr(page) >> (mm_pageShift + page->ord + 1));
-    printk(WHITE, BLACK, "_revBit(): page:%#081lx ord=%d, bitId=%#018lx\n", mm_getPhyAddr(page), page->ord, bitId);
+    // printk(WHITE, BLACK, "_revBit(): page:%#081lx ord=%d, bitId=%#018lx\n", mm_getPhyAddr(page), page->ord, bitId);
     bit_rev(&_buddy.revBit[page->ord][bitId / sizeof(u64)], (bitId % sizeof(u64)));
 }
 
@@ -50,7 +51,7 @@ int mm_buddy_init() {
 
         printk(WHITE, BLACK, "mm: buddy: bitmap #%d: %#018lx, size=%#018lx\n", i, _buddy.revBit[i], ali);
     }
-
+    _buddy.tot = 0;
     for (int i = 0; i <= mm_buddy_mxOrd; i++)
         List_init(&_buddy.freeLst[i]);
     for (int i = 0; i < mm_memStruct.nrZones; i++) {
@@ -64,6 +65,7 @@ int mm_buddy_init() {
             page->ord = ord;
             List_insBefore(&page->list, &_buddy.freeLst[ord]);
             addr += (1ul << (ord + mm_pageShift));
+            _buddy.tot += (1ul << (ord + mm_pageShift));
         }
     }
     
@@ -71,7 +73,7 @@ int mm_buddy_init() {
 }
 
 void mm_buddy_debug() {
-    printk(WHITE, BLACK, "mm: buddy:\n");
+    printk(WHITE, BLACK, "mm: buddy: usage %ld/%ld\n", _buddy.totUsage, _buddy.tot);
     for (int i = 0; i <= mm_buddy_mxOrd; i++) {
         printk(YELLOW, BLACK, "[%2d] ", i);
         for (List *list = _buddy.freeLst[i].next; list != &_buddy.freeLst[i]; list = list->next) {
@@ -83,6 +85,7 @@ void mm_buddy_debug() {
 }
 
 mm_Page *mm_allocPages(u64 log2Size, u32 attr) {
+    // printk(WHITE, BLACK, "mm: buddy: alloc 2^%ld page attr=%#010x\n", log2Size, attr);
     int intrState = intr_state();
     intr_mask();
     SpinLock_lock(&_buddyLck);
@@ -106,9 +109,10 @@ mm_Page *mm_allocPages(u64 log2Size, u32 attr) {
         _revBit(rPage);
         List_insBefore(&rPage->list, &_buddy.freeLst[i - 1]);
     }
-    resPage->attr = attr | mm_Attr_HeadPage | mm_Attr_Allocated;
+    _buddy.totUsage += (1ul << (log2Size + mm_pageShift));
     SpinLock_unlock(&_buddyLck);
     if (!intrState) intr_unmask();
+    resPage->attr = attr | mm_Attr_HeadPage | mm_Attr_Allocated;
     return resPage;
     Fail:
     
@@ -124,7 +128,7 @@ int mm_freePages(mm_Page *pages) {
     int intrState = intr_state();
     intr_mask();
     SpinLock_lock(&_buddyLck);
-    
+    _buddy.totUsage -= (1ul << (pages->ord + mm_pageShift));
     pages->attr &= ~mm_Attr_Allocated;
     for (int i = pages->ord; i <= mm_buddy_mxOrd; i++) {
         _revBit(pages);
@@ -140,7 +144,6 @@ int mm_freePages(mm_Page *pages) {
         pages->ord++;
     }
     List_insBehind(&pages->list, &_buddy.freeLst[pages->ord]);
-    
     SpinLock_unlock(&_buddyLck);
     if (!intrState) intr_unmask();
 

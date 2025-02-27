@@ -20,15 +20,13 @@ void hal_init_init() {
 	res = mm_map_initCache();
 	if (res == res_FAIL) while (1) ;
 
-	printk(WHITE, BLACK, "res: %#018lx * %#018lx\n", hal_hw_uefi_info->screenInfo.pixelPreLine, hal_hw_uefi_info->screenInfo.verRes);
-	mm_buddy_debug();
-	mm_Page *pages1 = mm_allocPages(4, mm_Attr_Shared), *pages2;
-	// mm_buddy_debug();
-	pages2 = mm_allocPages(2, mm_Attr_Shared);
-	mm_buddy_debug();
-	printk(YELLOW, BLACK, "pages1:%#018lx, pages2:%#018lx\n", mm_getPhyAddr(pages1), mm_getPhyAddr(pages2));
-	// mm_freePages(pages1);
-	// mm_freePages(pages2);
+	void *addr[10][10];
+	for (int i = 0; i < 10; i++) {
+		for (int j = 0; j < 10; j++) addr[i][j] = mm_kmalloc(sizeof(u64) << i, mm_Attr_Shared, NULL);
+	}
+	void *addr2[3];
+	for (int i = 0; i < 3; i++) addr2[i] = mm_kmalloc(1ul << 20, mm_Attr_Shared, NULL);
+	mm_slab_debug();
 	mm_buddy_debug();
 
 	int i = 1 / 0;

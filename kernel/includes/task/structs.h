@@ -5,6 +5,7 @@
 #include <lib/list.h>
 #include <lib/rbtree.h>
 #include <hal/task/structs.h>
+#include <mm/desc.h>
 
 typedef struct task_ThreadStruct task_ThreadStruct;
 typedef struct task_MemStruct task_MemStruct;
@@ -12,12 +13,14 @@ typedef struct task_MemStruct task_MemStruct;
 typedef void (*task_SignalHandler)(u64 signal);
 
 struct task_ThreadStruct {
-	
-} __attribute__ ((packed));
+	u64 fs, gs;
 
-struct task_MemStruct {
+	// member usage
 	u64 allocVirtMem;
 	u64 allocMem;
+
+	mm_Page *pageRecord;
+	RBTree kmallocRecord;
 } __attribute__ ((packed));
 
 struct task_TaskStruct {
@@ -26,7 +29,6 @@ struct task_TaskStruct {
 	u64 vRuntime, resRuntime;
 
 	task_ThreadStruct *thread;
-	task_MemStruct *mem;
 
 	List list;
 	RBNode rbNode;

@@ -8,4 +8,10 @@
 #else
 #error No definition of task_getLevel() for this arch
 #endif
+
+#ifdef HAL_TASK_CURRENT
+#define task_current hal_task_current
+#else
+#error No definition of task_current() for this arch!
+#endif
 #endif

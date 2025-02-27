@@ -10,6 +10,10 @@ if [ -L ./Tools/hal ]; then
 	rm ./Tools/hal
 fi
 
+if [ ! -f ./.depend ]; then
+	touch ./.depend
+fi
+
 ln -s ../hal/${ARCH}/includes/ ./includes/hal
 ln -s ../hal/${ARCH}/Tools/ ./Tools/hal
 

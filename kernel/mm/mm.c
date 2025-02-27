@@ -92,8 +92,8 @@ int mm_init() {
         mm_memStruct.totMem += mm_memStruct.zones[i].totFree;
     printk(WHITE, BLACK, "mm: totMem:%#018lx=%ldMB\n", mm_memStruct.totMem, mm_memStruct.totMem >> 10);
 
-    int res = mm_buddy_init();
-    if (res == res_FAIL) return res_FAIL;
+    if (mm_buddy_init() == res_FAIL) return res_FAIL;
+    if (mm_slab_init() == res_FAIL) return res_FAIL;
 
     return res_SUCC;
 }

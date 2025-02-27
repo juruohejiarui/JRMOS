@@ -4,6 +4,7 @@
 #include <lib/list.h>
 #include <task/constant.h>
 #include <hal/mm/mm.h>
+#include <lib/rbtree.h>
 
 #define mm_Attr_Shared      0x1u
 #define mm_Attr_Shared2U    0x2u
@@ -66,6 +67,18 @@ typedef struct mm_MemStruct {
 	u64 totMem;
 	u64 edStruct;
 } mm_MemStruct;
+
+#define mm_slab_mnSizeShift	5
+#define mm_slab_mnSize		(1ul << mm_slab_mnSizeShift)
+#define mm_slab_mxSizeShift	20
+#define mm_slab_mxSize		(1ul << mm_slab_mxSizeShift)
+
+typedef struct mm_KmallocRecord {
+	void *ptr;
+	u64 size;
+	RBNode rbNode;
+	void (*destructor)(void *ptr);
+} mm_KmallocRecord;
 
 extern mm_MemStruct mm_memStruct; 
  
