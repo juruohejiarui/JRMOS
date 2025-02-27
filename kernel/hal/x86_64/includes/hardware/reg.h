@@ -1,5 +1,5 @@
-#ifndef __HAL_REG_H__
-#define __HAL_REG_H__
+#ifndef __HAL_HARDWARE_REG_H__
+#define __HAL_HARDWARE_REG_H__
 
 #define hal_hw_setCR(id, vl) do { \
 	u64 vr = (vl); \

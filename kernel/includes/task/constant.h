@@ -12,4 +12,6 @@
 #define task_level_Kernel   0x0
 #define task_level_User     0x3
 
+#define task_nrSignal	64
+
 #endif

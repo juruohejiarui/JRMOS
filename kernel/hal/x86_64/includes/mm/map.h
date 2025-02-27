@@ -28,7 +28,7 @@
 #define HAL_MM_UNMAP
 
 struct hal_mm_PageTbl {
-    u64 entries[512];
+    u64 entries[hal_mm_nrPageTblEntries];
 } __attribute__ ((packed));
 
 typedef struct hal_mm_PageTbl hal_mm_PageTbl;
@@ -46,4 +46,6 @@ int hal_mm_map(u64 virt, u64 phys, u64 attr);
 int hal_mm_map1G(u64 virt, u64 phys, u64 attr);
 
 int hal_mm_unmap(u64 virt);
+
+int hal_mm_map_syncKrl();
 #endif

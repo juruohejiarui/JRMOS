@@ -2,6 +2,7 @@
 #define __INTERRUPT_INTERRUPT_H__
 
 #include <hal/interrupt/interrupt.h>
+#include <interrupt/desc.h>
 
 #ifdef HAL_INTR_MASK
 #define intr_mask hal_intr_mask
@@ -27,6 +28,12 @@
 #error no definition of intr_pause() for this arch
 #endif
 
+int intr_alloc(u32 *cpuId, u32 *vecId);
+
 void intr_init();
+
+int intr_register(u8 irqId, intr_Info *info, void *installArg);
+
+int intr_unregister(u8 irqId);
 
 #endif

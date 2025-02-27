@@ -12,11 +12,11 @@ static __always_inline__ u64 _cvtAttr(u64 attr) {
     if (attr & mm_Attr_Exist)       cvt |= (1ul << 0);
     return cvt;
 }
+ 
 int hal_mm_map(u64 virt, u64 phys, u64 attr) {
     attr = _cvtAttr(attr);
     hal_mm_PageTbl *tbl, *subTbl;
-    if (virt >= task_krlAddrSt) mm_map_krlTblModiJiff++;
-    tbl = mm_dmas_phys2Virt(hal_hw_getCR(3));
+    tbl = virt >= task_krlAddrSt ? mm_dmas_phys2Virt(hal_hw_getCR(3)) : mm_dmas_phys2Virt(hal_hw_getCR(3));
 
     u64 idx = (virt & hal_mm_pgdIdxMask) >> hal_mm_pgdShift;
     if (!tbl->entries[idx]) {
@@ -50,8 +50,8 @@ int hal_mm_map(u64 virt, u64 phys, u64 attr) {
 int hal_mm_map1G(u64 virt, u64 phys, u64 attr) {
     attr = _cvtAttr(attr);
     hal_mm_PageTbl *tbl, *subTbl;
-    if (virt >= task_krlAddrSt) mm_map_krlTblModiJiff++;
-    tbl = mm_dmas_phys2Virt(hal_hw_getCR(3));
+
+    tbl = virt >= task_krlAddrSt ? mm_dmas_phys2Virt(hal_hw_getCR(3)) : mm_dmas_phys2Virt(hal_hw_getCR(3));
 
     u64 idx = (virt & hal_mm_pgdIdxMask) >> hal_mm_pgdShift;
     if (!tbl->entries[idx]) {
@@ -69,7 +69,10 @@ int hal_mm_map1G(u64 virt, u64 phys, u64 attr) {
 }
 
 int hal_mm_unmap(u64 virt) {
-    hal_mm_PageTbl *tbl = mm_dmas_phys2Virt(hal_hw_getCR(3)), *subTbl;
+    hal_mm_PageTbl *tbl, *subTbl;
+
+    tbl = virt >= task_krlAddrSt ? mm_dmas_phys2Virt(hal_hw_getCR(3)) : mm_dmas_phys2Virt(hal_hw_getCR(3));
+
     u64 idx = (virt & hal_mm_pgdIdxMask) >> hal_mm_pgdShift;
     tbl = (hal_mm_PageTbl *)(tbl->entries[idx] & ~0xffful);
     if (tbl == NULL) return res_FAIL;
@@ -97,4 +100,8 @@ int hal_mm_unmap(u64 virt) {
     hal_mm_flushTlb();
 
     return res_SUCC;
+}
+
+int hal_mm_map_syncKrl() {
+	return 0;
 }
