@@ -33,7 +33,17 @@ struct hal_mm_PageTbl {
 
 typedef struct hal_mm_PageTbl hal_mm_PageTbl;
 
-int hal_mm_map(u64 virt, u64 phys, u64 attr, u64 size);
+#define hal_mm_flushTlb() do { \
+    __asm__ volatile ( \
+        "movq %%cr3, %%rax      \n\t" \
+        "movq %%rax, %%cr3      \n\t" \
+        : : : "memory" \
+    ); \
+} while(0)
 
-int hal_mm_unmap(u64 virt, u64 size);
+int hal_mm_map(u64 virt, u64 phys, u64 attr);
+
+int hal_mm_map1G(u64 virt, u64 phys, u64 attr);
+
+int hal_mm_unmap(u64 virt);
 #endif

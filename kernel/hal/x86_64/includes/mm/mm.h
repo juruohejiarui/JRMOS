@@ -7,5 +7,8 @@
 #define hal_mm_pageSize     Page_4KSize
 #define hal_mm_pageShift    Page_4KShift
 
+#define HAL_MM_KRLTBLPHYSADDR
+#define hal_mm_krlTblPhysAddr 0x101000
+
 void hal_mm_loadmap();
 #endif

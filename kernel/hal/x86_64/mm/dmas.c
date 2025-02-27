@@ -24,3 +24,7 @@ int hal_mm_dmas_init() {
     }
     return res_SUCC;
 }
+
+int hal_mm_dmas_map(u64 virt) {
+    return hal_mm_map1G(virt, mm_dmas_virt2Phys(virt), mm_Attr_Exist);
+}

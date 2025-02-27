@@ -2,9 +2,10 @@
 #define __MM_DESC_H__
 
 #include <lib/list.h>
+#include <lib/rbtree.h>
 #include <task/constant.h>
 #include <hal/mm/mm.h>
-#include <lib/rbtree.h>
+#include <hal/mm/dmas.h>
 
 #define mm_Attr_Shared      0x1u
 #define mm_Attr_Shared2U    0x2u
@@ -13,6 +14,7 @@
 #define mm_Attr_Allocated	0x10u
 #define mm_Attr_MMU			0x20u
 #define mm_Attr_System		0x40u
+#define mm_Attr_Exist		0x80u
 
 #define mm_kernelAddr	((void *)(task_krlAddrSt + 0x100000ul))
 
@@ -21,6 +23,20 @@
 #define mm_pageShift	hal_mm_pageShift
 #else
 #error no definition of hal_mm_pageSize and hal_mm_pageSize for this arch!
+#endif
+
+#ifdef HAL_MM_KRLTBLPHYSADDR
+#define mm_krlTblPhysAddr	hal_mm_krlTblPhysAddr
+#else
+#error no definition of mm_krlTblPhysAddr for this arch!
+#endif
+
+#define mm_dmas_addrSt	(0xffff880000000000ul)
+
+#ifdef HAL_MM_DMAS_MAPSIZE
+#define mm_dmas_mapSize		hal_mm_dmas_mapSize
+#else
+#error no definition of mm_dmas_mapSize	for this arch!
 #endif
 
 extern char mm_symbol_text;

@@ -11,14 +11,15 @@
 #endif
 
 #ifdef HAL_MM_UNMAP
-#define mm_unmap hal_mm_map
+#define mm_unmap hal_mm_unmap
 #else
 #error no definition of hal_mm_unmap for this arch!
 #endif
 
-int mm_map_initCache();
+extern u64 mm_map_krlTblModiJiff;
+
+int mm_map_init();
 hal_mm_PageTbl *mm_map_allocTbl();
 
 int mm_map_freeTbl(hal_mm_PageTbl *tbl);
-
 #endif

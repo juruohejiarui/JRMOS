@@ -21,4 +21,12 @@
 #error no definition of intr_mask() for this arch
 #endif
 
+#ifdef HAL_INTR_PAUSE
+#define intr_pause hal_intr_pause
+#else
+#error no definition of intr_pause() for this arch
+#endif
+
+void intr_init();
+
 #endif

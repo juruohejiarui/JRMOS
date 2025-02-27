@@ -5,10 +5,12 @@
 
 #define HAL_INTR_MASK
 #define HAL_INTR_UNMASK
+#define HAL_INTR_PAUSE
 #define HAL_INTR_STATE
 
 #define hal_intr_mask()     do { __asm__ volatile ("cli \n\t" : : : "memory"); } while(0)
 #define hal_intr_unmask()   do { __asm__ volatile ("sti \n\t" : : : "memory"); } while(0)
+#define hal_intr_pause()    do { __asm__ volatile ("hlt \n\t" : : : "memory"); } while(0)
 
 #define hal_intr_state() ({ \
     u64 rflags; \

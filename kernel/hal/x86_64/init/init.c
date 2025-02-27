@@ -17,7 +17,7 @@ void hal_init_init() {
 	int res = mm_init();
 	if (res == res_FAIL) while (1) ;
 
-	res = mm_map_initCache();
+	res = mm_map_init();
 	if (res == res_FAIL) while (1) ;
 
 	void *addr[10][10];
