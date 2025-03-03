@@ -16,7 +16,7 @@ struct intr_Ctrl {
 typedef struct intr_Ctrl intr_Ctrl;
 
 struct intr_Info {
-    u8 cpuId, vecId, irqId;
+    u8 cpuId, vecId;
 
     u64 param;
 

@@ -5,6 +5,7 @@
 #include <mm/dmas.h>
 #include <hal/hardware/reg.h>
 
+// I/O APIC Redirection Table Entry Descriptor
 typedef struct hal_hw_apic_RteDesc {
 	u32 vector 			: 8; // 0-7
 	u32 deliveryMode 	: 3; // 8-10
@@ -114,11 +115,11 @@ static __always_inline__ void hal_hw_apic_setApicBase(u64 base) { hal_hw_writeMs
 void hal_hw_apic_writeRte(u8 idx, u64 val);
 u64 hal_hw_apic_readRte(u8 idx);
 
-void hal_hw_apic_enable(u8 intrId);
-void hal_hw_apic_disable(u8 intrId);
-
 void hal_hw_apic_install(u8 intrId, void *arg);
 void hal_hw_apic_uninstall(u8 intrId);
+
+void hal_hw_apic_enable(u8 intrId);
+void hal_hw_apic_disable(u8 intrId);
 
 void hal_hw_apic_edgeAck(u8 intrId);
 

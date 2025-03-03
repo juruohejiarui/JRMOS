@@ -104,3 +104,21 @@ void hal_hw_apic_writeRte(u8 idx, u64 val) {
 	*ioApicMap.data = val >> 32;
 	hal_hw_mfence();
 }
+
+u64 hal_hw_apic_readRte(u8 idx) {
+	u64 val;
+	*ioApicMap.idx = idx;
+	hal_hw_mfence();
+	val = *ioApicMap.data;
+	hal_hw_mfence();
+
+	*ioApicMap.idx = idx + 1;
+	hal_hw_mfence();
+	val |= ((u64)*ioApicMap.data) << 32;
+	hal_hw_mfence();
+
+	return val;
+}
+void hal_hw_apic_install(u8 intrId, void *arg) {
+	hal_hw_apic_writeRte(intrId)
+}

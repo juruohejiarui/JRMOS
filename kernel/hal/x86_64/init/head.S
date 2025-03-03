@@ -35,7 +35,7 @@ ENTRY(_start)
     // jnc setSMPInfo
 
     movq stkPtr(%rip), %rsp
-	lidt idtPointer(%rip)
+	lidt hal_init_idtPtr(%rip)
     jmp setSmpTmpStkEnd
 
 // setSMPInfo:
@@ -101,7 +101,7 @@ setupIDT:
     // set the 32...63-th bits of offset to 64...95-th bits
     shrq $32, %rdx
 // set all the interrupt vector to ignoreInt()
-    leaq idtTable(%rip), %rdi
+    leaq hal_init_idtTbl(%rip), %rdi
     mov $256, %rcx
 repeatSetIDT:
     movq %rax, (%rdi)
@@ -112,12 +112,12 @@ repeatSetIDT:
 
 // set the GDT descriptor of TSS
 setupTSS64:
-    leaq tss64Table(%rip), %rdx
+    leaq hal_init_tss64(%rip), %rdx
     xorq %rax, %rax
     xorq %rcx, %rcx
     // present(47th) = 1, DescriptorType(44th) = 0, E(32th) = 1, A(40th) = 1
     movq $(0x89 << 40), %rax
-    // get the 0...31-th bits of address of tss64Table(represented by A)
+    // get the 0...31-th bits of address of hal_init_tss64(represented by A)
     movl %edx, %ecx
     // set the 24-31-th bits of A to the 56...64-th bits
     shrl $24, %ecx
@@ -276,18 +276,18 @@ gdtPointer:
     gdtLimit:   .word gdtEnd - gdtTable - 1
     gdtBase:    .quad gdtTable
 
-ENTRY(idtTable)
+ENTRY(hal_init_idtTbl)
     .fill 512, 8, 0
 idtEnd:
 
-idtPointer:
-    idtLimit:   .word idtEnd - idtTable - 1
-    idtBase:    .quad idtTable
+hal_init_idtPtr:
+    idtLimit:   .word idtEnd - hal_init_idtTbl - 1
+    idtBase:    .quad hal_init_idtTbl
 
-ENTRY(tss64Table)
+ENTRY(hal_init_tss64)
     .fill 13, 8, 0
 tss64End:
 
 tss64Pointer:
-    tss64Limit: .word tss64End - tss64Table - 1
-    tss64Base:  .quad tss64Table
+    tss64Limit: .word tss64End - hal_init_tss64 - 1
+    tss64Base:  .quad hal_init_tss64
