@@ -10,14 +10,14 @@
 __noinline__ void irqName(preffix, num);      \
 __asm__ ( \
     ".section .text     \n\t" \
-    ".global "SYMBOL_NAME_STR(preffix)#num"Interrupt    \n\t" \
-    SYMBOL_NAME_STR(preffix)#num"Interrupt: \n\t" \
+    ".global "SYMBOL_NAME_STR(preffix)#num"Intr    \n\t" \
+    SYMBOL_NAME_STR(preffix)#num"Intr: \n\t" \
     "cli       			\n\t" \
     "pushq $0   		\n\t" \
     saveAll \
     "movq %rsp, %rdi        \n\t" \
     "movq $"#num", %rsi     \n\t" \
-    "leaq Intr_retFromIntr(%rip), %rax 	\n\t" \
+    "leaq hal_intr_retFromIntr(%rip), %rax 	\n\t" \
 	"pushq %rax			\n\t" \
     "jmp "#dispatcher"   \n\t" \
 ); \

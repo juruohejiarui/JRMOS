@@ -5,8 +5,11 @@
 #include <mm/map.h>
 #include <mm/buddy.h>
 #include <lib/bit.h>
+#include <hal/hardware/io.h>
 #include <lib/string.h>
 
+// the index of RTE register of the specific vector
+#define _idxOfRte(vecId) (((vecId - 0x20) << 1) + 0x10)
 struct ioApicMap {
 	u32 phyAddr;
 	u8 *idx;
@@ -84,12 +87,27 @@ int hal_hw_apic_initLocal() {
 	return res_SUCC;
 }
 
+int hal_hw_apic_initIO() {
+	
+}
+
 int hal_hw_apic_init() {
 	if (hal_hw_apic_map() == res_FAIL) {
 		printk(RED, BLACK, "hw: apic: failed to map.\n");
 		return res_FAIL;
 	}
+	hal_hw_io_out8(0x21, 0xff);
+	hal_hw_io_out8(0xa1, 0xff);
+	
+	hal_hw_io_out8(0x22, 0x70);
+	hal_hw_io_out8(0x23, 0x01);
+
+
 	if (hal_hw_apic_initLocal() == res_FAIL) return res_FAIL;
+
+	hal_hw_io_out32(0xcf8, 0x8000f8f0);
+	hal_hw_mfence();
+
 	return res_SUCC;
 }
 
@@ -119,6 +137,38 @@ u64 hal_hw_apic_readRte(u8 idx) {
 
 	return val;
 }
-void hal_hw_apic_install(u8 intrId, void *arg) {
-	hal_hw_apic_writeRte(intrId)
+void hal_hw_apic_install(u8 vecId, void *arg) {
+	u64 val = *(u64 *)arg;
+	((hal_hw_apic_RteDesc *)val)->mask = 1;
+	hal_hw_apic_writeRte(_idxOfRte(vecId), val);
+}
+
+void hal_hw_apic_uninstall(u8 vecId) {
+	hal_hw_apic_writeRte(_idxOfRte(vecId), (1ul << 16));
+}
+
+void hal_hw_apic_enable(u8 vecId) {
+	u64 desc = hal_hw_apic_readRte(_idxOfRte(vecId));
+	((hal_hw_apic_RteDesc *)&desc)->mask = 0;
+	hal_hw_apic_writeRte(_idxOfRte(vecId), desc);
+}
+
+void hal_hw_apic_disable(u8 vecId) {
+	u64 desc = hal_hw_apic_readRte(_idxOfRte(vecId));
+	((hal_hw_apic_RteDesc *)&desc)->mask = 1;
+	hal_hw_apic_writeRte(_idxOfRte(vecId), desc);
+}
+
+void hal_hw_apic_edgeAck(u8 vecId) {
+	if (hal_hw_apic_supportFlag & hal_hw_apic_supportFlag_X2Apic) {
+		__asm__ volatile (
+			"movq $0x00, %%rdx		\n\t"
+			"movq $0x00, %%rax		\n\t"
+			"movq $0x80b, %%rcx		\n\t"
+			"wrmsr					\n\t"
+			:
+			:
+			: "memory", "rdx", "rax", "rcx"
+		);
+	} else *(u32 *)mm_dmas_phys2Virt(0xfee000b0) = 0;
 }

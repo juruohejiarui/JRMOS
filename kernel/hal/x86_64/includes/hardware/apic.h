@@ -115,13 +115,13 @@ static __always_inline__ void hal_hw_apic_setApicBase(u64 base) { hal_hw_writeMs
 void hal_hw_apic_writeRte(u8 idx, u64 val);
 u64 hal_hw_apic_readRte(u8 idx);
 
-void hal_hw_apic_install(u8 intrId, void *arg);
-void hal_hw_apic_uninstall(u8 intrId);
+void hal_hw_apic_install(u8 vecId, void *arg);
+void hal_hw_apic_uninstall(u8 vecId);
 
-void hal_hw_apic_enable(u8 intrId);
-void hal_hw_apic_disable(u8 intrId);
+void hal_hw_apic_enable(u8 vecId);
+void hal_hw_apic_disable(u8 vecId);
 
-void hal_hw_apic_edgeAck(u8 intrId);
+void hal_hw_apic_edgeAck(u8 vecId);
 
 int hal_hw_apic_init();
 
