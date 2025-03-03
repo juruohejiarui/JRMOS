@@ -13,18 +13,19 @@ int hal_mm_dmas_init() {
     }
     mxAddr = upAlign(mxAddr, hal_mm_pgdSize);
     u64 *tbl = (u64 *)upAlign(mm_memStruct.edStruct, hal_mm_pldSize);
-    mm_memStruct.edStruct += sizeof(u64) * (mxAddr >> hal_mm_pudShift);
+    mm_memStruct.edStruct = (u64)tbl + sizeof(u64) * (mxAddr >> hal_mm_pudShift);
     for (u64 i = 0; i < (mxAddr >> hal_mm_pudShift); i++) {
         tbl[i] = (i << hal_mm_pudShift) | 0x87;
     }
     u64 *pud = (u64 *)(hal_hw_getCR(3) + task_krlAddrSt);
     for (u64 i = 0; i < (mxAddr >> hal_mm_pgdShift); i++) {
         pud[i + ((mm_dmas_addrSt & hal_mm_pgdIdxMask) >> hal_mm_pgdShift)]
-            = ((u64)&tbl[i * hal_mm_nrPageTblEntries] - task_krlAddrSt) | 0x7;
+            = ((u64)&tbl[i * hal_mm_nrPageTblEntries] - task_krlAddrSt) | 0x3;
     }
+    hal_mm_flushTlb();
     return res_SUCC;
 }
 
-int hal_mm_dmas_map(u64 virt) {
-    return hal_mm_map1G(virt, mm_dmas_virt2Phys(virt), mm_Attr_Exist);
+int hal_mm_dmas_map(u64 phys) {
+    return hal_mm_map1G((u64)mm_dmas_phys2Virt(phys), phys, mm_Attr_Exist);
 }

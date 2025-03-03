@@ -132,3 +132,15 @@ int mm_unmap(u64 virt) {
 
     return res;
 }
+
+u64 mm_getMap(u64 virt) {
+    if (virt >= task_krlAddrSt) SpinLock_lock(&mm_map_krlTblLck);
+    else SpinLock_lock(&task_current->thread->pgTblLck);
+
+    u64 phyAddr = hal_mm_getMap(virt);
+    
+    if (virt >= task_krlAddrSt) SpinLock_unlock(&mm_map_krlTblLck);
+    else SpinLock_unlock(&task_current->thread->pgTblLck);
+
+    return phyAddr;
+}

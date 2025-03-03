@@ -12,7 +12,7 @@
 #define BLUE	0x1010ff
 #define BLACK	0x000000
 #define YELLOW	0xffff00
-#define ORANGE	0xff3000
+#define ORANGE	0xffa000
 #define WHITE	0xffffff
 
 typedef struct screen_Info {

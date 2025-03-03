@@ -1,5 +1,4 @@
 #include <hal/linkage.h>
-#include <hal/hardware/cpu.h>
 
 // .globl hw_CPU_cpuInfo
 // .globl hal_init_initSMP

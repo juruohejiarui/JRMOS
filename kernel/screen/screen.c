@@ -4,7 +4,7 @@
 #include <lib/algorithm.h>
 #include <mm/dmas.h>
 #include <task/api.h>
-#include <interrupt/interrupt.h>
+#include <interrupt/api.h>
 #include "font.h"
 
 struct Position {

@@ -1,6 +1,7 @@
 #include <hal/init/init.h>
 #include <hal/hardware/uefi.h>
 #include <init/init.h>
+#include <interrupt/api.h>
 #include <mm/mm.h>
 #include <mm/map.h>
 #include <mm/buddy.h>
@@ -26,8 +27,8 @@ void hal_init_init() {
 	}
 	void *addr2[3];
 	for (int i = 0; i < 3; i++) addr2[i] = mm_kmalloc(1ul << 20, mm_Attr_Shared, NULL);
-	mm_slab_debug();
-	mm_buddy_debug();
+
+	intr_init();
 
 	int i = 1 / 0;
 

@@ -6,7 +6,7 @@
 #include <lib/spinlock.h>
 #include <lib/string.h>
 #include <screen/screen.h>
-#include <interrupt/interrupt.h>
+#include <interrupt/api.h>
 
 static struct BuddyStruct {
     u64 *revBit[mm_buddy_mxOrd + 1];
@@ -48,8 +48,6 @@ int mm_buddy_init() {
         }
         _buddy.revBit[i] = mm_dmas_phys2Virt(mm_getPhyAddr(pages));
         memset(_buddy.revBit[i], 0, nrPage << mm_pageShift);
-
-        printk(WHITE, BLACK, "mm: buddy: bitmap #%d: %#018lx, size=%#018lx\n", i, _buddy.revBit[i], ali);
     }
     _buddy.tot = 0;
     for (int i = 0; i <= mm_buddy_mxOrd; i++)

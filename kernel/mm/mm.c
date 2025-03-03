@@ -39,9 +39,6 @@ int mm_init() {
     mm_memStruct.zones[mm_memStruct.krlZoneId].availSt = upAlign(mm_memStruct.edStruct - task_krlAddrSt, mm_pageSize);
     // from now on, printk can be used
     printk(WHITE, BLACK, "mm: edStruct: %#018lx mm_symbol_end: %#018lx kernel zone id:%d\nmm:", mm_memStruct.edStruct, &mm_symbol_end, mm_memStruct.krlZoneId);
-    for (int i = 0; i < mm_nrMemMapEntries; i++) {
-        printk(YELLOW, BLACK, "\t[%2d]: addr:%#018lx len:%#018lx attr:%#010lx\n", i, mm_memMapEntries[i].addr, mm_memMapEntries[i].size, mm_memMapEntries[i].attr);
-    }
 
     u64 pgDescArrSize;
     {

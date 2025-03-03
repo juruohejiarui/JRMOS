@@ -25,5 +25,5 @@
 })
 
 
-void hal_intr_init();
+int hal_intr_init();
 #endif

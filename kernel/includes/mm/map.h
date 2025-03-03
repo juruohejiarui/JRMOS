@@ -12,13 +12,19 @@ extern SpinLock mm_map_krlTblLck;
 #ifdef HAL_MM_MAP
 int mm_map(u64 virt, u64 phys, u64 attr);
 #else
-#error no definition of hal_mm_map for this arch!
+#error no definition of mm_map for this arch!
 #endif
 
 #ifdef HAL_MM_UNMAP
 int mm_unmap(u64 virt);
 #else
-#error no definition of hal_mm_unmap for this arch!
+#error no definition of mm_unmap for this arch!
+#endif
+
+#ifdef HAL_MM_GETMAP
+u64 mm_getMap(u64 virt);
+#else
+#error no definition of hal_mm_getMap for this arch!
 #endif
 
 int mm_map_init();

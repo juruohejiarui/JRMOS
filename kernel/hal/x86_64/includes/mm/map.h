@@ -26,6 +26,7 @@
 
 #define HAL_MM_MAP
 #define HAL_MM_UNMAP
+#define HAL_MM_GETMAP
 
 struct hal_mm_PageTbl {
     u64 entries[hal_mm_nrPageTblEntries];
@@ -46,6 +47,8 @@ int hal_mm_map(u64 virt, u64 phys, u64 attr);
 int hal_mm_map1G(u64 virt, u64 phys, u64 attr);
 
 int hal_mm_unmap(u64 virt);
+
+u64 hal_mm_getMap(u64 virt);
 
 int hal_mm_map_syncKrl();
 #endif

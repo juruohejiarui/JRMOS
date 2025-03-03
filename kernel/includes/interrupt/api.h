@@ -30,7 +30,7 @@
 
 int intr_alloc(u32 *cpuId, u32 *vecId);
 
-void intr_init();
+int intr_init();
 
 int intr_register(u8 irqId, intr_Info *info, void *installArg);
 

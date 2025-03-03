@@ -6,7 +6,7 @@ int hal_intr_allocVec() {
     
 }
 
-void hal_intr_init() {
-    // hal_hw_apic_init();
-    
+int hal_intr_init() {
+    if (hal_hw_apic_init() == res_FAIL) return res_FAIL;
+    return res_SUCC;
 }

@@ -2,6 +2,8 @@
 #define __HAL_HARDWARE_APIC_H__
 
 #include <lib/dtypes.h>
+#include <mm/dmas.h>
+#include <hal/hardware/reg.h>
 
 typedef struct hal_hw_apic_RteDesc {
 	u32 vector 			: 8; // 0-7
@@ -96,5 +98,32 @@ extern u64 hal_hw_apic_supportFlag;
 
 #define hal_hw_apic_supportFlag_X2Apic			(1ul << 0)
 #define hal_hw_apic_supportFlag_EOIBroadcase	(1ul << 1)
+
+static __always_inline__ void hal_hw_apic_setIcrDest(hal_hw_apic_IcrDesc *icr, u32 apicId, u32 x2ApicId) {
+	(hal_hw_apic_supportFlag & hal_hw_apic_supportFlag_X2Apic) ? (icr->dest.x2Apic = x2ApicId) : (icr->dest.apic = apicId);
+}
+
+static __always_inline__ u32 hal_hw_apic_getApicId() {
+	return (hal_hw_apic_supportFlag & hal_hw_apic_supportFlag_X2Apic) ? (u32)hal_hw_readMsr(0x802) : *(u32 *)mm_dmas_phys2Virt(0xfee00020);
+}
+
+
+static __always_inline__ u64 hal_hw_apic_getApicBase() { return hal_hw_readMsr(0x1b); }
+static __always_inline__ void hal_hw_apic_setApicBase(u64 base) { hal_hw_writeMsr(0x1b, base | hal_hw_readMsr(0x1b)); }
+
+void hal_hw_apic_writeRte(u8 idx, u64 val);
+u64 hal_hw_apic_readRte(u8 idx);
+
+void hal_hw_apic_enable(u8 intrId);
+void hal_hw_apic_disable(u8 intrId);
+
+void hal_hw_apic_install(u8 intrId, void *arg);
+void hal_hw_apic_uninstall(u8 intrId);
+
+void hal_hw_apic_edgeAck(u8 intrId);
+
+int hal_hw_apic_init();
+
+int hal_hw_apic_initSmp();
 
 #endif

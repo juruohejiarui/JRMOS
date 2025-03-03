@@ -1,6 +1,8 @@
 #ifndef __HAL_HARDWARE_REG_H__
 #define __HAL_HARDWARE_REG_H__
 
+#include <lib/dtypes.h>
+
 #define hal_hw_setCR(id, vl) do { \
 	u64 vr = (vl); \
 	__asm__ volatile ( \
@@ -21,4 +23,26 @@
 		: "rax", "memory"); \
 	vl; \
 })
+
+#define hal_hw_mfence() __asm__ volatile ("mfence 	\n\t" : : : "memory")
+
+static __always_inline__ u64 hal_hw_readMsr(u64 msrAddr) {
+    u32 data1, data2;
+    __asm__ volatile (
+        "rdmsr \n\t"
+        : "=d"(data1), "=a"(data2)
+        : "c"(msrAddr)
+        : "memory"
+    );
+    return (((u64) data1) << 32) | data2;
+}
+
+static __always_inline__ void hal_hw_writeMsr(u64 msrAddr, u64 data) { 
+    __asm__ volatile (
+        "wrmsr \n\t"
+        :
+        : "c"(msrAddr), "A"(data & 0xFFFFFFFF), "d"((data >> 32) & 0xFFFFFFFF)
+        : "memory"
+    );
+}
 #endif

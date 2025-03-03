@@ -7,7 +7,7 @@
 #include <lib/string.h>
 #include <task/api.h>
 #include <screen/screen.h>
-#include <interrupt/interrupt.h>
+#include <interrupt/api.h>
 
 #define alloc2MPage() mm_allocPages(Page_2MShift - mm_pageShift, mm_Attr_Shared)
 
@@ -95,7 +95,6 @@ int mm_slab_init() {
         blk->colCnt = blk->freeCnt;
         blk->colLen = upAlign(blk->colCnt, 64) / 64;
         memset(blk->colMap, 0xff, blk->colLen * sizeof(u64));
-        printk(WHITE, BLACK, "[%d]: colCnt=%ld colLen=%ld\n", i, blk->colCnt, blk->colLen);
         addr += sizeof(SlabBlk) + blk->colLen * sizeof(u64);
         for (u64 j = 0; j < blk->colCnt; j++) bit_set0(&blk->colMap[j >> 6], j & 63);
 
