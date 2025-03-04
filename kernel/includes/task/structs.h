@@ -6,6 +6,7 @@
 #include <lib/list.h>
 #include <lib/rbtree.h>
 #include <hal/task/structs.h>
+#include <hal/hardware/cpu.h>
 #include <mm/desc.h>
 #include <mm/map.h>
 
@@ -44,6 +45,7 @@ struct task_TaskStruct {
 	task_ThreadStruct *thread;
 
 	RBNode rbNode;
+	List list;
 
 	u8 signal[8];
  
@@ -56,5 +58,11 @@ typedef union task_Union {
 	task_TaskStruct task;
 	u8 krlStk[task_krlStkSize];
 } task_Union;
+
+typedef struct task_MgrStruct {
+	RBTree tasks[hal_hw_cpu_mxNum];
+	RBTree freeTasks;
+	Atomic freeTaskNum;
+} task_MgrStruct;
 
 #endif

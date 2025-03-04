@@ -112,12 +112,12 @@ repeatSetIDT:
 
 // set the GDT descriptor of TSS
 setupTSS64:
-    leaq hal_init_tss64(%rip), %rdx
+    leaq hal_init_tss(%rip), %rdx
     xorq %rax, %rax
     xorq %rcx, %rcx
     // present(47th) = 1, DescriptorType(44th) = 0, E(32th) = 1, A(40th) = 1
     movq $(0x89 << 40), %rax
-    // get the 0...31-th bits of address of hal_init_tss64(represented by A)
+    // get the 0...31-th bits of address of hal_init_tss(represented by A)
     movl %edx, %ecx
     // set the 24-31-th bits of A to the 56...64-th bits
     shrl $24, %ecx
@@ -132,14 +132,14 @@ setupTSS64:
     orq $103, %rax
     // set the 32...64-th bits of A to 64...95-th bits
     shrq $32, %rdx
-    // set rax and rdx to the gdtTable + 0x50 
-    leaq gdtTable(%rip), %rdi
+    // set rax and rdx to the hal_init_gdtTbl + 0x50 
+    leaq hal_init_gdtTbl(%rip), %rdi
     movq %rax, 0x50(%rdi)
     movq %rdx, 0x58(%rdi)
 
     // enable the tss
-    mov $0x50, %ax
-    ltr %ax
+    // mov $0x50, %ax
+    // ltr %ax
 
     movq goToKernel(%rip), %rax
     pushq $0x08
@@ -258,7 +258,7 @@ pdpte:
     .fill 488, 8, 0
 .section .data
 
-ENTRY(gdtTable)
+ENTRY(hal_init_gdtTbl)
     .quad 0x0000000000000000    /* NULL */
     .quad 0x0020980000000000    /* kernel code 64-bit */
     .quad 0x0000920000000000    /* kernel data 64-bit */
@@ -273,8 +273,8 @@ ENTRY(gdtTable)
 gdtEnd:
 
 gdtPointer:
-    gdtLimit:   .word gdtEnd - gdtTable - 1
-    gdtBase:    .quad gdtTable
+    gdtLimit:   .word gdtEnd - hal_init_gdtTbl - 1
+    gdtBase:    .quad hal_init_gdtTbl
 
 ENTRY(hal_init_idtTbl)
     .fill 512, 8, 0
@@ -284,10 +284,10 @@ hal_init_idtPtr:
     idtLimit:   .word idtEnd - hal_init_idtTbl - 1
     idtBase:    .quad hal_init_idtTbl
 
-ENTRY(hal_init_tss64)
+ENTRY(hal_init_tss)
     .fill 13, 8, 0
 tss64End:
 
 tss64Pointer:
-    tss64Limit: .word tss64End - hal_init_tss64 - 1
-    tss64Base:  .quad hal_init_tss64
+    tss64Limit: .word tss64End - hal_init_tss - 1
+    tss64Base:  .quad hal_init_tss

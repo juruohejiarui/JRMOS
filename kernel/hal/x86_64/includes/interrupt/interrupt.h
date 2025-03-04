@@ -1,7 +1,31 @@
 #ifndef __HAL_INTERRUPT_H__
 #define __HAL_INTERRUPT_H__
 
-#include <lib/dtypes.h>
+#include <hal/interrupt/desc.h>
+#include <lib/string.h>
+
+#define hal_irqName2(preffix, num) hal_##preffix##num##Interrupt(void)
+#define hal_irqName(preffix, num) hal_irqName2(preffix, num)
+
+#define hal_intr_buildIrq(preffix, num, dispatcher)   \
+__noinline__ void irqName(preffix, num);      \
+__asm__ ( \
+    ".section .text     \n\t" \
+    ".global "SYMBOL_NAME_STR(preffix)#num"Intr    \n\t" \
+    SYMBOL_NAME_STR(preffix)#num"Intr: \n\t" \
+    "cli       			\n\t" \
+    "pushq $0   		\n\t" \
+    saveAll \
+    "movq %rsp, %rdi        \n\t" \
+    "movq $"#num", %rsi     \n\t" \
+    "leaq hal_intr_retFromIntr(%rip), %rax 	\n\t" \
+	"pushq %rax			\n\t" \
+    "jmp "#dispatcher"   \n\t" \
+); \
+
+#undef hal_irqName2
+#undef hal_irqName
+
 
 #define HAL_INTR_MASK
 #define HAL_INTR_UNMASK
@@ -24,6 +48,64 @@
     (rflags >> 9) & 1; \
 })
 
+#define hal_intr_setGate(idtAddr, attr, istIndex, codeAddr) \
+    do { \
+        u64 d0, d1; \
+        __asm__ volatile ( \
+            /* set the 0...15-th bits of code addr */ \
+            "movw %%dx, %%ax        \n\t" \
+            /* set the ist index and attr */ \
+            "andq $0x7, %%rcx       \n\t" \
+            "addq %4, %%rcx         \n\t" \
+            "shlq $32, %%rcx         \n\t" \
+            "orq %%rcx, %%rax       \n\t" \
+            /* set the 15...31-th bits of code addr to 48...63-th bits */ \
+            "xorq %%rcx, %%rcx      \n\t" \
+            "movl %%edx, %%ecx      \n\t" \
+            "shrq $16, %%rcx        \n\t" \
+            "shlq $48, %%rcx        \n\t" \
+            "orq %%rcx, %%rax       \n\t" \
+            "movq %%rax, %0         \n\t" \
+            /* set the 32...63-th bits of code addr to 64...95-th bits */ \
+            "shrq $32, %%rdx        \n\t" \
+            "movq %%rdx, %1         \n\t" \
+            :   "=m"(*(u64 *)(idtAddr)), "=m"(*(1 + (u64 *)(idtAddr))), \
+                "=&a"(d0), "=&d"(d1) \
+            :   "i"(attr << 8), \
+                "3"((u64 *)(codeAddr)),  /*set rdx to be the code addr*/ \
+                "2"(0x8 << 16), /*set the segment selector to be 0x8 (kernel code 64-bit)*/ \
+                "c"(istIndex) \
+            : "memory" \
+        ); \
+    } while(0)
+
+static __always_inline__ void hal_intr_setIntrGate(hal_intr_IdtItem *idtTbl, u64 idtIdx, u8 istIdx, void *codeAddr) {
+    hal_intr_setGate(idtTbl + idtIdx, 0x8E, istIdx, codeAddr);
+}
+
+static __always_inline__ void hal_intr_setTrapGate(hal_intr_IdtItem *idtTbl, u64 idtIdx, u8 istIdx, void *codeAddr) {
+    hal_intr_setGate(idtTbl + idtIdx, 0x8F, istIdx, codeAddr);
+}
+
+static __always_inline__ void hal_intr_setSystemGate(hal_intr_IdtItem *idtTbl, u64 idtIdx, u8 istIdx, void *codeAddr) {
+    hal_intr_setGate(idtTbl + idtIdx, 0xEF, istIdx, codeAddr);
+}
+
+static __always_inline__ void hal_intr_setSysIntrGate(hal_intr_IdtItem *idtTbl, u64 idtIdx, u8 istIdx, void *codeAddr) {
+    hal_intr_setGate(idtTbl + idtIdx, 0xEE, istIdx, codeAddr);
+}
+
+#undef hal_intr_setGate
+
+void hal_intr_setTss(hal_intr_TSS *tss, 
+    u64 rsp0, u64 rsp1, u64 rsp2, u64 ist1, u64 ist2, u64 ist3, u64 ist4, u64 ist5, u64 ist6, u64 ist7);
+
+// set tss item in the gdtTable
+void hal_intr_setTssItem(u64 idx, hal_intr_TSS *tss);
+
+void hal_intr_setTr(u16 idx);
+
+static __always_inline__ void hal_intr_cpyTss(hal_intr_TSS *src, u32 *dst) { memcpy(src, dst, sizeof(hal_intr_TSS)); }
 
 int hal_intr_init();
 #endif

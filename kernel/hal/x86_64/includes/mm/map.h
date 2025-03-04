@@ -42,6 +42,12 @@ typedef struct hal_mm_PageTbl hal_mm_PageTbl;
     ); \
 } while(0)
 
+#define hal_mm_state_Unmap  0x0
+#define hal_mm_state_Premap 0x1
+#define hal_mm_state_Mapped 0x2
+
+int hal_mm_getState(u64 virt);
+
 int hal_mm_map(u64 virt, u64 phys, u64 attr);
 
 int hal_mm_map1G(u64 virt, u64 phys, u64 attr);

@@ -14,4 +14,9 @@
 #else
 #error No definition of task_current() for this arch!
 #endif
+
+
+task_TaskStruct *task_newSubTask(void *entryAddr, void *arg);
+
+
 #endif
