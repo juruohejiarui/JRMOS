@@ -29,6 +29,58 @@ typedef struct hal_hw_uefi_AcpiHeader {
 	u32 creatorRevision;
 } __attribute__ ((packed)) hal_hw_uefi_AcpiHeader;
 
+typedef struct hal_hw_uefi_MadtEntry {
+	u8 type;
+	u8 len;
+	union {
+		struct hal_hw_uefi_MadtEntry_Type0 {
+			u8 procId;
+			u8 apicId;
+			u32 flags;
+		} __attribute__ ((packed)) type0;
+		struct hal_hw_uefi_MadtEntry_Type1 {
+			u8 ioApicId;
+			u8 reserved;
+			u32 ioApicAddr;
+			u32 gloSysIntrBase;
+		} __attribute__ ((packed)) type1;
+		struct hal_hw_uefi_MadtEntry_Type2 {
+			u8 busSrc;
+			u8 irqSrc;
+			u32 gloSysIntr;
+			u16 flags;
+		} __attribute__ ((packed)) type2;
+		struct hal_hw_uefi_MadtEntry_Type3 {
+			u8 nmiSrc;
+			u8 reserved;
+			u16 flags;
+			u32 gloSysIntrBase;
+		} __attribute__ ((packed)) type3;
+		struct hal_hw_uefi_MadtEntry_Type4 {
+			u8 procId;
+			u16 flags;
+			u8 lint;
+		} __attribute__ ((packed)) type4;
+		struct hal_hw_uefi_MadtEntry_Type5 {
+			u16 reserved;
+			u64 addr;
+		} __attribute__ ((packed)) type5;
+		struct hal_hw_uefi_MadtEntry_Type9 {
+			u16 reserved;
+			u32 x2apicId;
+			u32 flags;
+			u32 apicId;
+		} __attribute__ ((packed)) type9;
+	} __attribute__ ((packed));
+} __attribute__ ((packed)) hal_hw_uefi_MadtEntry;
+
+typedef struct hal_hw_uefi_MadtDesc {
+	hal_hw_uefi_AcpiHeader hdr;
+	u32 locApicAddr;
+	u32 flags;
+	hal_hw_uefi_MadtEntry entry[0];
+} __attribute__ ((packed)) hal_hw_uefi_MadtDesc;
+
 typedef struct hal_hw_uefi_RsdpDesc {
 	u8 signature[8];
 	u8 chkSum;

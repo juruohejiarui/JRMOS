@@ -4,6 +4,7 @@
 #include <hal/hardware/hpet.h>
 #include <init/init.h>
 #include <interrupt/api.h>
+#include <hal/cpu/api.h>
 #include <mm/mm.h>
 #include <mm/map.h>
 #include <mm/buddy.h>

@@ -10,6 +10,8 @@
 #define cpu_Desc_state_Trapped  0x2
 #define cpu_Desc_state_Pause    0x3
 
+// when you need to modify the structure of this descriptor
+// please update the corresponding constant in cpu/asmdesc.h
 typedef struct cpu_Desc {
     u64 state;
     u64 intrMsk[64];
@@ -19,6 +21,6 @@ typedef struct cpu_Desc {
 } __attribute__ ((packed)) cpu_Desc;
 
 extern u32 cpu_num;
-extern u32 cpu_desc[cpu_mxNum];
+extern cpu_Desc cpu_desc[cpu_mxNum];
 
 #endif
