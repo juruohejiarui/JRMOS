@@ -6,7 +6,7 @@
 #include <lib/list.h>
 #include <lib/rbtree.h>
 #include <hal/task/structs.h>
-#include <hal/hardware/cpu.h>
+#include <cpu/desc.h>
 #include <mm/desc.h>
 #include <mm/map.h>
 
@@ -60,7 +60,7 @@ typedef union task_Union {
 } task_Union;
 
 typedef struct task_MgrStruct {
-	RBTree tasks[hal_hw_cpu_mxNum];
+	RBTree tasks[cpu_mxNum];
 	RBTree freeTasks;
 	Atomic freeTaskNum;
 } task_MgrStruct;

@@ -1,5 +1,7 @@
 #include <hal/init/init.h>
 #include <hal/hardware/uefi.h>
+#include <hal/hardware/reg.h>
+#include <hal/hardware/hpet.h>
 #include <init/init.h>
 #include <interrupt/api.h>
 #include <mm/mm.h>
@@ -21,14 +23,13 @@ void hal_init_init() {
 	res = mm_map_init();
 	if (res == res_FAIL) while (1) ;
 
-	void *addr[10][10];
-	for (int i = 0; i < 10; i++) {
-		for (int j = 0; j < 10; j++) addr[i][j] = mm_kmalloc(sizeof(u64) << i, mm_Attr_Shared, NULL);
-	}
-	void *addr2[3];
-	for (int i = 0; i < 3; i++) addr2[i] = mm_kmalloc(1ul << 20, mm_Attr_Shared, NULL);
+	if (intr_init() == res_FAIL) while (1) hal_hw_hlt();
 
-	intr_init();
+	if (hal_hw_uefi_loadTbl() == res_FAIL) while (1) hal_hw_hlt();
+
+	if (hal_hw_hpet_init() == res_FAIL) while (1) hal_hw_hlt();
+
+	if (hal_cpu_init() == res_FAIL) while (1) hal_hw_hlt();
 
 	int i = 1 / 0;
 

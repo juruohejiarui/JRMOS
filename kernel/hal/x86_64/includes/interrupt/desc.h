@@ -16,4 +16,13 @@ typedef struct hal_intr_TSS {
     u16 iomapBaseAddr;
 } __attribute__((packed)) hal_intr_TSS;
 
+typedef struct hal_intr_PtReg {
+    u64 r15, r14, r13, r12, r11, r10, r9, r8;
+    u64 rbx, rcx, rdx, rsi, rdi, rbp;
+    u64 ds, es;
+    u64 rax;
+    u64 func, errCode;
+    u64 rip, cs, rflags, rsp, ss;
+} hal_intr_PtReg;
+
 #endif

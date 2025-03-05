@@ -15,7 +15,7 @@ typedef struct hal_hw_uefi_GUID {
 	u16 data2;
 	u16 data3;
 	u8 data4[8];
-} __attribute__ ((packed)) hal_hw_uefi_GUID;
+} hal_hw_uefi_GUID;
 
 typedef struct hal_hw_uefi_AcpiHeader {
 	u8 signature[4];
@@ -56,7 +56,7 @@ typedef struct hal_hw_uefi_E820Desc {
 typedef struct hal_hw_uefi_E820DescArray {
 	u32 entryCnt;
 	hal_hw_uefi_E820Decs entry[0];
-} __attribute__ ((packed)) hal_hw_uefi_E820DescArray;
+} hal_hw_uefi_E820DescArray;
 
 typedef struct hal_hw_uefi_CfgTbl {
 	hal_hw_uefi_GUID venderGUID;
@@ -73,9 +73,13 @@ typedef struct hal_hw_uefi_InfoStruct {
 	u64 memDescSize;
 } hal_hw_uefi_InfoStruct;
 
+extern hal_hw_uefi_RsdpDesc *hal_hw_uefi_rsdpTbl;
+extern hal_hw_uefi_XsdtDesc *hal_hw_uefi_xsdtTbl;
+
 extern hal_hw_uefi_InfoStruct *hal_hw_uefi_info;
 
 void hal_hw_uefi_init();
 
+int hal_hw_uefi_loadTbl();
 
 #endif

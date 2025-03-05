@@ -2,29 +2,54 @@
 #define __HAL_INTERRUPT_H__
 
 #include <hal/interrupt/desc.h>
+#include <interrupt/desc.h>
+#include <hal/linkage.h>
 #include <lib/string.h>
 
-#define hal_irqName2(preffix, num) hal_##preffix##num##Interrupt(void)
-#define hal_irqName(preffix, num) hal_irqName2(preffix, num)
+#define hal_intr_irqName(preffix, num) preffix##num(void)
+
+#define hal_intr_saveAll \
+    "pushq %rax     \n\t" \
+    "pushq %rax     \n\t" \
+    "movq %es, %rax \n\t" \
+    "pushq %rax     \n\t" \
+    "movq %ds, %rax \n\t" \
+    "pushq %rax     \n\t" \
+    "xorq %rax, %rax\n\t" \
+    "pushq %rbp     \n\t" \
+    "pushq %rdi     \n\t" \
+    "pushq %rsi     \n\t" \
+    "pushq %rdx     \n\t" \
+    "pushq %rcx     \n\t" \
+    "pushq %rbx     \n\t" \
+    "pushq %r8      \n\t" \
+    "pushq %r9      \n\t" \
+    "pushq %r10     \n\t" \
+    "pushq %r11     \n\t" \
+    "pushq %r12     \n\t" \
+    "pushq %r13     \n\t" \
+    "pushq %r14     \n\t" \
+    "pushq %r15     \n\t" \
+    "movq $0x10, %rdx\n\t" \
+    "movq %rdx, %ss \n\t" \
+    "movq %rdx, %ds \n\t" \
+    "movq %rdx, %es \n\t" \
 
 #define hal_intr_buildIrq(preffix, num, dispatcher)   \
-__noinline__ void irqName(preffix, num);      \
+__noinline__ void hal_intr_irqName(preffix, num);      \
 __asm__ ( \
     ".section .text     \n\t" \
-    ".global "SYMBOL_NAME_STR(preffix)#num"Intr    \n\t" \
-    SYMBOL_NAME_STR(preffix)#num"Intr: \n\t" \
+    ".global "SYMBOL_NAME_STR(preffix)#num"    \n\t" \
+    SYMBOL_NAME_STR(preffix)#num": \n\t" \
     "cli       			\n\t" \
     "pushq $0   		\n\t" \
-    saveAll \
+    hal_intr_saveAll \
     "movq %rsp, %rdi        \n\t" \
     "movq $"#num", %rsi     \n\t" \
     "leaq hal_intr_retFromIntr(%rip), %rax 	\n\t" \
 	"pushq %rax			\n\t" \
     "jmp "#dispatcher"   \n\t" \
 ); \
-
-#undef hal_irqName2
-#undef hal_irqName
 
 
 #define HAL_INTR_MASK
@@ -96,6 +121,9 @@ static __always_inline__ void hal_intr_setSysIntrGate(hal_intr_IdtItem *idtTbl, 
 }
 
 #undef hal_intr_setGate
+
+extern void (*hal_intr_irqList[24])(void);
+extern intr_Info hal_intr_intrInfo[24];
 
 void hal_intr_setTss(hal_intr_TSS *tss, 
     u64 rsp0, u64 rsp1, u64 rsp2, u64 ist1, u64 ist2, u64 ist3, u64 ist4, u64 ist5, u64 ist6, u64 ist7);

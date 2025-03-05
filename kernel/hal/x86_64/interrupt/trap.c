@@ -4,6 +4,22 @@
 #include <hal/init/init.h>
 #include <screen/screen.h>
 
+static char *_regName[] = {
+	"r15", "r14", "r13", "r12", "r11", "r10", "r9 ", "r8",
+	"rbx", "rcx", "rdx", "rsi", "rdi", "rbp",
+	"ds", "es",
+	"rax",
+	"func", "err",
+	"rip", "cs", "rflg", "rsp", "ss"
+};
+
+static void _printRegs(u64 rsp) {
+	printk(WHITE, BLACK, "registers: \n");
+	for (int i = 0; i < sizeof(hal_intr_PtReg) / sizeof(u64); i++)
+		printk(WHITE, BLACK, "%4s=%#018lx%c", _regName[i], *(u64 *)(rsp + i * 8), (i + 1) % 8 == 0 ? '\n' : ' ');
+	// _backtrace((hal_intr_PtReg *)rsp);
+}
+
 void hal_intr_doDivideError(u64 rsp, u64 errorCode) {
 	u64 *p = NULL;
 	p = (u64 *)(rsp + 0x98);
@@ -161,7 +177,7 @@ void hal_intr_doGeneralProtection(u64 rsp, u64 errorCode) {
 			printk(RED,BLACK,"Refers to a descriptor in the GDT;\n");
 	}
 	printk(RED,BLACK,"Segment Selector Index:%#018lx\n",errorCode & 0xfff8);
-	// Intr_Trap_printRegs(rsp);
+	_printRegs(rsp);
 	while(1) hal_hw_hlt();
 }
 
@@ -263,25 +279,25 @@ void hal_intr_doVirtualizationError(u64 rsp, u64 errorCode) {
 }
 
 void hal_intr_initTrapGates() {
-	hal_intr_setTrapGate(hal_init_idtTbl, 0, 2, hal_intr_divideError);
-	hal_intr_setTrapGate(hal_init_idtTbl, 1, 2, hal_intr_debug);
-	hal_intr_setIntrGate(hal_init_idtTbl, 2, 2, hal_intr_nmi);
-	hal_intr_setSystemGate(hal_init_idtTbl, 3, 2, hal_intr_int3);
-	hal_intr_setSystemGate(hal_init_idtTbl, 4, 2, hal_intr_overflow);
-	hal_intr_setSystemGate(hal_init_idtTbl, 5, 2, hal_intr_bounds);
-	hal_intr_setTrapGate(hal_init_idtTbl, 6, 2, hal_intr_undefinedOpcode);
-	hal_intr_setTrapGate(hal_init_idtTbl, 7, 2, hal_intr_devNotAvailable);
-	hal_intr_setTrapGate(hal_init_idtTbl, 8, 2, hal_intr_doubleFault);
-	hal_intr_setTrapGate(hal_init_idtTbl, 9, 2, hal_intr_coprocessorSegmentOverrun);
-	hal_intr_setTrapGate(hal_init_idtTbl, 10, 2, hal_intr_invalidTSS);
-	hal_intr_setTrapGate(hal_init_idtTbl, 11, 2, hal_intr_segmentNotPresent);
-	hal_intr_setTrapGate(hal_init_idtTbl, 12, 2, hal_intr_stackSegmentFault);
-	hal_intr_setTrapGate(hal_init_idtTbl, 13, 2, hal_intr_generalProtection);
-	hal_intr_setTrapGate(hal_init_idtTbl, 14, 2, hal_intr_pageFault);
+	hal_intr_setTrapGate(hal_init_idtTbl, 0, 0, hal_intr_divideError);
+	hal_intr_setTrapGate(hal_init_idtTbl, 1, 0, hal_intr_debug);
+	hal_intr_setIntrGate(hal_init_idtTbl, 2, 0, hal_intr_nmi);
+	hal_intr_setSystemGate(hal_init_idtTbl, 3, 0, hal_intr_int3);
+	hal_intr_setSystemGate(hal_init_idtTbl, 4, 0, hal_intr_overflow);
+	hal_intr_setSystemGate(hal_init_idtTbl, 5, 0, hal_intr_bounds);
+	hal_intr_setTrapGate(hal_init_idtTbl, 6, 0, hal_intr_undefinedOpcode);
+	hal_intr_setTrapGate(hal_init_idtTbl, 7, 0, hal_intr_devNotAvailable);
+	hal_intr_setTrapGate(hal_init_idtTbl, 8, 0, hal_intr_doubleFault);
+	hal_intr_setTrapGate(hal_init_idtTbl, 9, 0, hal_intr_coprocessorSegmentOverrun);
+	hal_intr_setTrapGate(hal_init_idtTbl, 10, 0, hal_intr_invalidTSS);
+	hal_intr_setTrapGate(hal_init_idtTbl, 11, 0, hal_intr_segmentNotPresent);
+	hal_intr_setTrapGate(hal_init_idtTbl, 12, 0, hal_intr_stackSegmentFault);
+	hal_intr_setTrapGate(hal_init_idtTbl, 13, 0, hal_intr_generalProtection);
+	hal_intr_setTrapGate(hal_init_idtTbl, 14, 0, hal_intr_pageFault);
 	// 15 reserved
-	hal_intr_setTrapGate(hal_init_idtTbl, 16, 2, hal_intr_x87FPUError);
-	hal_intr_setTrapGate(hal_init_idtTbl, 17, 2, hal_intr_alignmentCheck);
-	hal_intr_setTrapGate(hal_init_idtTbl, 18, 2, hal_intr_machineCheck);
-	hal_intr_setTrapGate(hal_init_idtTbl, 19, 2, hal_intr_simdError);
-	hal_intr_setTrapGate(hal_init_idtTbl, 20, 2, hal_intr_virtualizationError);
+	hal_intr_setTrapGate(hal_init_idtTbl, 16, 0, hal_intr_x87FPUError);
+	hal_intr_setTrapGate(hal_init_idtTbl, 17, 0, hal_intr_alignmentCheck);
+	hal_intr_setTrapGate(hal_init_idtTbl, 18, 0, hal_intr_machineCheck);
+	hal_intr_setTrapGate(hal_init_idtTbl, 19, 0, hal_intr_simdError);
+	hal_intr_setTrapGate(hal_init_idtTbl, 20, 0, hal_intr_virtualizationError);
 }

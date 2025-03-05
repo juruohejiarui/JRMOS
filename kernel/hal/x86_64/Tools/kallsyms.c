@@ -50,9 +50,9 @@ void read_map(FILE *filp)
 	}
 	for(i = 0;i < count;i++) 
 	{
-		if(strcmp(table[i].symbol,"_text") == 0)
+		if(strcmp(table[i].symbol,"mm_symbol_text") == 0)
 			_text = table[i].address;
-		if(strcmp(table[i].symbol,"_etext") == 0)
+		if(strcmp(table[i].symbol,"mm_symbol_etext") == 0)
 			_etext = table[i].address;
 	}
 }

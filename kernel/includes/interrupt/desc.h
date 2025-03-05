@@ -22,12 +22,12 @@ struct intr_Info {
 
     char *name;
     
-    void (*handler)(u32 irq, u64 param);
+    void (*handler)(u64 param);
     intr_Ctrl *ctrl;
 };
 
 typedef struct intr_Info intr_Info;
 
-#define intr_handlerDeclare(name) void name(u32 irq, u64 param)
+#define intr_handlerDeclare(name) void name(u64 param)
 
 #endif
