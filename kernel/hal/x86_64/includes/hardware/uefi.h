@@ -94,7 +94,7 @@ typedef struct hal_hw_uefi_RsdpDesc {
 } __attribute__ ((packed)) hal_hw_uefi_RsdpDesc;
 
 // ACPI2.0 XSDT
-typedef struct hal_hw_uefi_XsdtDesc{
+typedef struct hal_hw_uefi_XsdtDesc {
 	hal_hw_uefi_AcpiHeader hdr;
 	u64 entry[0];
 } __attribute__ ((packed)) hal_hw_uefi_XsdtDesc;

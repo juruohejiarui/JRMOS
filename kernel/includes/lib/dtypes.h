@@ -13,8 +13,13 @@ typedef signed long i64;
 typedef float f32;
 typedef double f64;
 
+#ifndef __always_inline__
 #define __always_inline__  inline __attribute__ ((always_inline))
+#endif
+
+#ifndef __noinline__
 #define __noinline__ __attribute__ ((noinline))
+#endif
 
 #define NULL ((void *)0)
 

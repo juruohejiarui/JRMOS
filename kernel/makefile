@@ -1,14 +1,7 @@
-C_HOST=gcc
-CPP_HOST=g++
+HOSTC=gcc
+HOSTCPP=g++
 C_STD=c11
 CPP_STD=c++20
-
-rely: ./Tools/rely
-	@./Tools/rely -arch $(ARCH)
-	@echo [SCRIPT] build rely
-./Tools/rely: ./Tools/rely.cpp
-	@g++ ./Tools/rely.cpp -o ./Tools/rely --std=$(CPP_STD)
-	@echo "[HOSTCPP] ./Tools/rely.cpp"
 
 ARCH_HOST=$(shell uname -m)
 
@@ -49,13 +42,47 @@ C_FLAGS= \
 	-mno-red-zone \
 	-fmerge-constants \
 
+GEN_C_FLAGS= \
+	--std=$(C_STD) \
+	$(C_INCLUDE_PATH) \
+	-fno-builtin -fno-stack-protector \
+	-Wno-packed-bitfield-compat \
+	-Wno-address-of-packed-member \
+	-mno-red-zone \
+	-fmerge-constants \
+
 ASM_FLAGS=$(ASM_FLAGS_ARCH)
 
 LD_FLAGS=$(LG_FLAGS_ARCH) -z muldefs --no-warn-rwx-segments -z noexecstack
 
 OBJCOPY_FLAGS=$(OBJCOPY_FLAGS_ARCH) -O binary
 
+ALLGENOBJS=
+ALLGENSCRIPTS=
+include ./.gendepend
+
+ALLOBJS=
+ALLTMPS=
 include ./.depend
+
+rely: ./Tools/rely
+	@./Tools/rely $(ARCH) CC C_FLAGS o .depend . ALLOBJS ALLTMPS Tools 
+	@echo [SCRIPT] build rely
+genrely: ./Tools/rely
+	@./Tools/rely $(ARCH) HOSTC GEN_C_FLAGS script .gendepend ./Tools/hal/gen ALLGENOBJS ALLGENSCRIPTS
+	@echo [SCRIPT] build generation rely
+
+./Tools/gen: ./Tools/gen.cpp
+	@$(HOSTCPP) ./Tools/gen.cpp -o ./Tools/gen --std=$(CPP_STD)
+	@echo "[HOSTCPP] ./Tools/gen.cpp"
+
+gen: $(ALLGENSCRIPTS)
+	@echo "[GEN] generate"
+
+./Tools/rely: ./Tools/rely.cpp
+	@$(HOSTCPP) ./Tools/rely.cpp -o ./Tools/rely --std=$(CPP_STD)
+	@echo "[HOSTCPP] ./Tools/rely.cpp"
+
 
 all: system_tmp ./Tools/hal/kallsyms.o
 	@$(LD) $(LD_FLAGS) -o system $(ALLOBJS) ./Tools/hal/kallsyms.o -T $(ARCH_DIR)/kernel.lds 
@@ -67,13 +94,16 @@ system_tmp: $(ALLOBJS)
 	@$(LD) $(LD_FLAGS) $(LDFLAGS_ARCH) -o system_tmp $(ALLOBJS) -T $(ARCH_DIR)/kernel.lds 
 	@echo "[LD] system_tmp"
 
-./Tools/hal/kallsyms.o: ./Tools/hal/kallsyms.c system_tmp
-	@$(C_HOST) -o ./Tools/hal/kallsyms ./Tools/hal/kallsyms.c
+./Tools/hal/kallsyms: ./Tools/hal/kallsyms.c
+	@$(HOSTC) -o ./Tools/hal/kallsyms ./Tools/hal/kallsyms.c
+	@echo "[HOSTC] ./Tools/hal/kallsyms.c"
+
+./Tools/hal/kallsyms.o: ./Tools/hal/kallsyms system_tmp
 	@$(NM) -n system_tmp | ./Tools/hal/kallsyms > ./Tools/hal/kallsyms.S
 	@$(CC) -c ./Tools/hal/kallsyms.S -o ./Tools/hal/kallsyms.o -Wl,--no-warn-rwx-segments
 	@echo "[GEN] kallsyms.o"
 
 clean:
-	rm -rf $(ALLTMPS)
-	rm system system_tmp kernel.bin ./Tools/hal/kallsyms.o ./Tools/hal/kallsyms.S ./Tools/hal/kallsyms ./Tools/rely
-	rm .depend
+	rm -rf $(ALLOBJS) $(ALLTMPS) $(ALLGENOBJS) $(ALLGENTMPS)
+	rm system system_tmp kernel.bin ./Tools/hal/kallsyms.o ./Tools/hal/kallsyms.S ./Tools/hal/kallsyms ./Tools/rely ./Tools/gen
+	rm .depend .gendepend .gentask

@@ -1,17 +1,22 @@
 
 
 #!/bin/bash
+
+./install-EFI-img.sh
+
 uNames='uname -s'
+sudoFlag=''
 osName=$(uname -s)
 
 if [ "$osName" = "Darwin" ]; then
-	echo "under MacOS"
+	echo "debug-qemu: under MacOS"
 	ovmfPath="./OVMF_CODE_4M.fd"
 	paramArch="-cpu Haswell \
 		-vga virtio \
 		-accel tcg"
 else
-	echo "under Linux"
+	echo "debug-qemu: under Linux"
+	sudoFlag="sudo"
 	ovmfPath="/usr/share/OVMF/OVMF_CODE_4M.fd"
 	paramArch="-cpu host \
 		-enable-kvm"
@@ -20,6 +25,7 @@ usbVendor=0x21c4
 usbProduct=0x0cd1
 # usbVendor=0x17ef
 # usbProduct=0x3899
+
 
 param="-drive file="${ovmfPath}",if=pflash,format=raw,unit=0,readonly=on \
 		-monitor stdio \
@@ -34,6 +40,7 @@ param="-drive file="${ovmfPath}",if=pflash,format=raw,unit=0,readonly=on \
 		-m 512M \
 		-smp 4"
 
-qemu-system-x86_64 \
+
+$sudoFlag qemu-system-x86_64 \
 	$param \
 	$paramArch

@@ -14,9 +14,9 @@
 // please update the corresponding constant in cpu/asmdesc.h
 typedef struct cpu_Desc {
     u64 state;
-    u64 intrMsk[64];
+    u64 intrMsk[4];
     u32 intrUsage, intrFree;
-    intr_Info *intrInfo[0x40];
+    intr_Info *intrInfo[0x100];
     hal_cpu_Desc hal;
 } __attribute__ ((packed)) cpu_Desc;
 

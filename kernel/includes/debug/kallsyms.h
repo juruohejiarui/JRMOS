@@ -1,5 +1,5 @@
-#ifndef __HAL_DEBUG_KALLSYMS_H__
-#define __HAL_DEBUG_KALLSYMS_H__
+#ifndef __DEBUG_KALLSYMS_H__
+#define __DEBUG_KALLSYMS_H__
 
 extern unsigned long dbg_kallsyms_addr[] __attribute__((weak));
 extern long dbg_kallsyms_syms_num __attribute__((weak));

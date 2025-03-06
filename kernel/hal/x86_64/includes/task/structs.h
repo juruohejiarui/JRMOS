@@ -6,6 +6,8 @@
 #include <hal/mm/map.h>
 
 typedef struct hal_task_ThreadStruct {
+	// physical address of pgd
+	u64 pgd;
 } __attribute__ ((packed)) hal_task_ThreadStruct;
 
 typedef struct hal_task_TaskStruct {

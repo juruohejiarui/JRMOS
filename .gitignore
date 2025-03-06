@@ -2,11 +2,15 @@
 *.o
 *.STMP
 *.log
+*.script
 /kernel/Tools/rely
+/kernel/Tools/gen
 /kernel/hal/*/Tools/kallsyms
 /kernel/hal/*/Tools/kallsyms.S
 /kernel/system
 /kernel/system_tmp
 /kernel/kernel.bin
 .depend
+.gendepend
+.gentask
 .DS_store

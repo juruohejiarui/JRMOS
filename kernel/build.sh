@@ -14,10 +14,21 @@ if [ ! -f ./.depend ]; then
 	touch ./.depend
 fi
 
+if [ ! -f ./.gendepend ]; then
+	touch ./.gendepend
+fi
+
+if [ ! -f ./.gentask ]; then
+	touch ./.gentask
+fi
+
 ln -s ../hal/${ARCH}/includes/ ./includes/hal
 ln -s ../hal/${ARCH}/Tools/ ./Tools/hal
 
+make genrely ARCH=${ARCH}
+make gen ARCH=${ARCH}
 make rely ARCH=${ARCH}
+
 if [ $? -ne 0 ]; then
 	echo "failed to build rely."
 else
