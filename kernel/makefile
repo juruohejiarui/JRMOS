@@ -48,7 +48,6 @@ GEN_C_FLAGS= \
 	-fno-builtin -fno-stack-protector \
 	-Wno-packed-bitfield-compat \
 	-Wno-address-of-packed-member \
-	-mno-red-zone \
 	-fmerge-constants \
 
 ASM_FLAGS=$(ASM_FLAGS_ARCH)
@@ -105,5 +104,5 @@ system_tmp: $(ALLOBJS)
 
 clean:
 	rm -rf $(ALLOBJS) $(ALLTMPS) $(ALLGENOBJS) $(ALLGENTMPS)
-	rm system system_tmp kernel.bin ./Tools/hal/kallsyms.o ./Tools/hal/kallsyms.S ./Tools/hal/kallsyms ./Tools/rely ./Tools/gen
-	rm .depend .gendepend .gentask
+	rm system system_tmp kernel.bin ./Tools/hal/kallsyms.o ./Tools/hal/kallsyms.S ./Tools/hal/kallsyms ./Tools/rely
+	rm .depend .gendepend

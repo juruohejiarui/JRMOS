@@ -18,5 +18,12 @@
 
 task_TaskStruct *task_newSubTask(void *entryAddr, void *arg);
 
+void task_sche_updState();
+
+void task_sche_init();
+
+void task_sche_release();
+
+void task_schedule();
 
 #endif

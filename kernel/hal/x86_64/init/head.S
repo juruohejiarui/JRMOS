@@ -1,7 +1,9 @@
 #include <hal/linkage.h>
+#include <hal/cpu/genasm.h>
 
-// .globl hw_CPU_cpuInfo
-// .globl hal_init_initSMP
+.globl cpu_desc
+.globl hal_hw_apic_supportFlag
+.globl hal_init_initSMP
 .globl hal_init_init
 .globl hal_init_stk
 
@@ -32,31 +34,29 @@ ENTRY(_start)
     movq $0x1b, %rcx
     rdmsr
     bt $8, %rax
-    // jnc setSMPInfo
+    jnc setSMPInfo
 
     movq stkPtr(%rip), %rsp
 	lidt hal_init_idtPtr(%rip)
     jmp setSmpTmpStkEnd
 
-// setSMPInfo:
-// 	// movq 0x7e00, %rsp
-// 	// callq testT
-//     movq $0xb, %rax
-//     xorq %rcx, %rcx
-//     cpuid
-//     leaq SMP_cpuInfo(%rip), %rax
-// setSMPInfo_LoopStart:
-//     cmpl (%rax), %edx
-//     jz setSMPInfo_LoopEnd
-//     addq $616, %rax
-//     jmp setSMPInfo_LoopStart
-// setSMPInfo_LoopEnd:
-// 	// set stack pointer
-//     movq 0x10(%rax), %rsi
-// 	// set idt pointer
-// 	lidt 0x2E(%rax)
-//     addq $32768, %rsi
-//     movq %rsi, %rsp
+setSMPInfo:
+    movq $0xb, %rax
+    xorq %rcx, %rcx
+    cpuid
+    leaq cpu_desc(%rip), %rax
+setSMPInfo_LoopStart:
+    cmpl hal_cpu_Desc_x2apic(%rax), %edx
+    jz setSMPInfo_LoopEnd
+    addq $cpu_DescSize, %rax
+    jmp setSMPInfo_LoopStart
+setSMPInfo_LoopEnd:
+	// set stack pointer
+    movq hal_cpu_Desc_initStk(%rax), %rsi
+	// set idt pointer
+	lidt hal_cpu_Desc_idtPtr(%rax)
+    addq $32768, %rsi
+    movq %rsi, %rsp
 setSmpTmpStkEnd:
 
     movq $0x101000, %rax
@@ -77,10 +77,10 @@ entry64:
     movq %rax, %gs
     movq %rax, %ss
 
-    // movq $0x1b, %rcx
-    // rdmsr
-    // bt $8, %rax
-    // jnc SMPEntry
+    movq $0x1b, %rcx
+    rdmsr
+    bt $8, %rax
+    jnc SMPEntry
 
     movq stkPtr(%rip), %rsp
 
@@ -146,12 +146,12 @@ setupTSS64:
     pushq %rax
     lretq
 
-// SMPEntry:
-//     movq %rsi, %rsp
-//     leaq startSMP(%rip), %rax
-//     pushq $0x08
-//     pushq %rax
-//     lretq
+SMPEntry:
+    movq %rsi, %rsp
+    leaq hal_init_initSMP(%rip), %rax
+    pushq $0x08
+    pushq %rax
+    lretq
 
 // goToSmpKernel:
     // .quad hal_Init_initSMP

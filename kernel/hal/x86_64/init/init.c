@@ -9,7 +9,7 @@
 #include <mm/map.h>
 #include <mm/buddy.h>
 
-u8 hal_init_stk[task_krlStkSize] __attribute__((__section__ (".data.hal_init_stack") )) = {};
+u8 hal_init_stk[task_krlStkSize] __attribute__((__section__ (".data.hal_init_stk") )) = {};
 
 // this is the function called by head.S
 void hal_init_init() {
@@ -35,4 +35,8 @@ void hal_init_init() {
 	int i = 1 / 0;
 
 	while (1) ;
+}
+
+void hal_init_initSMP() {
+
 }

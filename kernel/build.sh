@@ -18,10 +18,6 @@ if [ ! -f ./.gendepend ]; then
 	touch ./.gendepend
 fi
 
-if [ ! -f ./.gentask ]; then
-	touch ./.gentask
-fi
-
 ln -s ../hal/${ARCH}/includes/ ./includes/hal
 ln -s ../hal/${ARCH}/Tools/ ./Tools/hal
 

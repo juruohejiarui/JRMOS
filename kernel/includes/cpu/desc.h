@@ -16,9 +16,12 @@ typedef struct cpu_Desc {
     u64 state;
     u64 intrMsk[4];
     u32 intrUsage, intrFree;
-    intr_Info *intrInfo[0x100];
     hal_cpu_Desc hal;
 } __attribute__ ((packed)) cpu_Desc;
+
+#define cpu_irq_Schedule    0x0
+#define cpu_irq_Pause       0x1
+#define cpu_irq_Execute     0x2
 
 extern u32 cpu_num;
 extern cpu_Desc cpu_desc[cpu_mxNum];

@@ -2,19 +2,19 @@
 
 #!/bin/bash
 
-./install-EFI-img.sh
 
 uNames='uname -s'
 sudoFlag=''
-osName=$(uname -s)
+osName=$(uname -m)
 
-if [ "$osName" = "Darwin" ]; then
-	echo "debug-qemu: under MacOS"
+if [ "$osName" = "arm64" -o "$osName" = "aarch64" ]; then
+	echo "debug-qemu: under aarch64"
 	ovmfPath="./OVMF_CODE_4M.fd"
 	paramArch="-cpu Haswell \
 		-vga virtio \
 		-accel tcg"
 else
+	./install-EFI-img.sh
 	echo "debug-qemu: under Linux"
 	sudoFlag="sudo"
 	ovmfPath="/usr/share/OVMF/OVMF_CODE_4M.fd"

@@ -10,4 +10,9 @@
 
 #define task_ThreadStruct_hal 0x258
 #define hal_task_ThreadStruct_pgd 0x258
+
+#define task_state_Running			0
+#define task_state_NeedSchedule	0x1
+#define task_state_Idle			0x2
+
 #endif

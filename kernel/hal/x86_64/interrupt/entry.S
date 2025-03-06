@@ -1,4 +1,5 @@
 #include <hal/linkage.h>
+#include <hal/task/genasm.h>
 
 offsetR15		= 0x00
 offsetR14		= 0x08
@@ -60,12 +61,14 @@ ENTRY(hal_intr_restoreAll)
 
 retFromException:
 ENTRY(hal_intr_retFromIntr)
-    // call Task_schedule
-	// // get CPU_ID of current task
-	// movq %rsp, %rax
-	// andq $-32768, %rax
-	// movq 0x50(%rax), %rax
-    // movq $-1, %rcx
+    movq %rsp, %rax
+	andq $-32768, %rax
+	movq task_TaskStruct_state(%rax), %rax
+    cmpq $task_state_NeedSchedule, %rax
+    jne hal_intr_endSchedule
+    callq task_schedule
+hal_intr_endSchedule:
+	// get CPU_ID of current task
     // leaq Intr_SoftIrq_state(%rip), %rbx
 	// testq (%rbx, %rax, 8), %rcx
     // jnz _softirqHandler

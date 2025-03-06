@@ -27,7 +27,9 @@ static __always_inline__ task_TaskStruct *hal_task_getCurrent() {
 
 #define hal_task_current hal_task_getCurrent()
 
-void hal_task_switch(task_TaskStruct *to);
-void hal_task_switchTss(task_TaskStruct *prev, task_TaskStruct *next);
+void hal_task_sche_switch(task_TaskStruct *to);
+void hal_task_sche_switchTss(task_TaskStruct *prev, task_TaskStruct *next);
+
+void hal_task_sche_updOtherState();
 
 #endif

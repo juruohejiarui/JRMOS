@@ -12,6 +12,11 @@
 #define task_level_Kernel   0x0
 #define task_level_User     0x3
 
+#define task_state_Running      0x0
+#define task_state_NeedSchedule 0x1
+#define task_state_Idle         0x2
+#define task_state_WaitFree     0x3
+
 #define task_nrSignal	64
 
 #endif
