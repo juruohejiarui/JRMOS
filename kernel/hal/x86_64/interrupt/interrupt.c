@@ -1,4 +1,4 @@
-#include <hal/interrupt/interrupt.h>
+#include <hal/interrupt/api.h>
 #include <hal/interrupt/trap.h>
 #include <hal/init/init.h>
 #include <hal/hardware/apic.h>
@@ -34,11 +34,11 @@ void hal_intr_setTssItem(u64 idx, hal_intr_TSS *tss) {
 }
 
 void hal_intr_dispatcher(u64 rsp, u64 irqId) {
-    intr_Info *intr = &hal_intr_intrInfo[irqId - 0x20];
+    intr_Desc *intr = &hal_intr_desc[irqId - 0x20];
     if (intr->handler == NULL) {
         printk(RED, BLACK, "intr: no handler for intr #%#lx\n", irqId);
     } else intr->handler(intr->param);
-    if (intr->ctrl != NULL && intr->ctrl->ack != NULL) intr->ctrl->ack(irqId);
+    if (intr->ctrl != NULL && intr->ctrl->ack != NULL) intr->ctrl->ack(intr);
 }
 
 #define buildIrq(x) hal_intr_buildIrq(hal_intr_irq, x, hal_intr_dispatcher)
@@ -50,7 +50,7 @@ buildIrq(0x2c)  buildIrq(0x2d)  buildIrq(0x2e)  buildIrq(0x2f)
 buildIrq(0x30)  buildIrq(0x31)  buildIrq(0x32)  buildIrq(0x33)
 buildIrq(0x34)  buildIrq(0x35)  buildIrq(0x36)  buildIrq(0x37)
 
-void (*hal_intr_irqList[24])(void) = {
+void (*hal_intr_entryList[24])(void) = {
     hal_intr_irq0x20, hal_intr_irq0x21, hal_intr_irq0x22, hal_intr_irq0x23, 
     hal_intr_irq0x24, hal_intr_irq0x25, hal_intr_irq0x26, hal_intr_irq0x27,
     hal_intr_irq0x28, hal_intr_irq0x29, hal_intr_irq0x2a, hal_intr_irq0x2b,
@@ -59,7 +59,7 @@ void (*hal_intr_irqList[24])(void) = {
     hal_intr_irq0x34, hal_intr_irq0x35, hal_intr_irq0x36, hal_intr_irq0x37
 };
 
-intr_Info hal_intr_intrInfo[24];
+intr_Desc hal_intr_desc[24];
 
 int hal_intr_init() {
 	if (hal_hw_apic_init() == res_FAIL) return res_FAIL;
@@ -75,6 +75,6 @@ int hal_intr_init() {
     hal_intr_setTr(10);
     
     // set intr gates
-    for (int i = 0; i < 24; i++) hal_intr_setIntrGate(hal_init_idtTbl, i + 0x20, 0, hal_intr_irqList[i]);
+    for (int i = 0; i < 24; i++) hal_intr_setIntrGate(hal_init_idtTbl, i + 0x20, 0, hal_intr_entryList[i]);
     return res_SUCC;
 }

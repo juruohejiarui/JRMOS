@@ -1,7 +1,7 @@
 #ifndef __INTERRUPT_INTERRUPT_H__
 #define __INTERRUPT_INTERRUPT_H__
 
-#include <hal/interrupt/interrupt.h>
+#include <hal/interrupt/api.h>
 #include <interrupt/desc.h>
 
 #ifdef HAL_INTR_MASK
@@ -28,12 +28,26 @@
 #error no definition of intr_pause() for this arch
 #endif
 
-int intr_alloc(u32 *cpuId, u32 *vecId);
+void intr_initDesc(intr_Desc *desc, void (*handler)(u64), u64 param, char *name, intr_Ctrl *ctrl);
+
+int intr_alloc(intr_Desc *desc, int intrNum);
+
+int intr_free(intr_Desc *desc, int intrNum);
 
 int intr_init();
 
-int intr_register(u8 irqId, intr_Info *info, void *installArg);
+static __always_inline__ int intr_enable(intr_Desc *desc) {
+	return desc->ctrl->enable(desc);
+}
+static __always_inline__ int intr_disable(intr_Desc *desc) {
+	return desc->ctrl->disable(desc);
+}
 
-int intr_unregister(u8 irqId);
+static __always_inline__ int intr_install(intr_Desc *desc, void *installArg) { 
+	return desc->ctrl->install(desc, installArg);
+}
+static __always_inline__ int intr_uninstall(intr_Desc *desc) {
+	return desc->ctrl->uninstall(desc);
+}
 
 #endif

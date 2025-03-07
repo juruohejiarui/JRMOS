@@ -4,29 +4,26 @@
 #include <lib/dtypes.h>
 #include <hal/interrupt/desc.h>
 
+struct intr_Desc;
+
 struct intr_Ctrl {
-    void (*install)(u8 irq, void *arg);
-    void (*uninstall)(u8 irq);
+    int (*install)(struct intr_Desc *desc, void *arg);
+    int (*uninstall)(struct intr_Desc *desc);
 
-    void (*enable)(u8 irq);
-    void (*disable)(u8 irq);
+    int (*enable)(struct intr_Desc *desc);
+    int (*disable)(struct intr_Desc *desc);
 
-    void (*ack)(u8 irq);
+    void (*ack)(struct intr_Desc *desc);
 };
 typedef struct intr_Ctrl intr_Ctrl;
 
-struct intr_Info {
+typedef struct intr_Desc {
     u8 cpuId, vecId;
-
     u64 param;
-
     char *name;
-    
     void (*handler)(u64 param);
     intr_Ctrl *ctrl;
-};
-
-typedef struct intr_Info intr_Info;
+} intr_Desc;
 
 #define intr_handlerDeclare(name) void name(u64 param)
 

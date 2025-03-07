@@ -2,7 +2,9 @@
 #include <lib/string.h>
 #include <lib/spinlock.h>
 #include <lib/algorithm.h>
+#include <mm/mm.h>
 #include <mm/dmas.h>
+#include <mm/buddy.h>
 #include <task/api.h>
 #include <interrupt/api.h>
 #include "font.h"
@@ -35,6 +37,17 @@ void screen_init() {
 	position.fbAddr = mm_dmas_phys2Virt(screen_info->frameBufBase);
 
 	_lineSize = screen_info->pixelPreLine * screen_charHeight;
+}
+
+int screen_enableBuf() {
+    u64 bufSize = screen_info->pixelPreLine * screen_info->verRes * sizeof(u32);
+    u64 log2BufSize = 0;
+    while ((1ul << log2BufSize) < bufSize) log2BufSize++;
+    mm_Page *pages = mm_allocPages(max(0, log2BufSize - mm_pageShift), mm_Attr_Shared);
+    if (pages == NULL) return res_FAIL;
+    _bufAddr = mm_dmas_phys2Virt(mm_getPhyAddr(pages));
+    // copy the screen to buf
+    memcpy(position.fbAddr, _bufAddr, bufSize);
 }
 
 #define isDigit(ch) ((ch) >= '0' && (ch) <= '9')

@@ -18,7 +18,10 @@ struct ioApicMap {
 } ioApicMap;
 
 static mm_Page *_locApicPg;
+
 u64 hal_hw_apic_supportFlag;
+
+intr_Ctrl hal_hw_apic_intrCtrl;
 
 int hal_hw_apic_map() {
 	if (mm_dmas_map(0xfec00000) == res_FAIL) return res_FAIL;
@@ -108,6 +111,12 @@ int hal_hw_apic_init() {
 	hal_hw_io_out32(0xcf8, 0x8000f8f0);
 	hal_hw_mfence();
 
+	hal_hw_apic_intrCtrl.ack = hal_hw_apic_edgeAck;
+	hal_hw_apic_intrCtrl.install = hal_hw_apic_install;
+	hal_hw_apic_intrCtrl.uninstall = hal_hw_apic_uninstall;
+	hal_hw_apic_intrCtrl.enable = hal_hw_apic_enable;
+	hal_hw_apic_intrCtrl.disable = hal_hw_apic_disable;
+
 	return res_SUCC;
 }
 
@@ -137,29 +146,33 @@ u64 hal_hw_apic_readRte(u8 idx) {
 
 	return val;
 }
-void hal_hw_apic_install(u8 vecId, void *arg) {
+int hal_hw_apic_install(intr_Desc *desc, void *arg) {
 	u64 val = *(u64 *)arg;
-	((hal_hw_apic_RteDesc *)val)->mask = 1;
-	hal_hw_apic_writeRte(_idxOfRte(vecId), val);
+	((hal_hw_apic_RteDesc *)&val)->mask = hal_hw_apic_Mask_Masked;
+	hal_hw_apic_writeRte(_idxOfRte(desc->vecId), val);
+	return res_SUCC;
 }
 
-void hal_hw_apic_uninstall(u8 vecId) {
-	hal_hw_apic_writeRte(_idxOfRte(vecId), (1ul << 16));
+int hal_hw_apic_uninstall(intr_Desc *desc) {
+	hal_hw_apic_writeRte(_idxOfRte(desc->vecId), (1ul << 16));
+	return res_SUCC;
 }
 
-void hal_hw_apic_enable(u8 vecId) {
-	u64 desc = hal_hw_apic_readRte(_idxOfRte(vecId));
-	((hal_hw_apic_RteDesc *)&desc)->mask = 0;
-	hal_hw_apic_writeRte(_idxOfRte(vecId), desc);
+int hal_hw_apic_enable(intr_Desc *desc) {
+	u64 rte = hal_hw_apic_readRte(_idxOfRte(desc->vecId));
+	((hal_hw_apic_RteDesc *)&rte)->mask = hal_hw_apic_Mask_Unmasked;
+	hal_hw_apic_writeRte(_idxOfRte(desc->vecId), rte);
+	return res_SUCC;
 }
 
-void hal_hw_apic_disable(u8 vecId) {
-	u64 desc = hal_hw_apic_readRte(_idxOfRte(vecId));
-	((hal_hw_apic_RteDesc *)&desc)->mask = 1;
-	hal_hw_apic_writeRte(_idxOfRte(vecId), desc);
+int hal_hw_apic_disable(intr_Desc *desc) {
+	u64 rte = hal_hw_apic_readRte(_idxOfRte(desc->vecId));
+	((hal_hw_apic_RteDesc *)&rte)->mask = hal_hw_apic_Mask_Masked;
+	hal_hw_apic_writeRte(_idxOfRte(desc->vecId), rte);
+	return res_SUCC;
 }
 
-void hal_hw_apic_edgeAck(u8 vecId) {
+void hal_hw_apic_edgeAck(intr_Desc *desc) {
 	if (hal_hw_apic_supportFlag & hal_hw_apic_supportFlag_X2Apic) {
 		__asm__ volatile (
 			"movq $0x00, %%rdx		\n\t"

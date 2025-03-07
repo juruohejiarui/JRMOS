@@ -1,4 +1,4 @@
-#include <hal/interrupt/interrupt.h>
+#include <hal/interrupt/api.h>
 #include <hal/interrupt/trap.h>
 #include <hal/hardware/reg.h>
 #include <hal/init/init.h>

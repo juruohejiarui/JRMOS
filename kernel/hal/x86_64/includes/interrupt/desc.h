@@ -3,6 +3,9 @@
 
 #include <lib/dtypes.h>
 
+#define hal_intr_vec_ps2    0x21
+#define hal_intr_vec_Timer  0x22
+
 typedef struct hal_intr_GdtItem { u8 dt[8]; } hal_intr_GdtItem;
 typedef struct hal_intr_IdtItem { u8 dt[16]; } hal_intr_IdtItem;
 

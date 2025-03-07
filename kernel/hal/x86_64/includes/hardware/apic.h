@@ -4,6 +4,7 @@
 #include <lib/dtypes.h>
 #include <mm/dmas.h>
 #include <hal/hardware/reg.h>
+#include <interrupt/desc.h>
 
 // I/O APIC Redirection Table Entry Descriptor
 typedef struct hal_hw_apic_RteDesc {
@@ -100,6 +101,8 @@ extern u64 hal_hw_apic_supportFlag;
 #define hal_hw_apic_supportFlag_X2Apic			(1ul << 0)
 #define hal_hw_apic_supportFlag_EOIBroadcase	(1ul << 1)
 
+extern intr_Ctrl hal_hw_apic_intrCtrl;
+
 static __always_inline__ void hal_hw_apic_setIcrDest(hal_hw_apic_IcrDesc *icr, u32 apicId, u32 x2ApicId) {
 	(hal_hw_apic_supportFlag & hal_hw_apic_supportFlag_X2Apic) ? (icr->dest.x2Apic = x2ApicId) : (icr->dest.apic = apicId);
 }
@@ -110,18 +113,18 @@ static __always_inline__ u32 hal_hw_apic_getApicId() {
 
 
 static __always_inline__ u64 hal_hw_apic_getApicBase() { return hal_hw_readMsr(0x1b); }
-static __always_inline__ void hal_hw_apic_setApicBase(u64 base) { hal_hw_writeMsr(0x1b, base | hal_hw_readMsr(0x1b)); }
+static __always_inline__ void hal_hw_apic_setApicBase(u64 base) { hal_hw_writeMsr(0x1b, base | (hal_hw_readMsr(0x1b) & ((1ul << 12) - 1))); }
 
 void hal_hw_apic_writeRte(u8 idx, u64 val);
 u64 hal_hw_apic_readRte(u8 idx);
 
-void hal_hw_apic_install(u8 vecId, void *arg);
-void hal_hw_apic_uninstall(u8 vecId);
+int hal_hw_apic_install(intr_Desc *desc, void *arg);
+int hal_hw_apic_uninstall(intr_Desc *desc);
 
-void hal_hw_apic_enable(u8 vecId);
-void hal_hw_apic_disable(u8 vecId);
+int hal_hw_apic_enable(intr_Desc *desc);
+int hal_hw_apic_disable(intr_Desc *desc);
 
-void hal_hw_apic_edgeAck(u8 vecId);
+void hal_hw_apic_edgeAck(intr_Desc *desc);
 
 int hal_hw_apic_init();
 

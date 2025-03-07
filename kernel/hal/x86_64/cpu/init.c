@@ -1,7 +1,7 @@
 #include <hal/hardware/uefi.h>
 #include <hal/hardware/apic.h>
 #include <hal/hardware/cpu.h>
-#include <hal/interrupt/interrupt.h>
+#include <hal/interrupt/api.h>
 #include <hal/init/init.h>
 #include <hal/cpu/api.h>
 #include <cpu/desc.h>
@@ -117,5 +117,17 @@ int hal_cpu_init() {
 			i, cpu_desc[i].hal.x2apic, cpu_desc[i].hal.apic, cpu_desc[i].hal.initStk, cpu_desc[i].hal.idtTbl, &cpu_desc[i].hal.idtTblSz,
 			cpu_desc[i].hal.tss);
 	}
+
+	cpu_bspIdx = cpu_mxNum;
+	for (int i = 0; i < cpu_num; i++)
+		if (hal_cpu_bspApicId == cpu_desc[i].hal.x2apic) {
+			cpu_bspIdx = i;
+			break;
+		}
+	if (cpu_bspIdx == cpu_mxNum) {
+		printk(RED, BLACK, "cpu : failed to find BSP in cpu list.\n");
+		return res_FAIL;
+	}
+	printk(WHITE, BLACK, "cpu: bspIdx:%d\n", cpu_bspIdx);
 	return res_SUCC;
 } 

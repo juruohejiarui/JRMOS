@@ -28,6 +28,8 @@ typedef struct screen_Info {
 extern screen_Info *screen_info;
 void screen_init();
 
+int screen_enableBuf();
+
 void printk(unsigned int fcol, unsigned int bcol, const char *fmt, ...);
 
 #endif
