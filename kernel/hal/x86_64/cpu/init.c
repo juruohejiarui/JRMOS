@@ -13,10 +13,6 @@
 static u32 _curTrIdx;
 u32 hal_cpu_bspApicId;
 
-int _initIntr() {
-	
-}
-
 static __always_inline__ int _canEnableProc(u32 flag) {
 	return (flag & 0x1) || (!(flag & 0x1) && (flag & 0x2));
 }

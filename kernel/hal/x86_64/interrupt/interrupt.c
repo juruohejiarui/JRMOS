@@ -76,5 +76,7 @@ int hal_intr_init() {
     
     // set intr gates
     for (int i = 0; i < 24; i++) hal_intr_setIntrGate(hal_init_idtTbl, i + 0x20, 0, hal_intr_entryList[i]);
+
+    if (hal_cpu_initIntr() == ) 
     return res_SUCC;
 }
