@@ -5,6 +5,8 @@
 
 int hal_cpu_init();
 
+int hal_cpu_enableAP();
+
 int hal_cpu_initIntr();
 
 void hal_cpu_sendIntr_all(u64 irq);

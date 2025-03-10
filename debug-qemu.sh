@@ -5,22 +5,33 @@
 
 uNames='uname -s'
 sudoFlag=''
-osName=$(uname -m)
+archName=$(uname -m)
+osName=$(uname -s)
 
-if [ "$osName" = "arm64" -o "$osName" = "aarch64" ]; then
+
+if [ "$archName" = "arm64" -o "$archName" = "aarch64" ]; then
 	echo "debug-qemu: under aarch64"
 	ovmfPath="./OVMF_CODE_4M.fd"
 	paramArch="-cpu Haswell \
 		-vga virtio \
 		-accel tcg"
 else
-	./install-EFI-img.sh
 	echo "debug-qemu: under Linux"
 	sudoFlag="sudo"
 	ovmfPath="/usr/share/OVMF/OVMF_CODE_4M.fd"
 	paramArch="-cpu host \
 		-enable-kvm"
 fi
+
+if [ "$osName" = "Linux" ]; then
+	./install-EFI-img.sh
+	echo "debug-qemu: under Linux"
+	paramOs="-vga std"
+else
+	echo "debug-qemu: under MacOS"
+	paramOs="-vga virtio"
+fi
+
 usbVendor=0x21c4
 usbProduct=0x0cd1
 # usbVendor=0x17ef
@@ -43,4 +54,5 @@ param="-drive file="${ovmfPath}",if=pflash,format=raw,unit=0,readonly=on \
 
 $sudoFlag qemu-system-x86_64 \
 	$param \
-	$paramArch
+	$paramArch \
+	$paramOs

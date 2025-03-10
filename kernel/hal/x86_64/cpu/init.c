@@ -126,4 +126,8 @@ int hal_cpu_init() {
 	}
 	printk(WHITE, BLACK, "cpu: bspIdx:%d\n", cpu_bspIdx);
 	return res_SUCC;
-} 
+}
+
+int hal_cpu_enableAP() {
+	
+}

@@ -35,6 +35,8 @@ void hal_init_init() {
 
 	if (hal_timer_init() == res_FAIL) while (1) hal_hw_hlt();
 
+	if (hal_cpu_enableAP() == res_FAIL) while (1) hal_hw_hlt();
+
 	intr_unmask();
 
 	// int i = 1 / 0;
