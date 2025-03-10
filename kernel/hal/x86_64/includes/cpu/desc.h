@@ -7,6 +7,10 @@
 
 #define hal_cpu_mxNum	128
 
+#define hal_cpu_intr_Schedule   0x80
+#define hal_cpu_intr_Pause      0x81
+#define hal_cpu_intr_Execute    0x82
+
 typedef struct hal_cpu_Desc {
     u32 x2apic;
     u32 apic;

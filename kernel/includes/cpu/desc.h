@@ -12,6 +12,10 @@
 #define cpu_Desc_state_Trapped  0x2
 #define cpu_Desc_state_Pause    0x3
 
+#define cpu_intr_Schedule   hal_cpu_intr_Schedule
+#define cpu_intr_Pause      hal_cpu_intr_Pause
+#define cpu_intr_Execute    hal_cpu_intr_Execute
+
 // when you need to modify the structure of this descriptor
 // please update the corresponding constant in cpu/asmdesc.h
 typedef struct cpu_Desc {
@@ -25,10 +29,6 @@ typedef struct cpu_Desc {
     softirq_Desc sirq[64];
     hal_cpu_Desc hal;
 } __attribute__ ((packed)) cpu_Desc;
-
-#define cpu_irq_Schedule    0x0
-#define cpu_irq_Pause       0x1
-#define cpu_irq_Execute     0x2
 
 extern u32 cpu_num;
 extern u32 cpu_bspIdx;

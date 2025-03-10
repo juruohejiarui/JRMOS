@@ -16,7 +16,7 @@ static __always_inline__ int task_sche_cfsTreeCmp(RBNode *a, RBNode *b) {
 
 RBTree_insert(task_sche_cfsTreeIns, task_sche_cfsTreeCmp)
 
-static __always_inline__ void task_sche_updCurState() {
+void task_sche_updCurState() {
     register u64 tmp = task_sche_cfsTbl[task_current->priority];
     task_current->vRuntime++;
     task_current->resRuntime--;

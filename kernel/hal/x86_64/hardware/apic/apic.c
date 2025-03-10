@@ -91,7 +91,7 @@ int hal_hw_apic_initLocal() {
 }
 
 int hal_hw_apic_initIO() {
-	
+	return res_SUCC;
 }
 
 int hal_hw_apic_init() {
@@ -146,6 +146,16 @@ u64 hal_hw_apic_readRte(u8 idx) {
 
 	return val;
 }
+
+void hal_hw_apic_writeIcr(u64 val) {
+	if (hal_hw_apic_supportFlag & hal_hw_apic_supportFlag_X2Apic) hal_hw_writeMsr(0x830, val);
+	else {
+		*(u32 *)mm_dmas_phys2Virt(0xfee00310) = (u32)(val >> 32);
+		hal_hw_mfence();
+		*(u32 *)mm_dmas_phys2Virt(0xfee00300) = val & 0xffffffffu;
+	}
+}
+
 int hal_hw_apic_install(intr_Desc *desc, void *arg) {
 	u64 val = *(u64 *)arg;
 	((hal_hw_apic_RteDesc *)&val)->mask = hal_hw_apic_Mask_Masked;

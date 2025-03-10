@@ -18,6 +18,8 @@
 
 task_TaskStruct *task_newSubTask(void *entryAddr, void *arg);
 
+void task_sche_updCurState();
+
 void task_sche_updState();
 
 void task_sche_init();

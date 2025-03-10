@@ -89,7 +89,7 @@ int _parseMadt() {
 }
 
 int hal_cpu_init() {
-	if (_initIntr() == res_FAIL) return res_FAIL;
+	if (hal_cpu_initIntr() == res_FAIL) return res_FAIL;
 
 	cpu_num = 0;
 	_curTrIdx = 12;
