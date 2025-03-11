@@ -24,8 +24,9 @@ SECTIONS
 	{
 		mm_symbol_text = .;
 		KEEP(*hal/x86_64/init/head.o(.text))
+		KEEP(*hal/x86_64/cpu/apboot.o(.text))
 		*(.text)
-
+		*(.text)
 		mm_symbol_etext = .;
 	}
 	. = ALIGN(8);

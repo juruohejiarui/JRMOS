@@ -129,5 +129,16 @@ int hal_cpu_init() {
 }
 
 int hal_cpu_enableAP() {
+	hal_hw_apic_IcrDesc icr;
+	*(u64 *)&icr = 0;
+	icr.vector = 0;
+	icr.deliverMode = hal_hw_apic_DeliveryMode_INIT;
+	icr.destMode = hal_hw_apic_DestMode_Physical;
+	icr.deliverStatus = hal_hw_apic_DeliveryStatus_Idle;
+	icr.level = hal_hw_apic_Level_Assert;
+	icr.triggerMode = hal_hw_apic_TriggerMode_Edge;
+	icr.DestShorthand = hal_hw_apic_DestShorthand_AllExcludingSelf;
 	
+	hal_hw_apic_writeIcr(*(u64 *)&icr);
+	return res_SUCC;
 }
