@@ -12,6 +12,6 @@ extern hal_intr_IdtItem hal_init_idtTbl[];
 extern u32 hal_init_tss[26];
 
 void hal_init_init();
-void hal_init_initSMP();
+void hal_init_initAP();
 
 #endif

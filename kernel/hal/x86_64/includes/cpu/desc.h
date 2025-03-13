@@ -26,7 +26,7 @@ typedef struct hal_cpu_Desc {
 
 extern u32 hal_cpu_bspApicId;
 
-extern u8 hal_cpu_apBootStart[];
+extern u8 hal_cpu_apBootEntry[];
 extern u8 hal_cpu_apBootEnd[];
 
 #endif

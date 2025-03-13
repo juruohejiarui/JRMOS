@@ -27,9 +27,18 @@ static __always_inline__ task_TaskStruct *hal_task_getCurrent() {
 
 #define hal_task_current hal_task_getCurrent()
 
+int hal_task_dispatchTask(task_TaskStruct *tsk);
+
 void hal_task_sche_switch(task_TaskStruct *to);
+
 void hal_task_sche_switchTss(task_TaskStruct *prev, task_TaskStruct *next);
 
 void hal_task_sche_updOtherState();
+
+void hal_task_newThread(hal_task_ThreadStruct *thread);
+
+void hal_task_initIdle();
+
+void hal_task_newSubTask(task_TaskStruct *tsk, void *entryAddr, u64 arg, u64 attr);
 
 #endif

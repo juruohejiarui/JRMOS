@@ -26,6 +26,6 @@ typedef struct hal_intr_PtReg {
     u64 rax;
     u64 func, errCode;
     u64 rip, cs, rflags, rsp, ss;
-} hal_intr_PtReg;
+} __attribute__ ((packed)) hal_intr_PtReg;
 
 #endif

@@ -32,20 +32,20 @@ typedef struct Slab {
 static Slab _slab[mm_slab_mxSizeShift - mm_slab_mnSizeShift + 1];
 
 static __always_inline__ int _addRecord(void *addr, u64 size, void (*destructor)(void *)) {
-    mm_KmallocRecord *record = mm_kmalloc(sizeof(mm_KmallocRecord), mm_Attr_Shared, NULL);
+    mm_SlabRecord *record = mm_kmalloc(sizeof(mm_SlabRecord), mm_Attr_Shared, NULL);
     if (!record) return res_FAIL;
     record->destructor = destructor;
     record->ptr = addr;
     record->size = size;
-    RBTree_ins(&task_current->thread->kmallocRecord, &record->rbNode);
+    RBTree_ins(&task_current->thread->slabRecord, &record->rbNode);
     return res_SUCC;
 }
 
 int _delRecord(void *addr) {
-    RBNode *node = task_current->thread->kmallocRecord.root;
-    mm_KmallocRecord *record = NULL;
+    RBNode *node = task_current->thread->slabRecord.root;
+    mm_SlabRecord *record = NULL;
     while (node) {
-        record = container(node, mm_KmallocRecord, rbNode);
+        record = container(node, mm_SlabRecord, rbNode);
         if (record->ptr == addr) break;
         else if (record->ptr < addr) node = node->right;
         else node = node->left;
@@ -54,7 +54,7 @@ int _delRecord(void *addr) {
         printk(RED, BLACK, "mm: slab: delRecord(): failed to find record of private address %#018lx\n", addr);
         return res_FAIL;
     }
-    RBTree_del(&task_current->thread->kmallocRecord, node);
+    RBTree_del(&task_current->thread->slabRecord, node);
     return mm_kfree(record, mm_Attr_Shared);
 }
 

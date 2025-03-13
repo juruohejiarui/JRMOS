@@ -4,11 +4,14 @@
 #include <hal/interrupt/api.h>
 #include <hal/init/init.h>
 #include <hal/cpu/api.h>
+#include <hal/mm/mm.h>
 #include <cpu/desc.h>
 #include <screen/screen.h>
+#include <task/structs.h>
 #include <mm/dmas.h>
 #include <mm/mm.h>
 #include <lib/string.h>
+#include <lib/algorithm.h>
 
 static u32 _curTrIdx;
 u32 hal_cpu_bspApicId;
@@ -19,7 +22,7 @@ static __always_inline__ int _canEnableProc(u32 flag) {
 
 
 static int _registerCPU(u32 x2apicId, u32 apicId) {
-	cpu_Desc *desc = &cpu_desc[cpu_num++];
+	cpu_Desc *desc = &cpu_desc[cpu_num];
 	memset(desc, 0, sizeof(cpu_Desc));
 	desc->hal.x2apic = x2apicId;
 	desc->hal.apic = apicId;
@@ -33,6 +36,10 @@ static int _registerCPU(u32 x2apicId, u32 apicId) {
 		desc->hal.trIdx = _curTrIdx;
 		_curTrIdx += 2;
 		desc->hal.tss = mm_kmalloc(128, mm_Attr_Shared, NULL);
+		memset(desc->hal.tss, 0, sizeof(hal_intr_TSS));
+		hal_intr_setTss(desc->hal.tss, 
+			(u64)desc->hal.initStk + task_krlStkSize, 0, 0, 
+			(u64)desc->hal.initStk + task_krlStkSize, (u64)desc->hal.initStk + task_krlStkSize, 0, 0, 0, 0, 0);
 		hal_intr_setTssItem(desc->hal.trIdx, desc->hal.tss);
 	} else {
 		desc->hal.initStk = hal_init_stk;
@@ -44,6 +51,10 @@ static int _registerCPU(u32 x2apicId, u32 apicId) {
 	desc->intrMsk[0] = desc->intrMsk[2] = desc->intrMsk[3] = ~0x0ul;
 	desc->intrFree = 64;
 	desc->intrUsage = 64 * 3;
+
+	// set cpuId in taskStruct
+	task_TaskStruct *tsk = (task_TaskStruct *)desc->hal.initStk;
+	tsk->cpuId = cpu_num++;
 	return res_SUCC;
 }
 
@@ -140,5 +151,54 @@ int hal_cpu_enableAP() {
 	icr.DestShorthand = hal_hw_apic_DestShorthand_AllExcludingSelf;
 	
 	hal_hw_apic_writeIcr(*(u64 *)&icr);
+
+	// enable interrupt to wait for 
+	hal_intr_unmask();
+	for (int i = 0; i < 100; i++) hal_hw_hlt();
+	hal_intr_mask();
+	
+	mm_MemMap *entry;
+	u64 stAddr, bootSz = (u64)&hal_cpu_apBootEnd - (u64)&hal_cpu_apBootEntry;
+	void *backup = mm_kmalloc(bootSz, mm_Attr_Shared, NULL);
+	for (int i = 0; i < mm_nrMemMapEntries; i++) {
+		entry = &mm_memMapEntries[i];
+		stAddr = upAlign(max(0x2000, entry->addr), Page_4KSize);
+		if (entry->attr & mm_Attr_Firmware 
+		 || stAddr >= 0x100000
+		 || bootSz > upAlign(entry->addr + entry->size, Page_4KSize) - stAddr) { 
+			entry = NULL; continue;
+		}
+		break;
+	}
+	if (entry == NULL) {
+		printk(RED, BLACK, "cpu: failed to find valid space for apu boot.\n");
+		return res_FAIL;
+	}
+	icr.vector = stAddr >> Page_4KShift;
+	icr.deliverMode = hal_hw_apic_DeliveryMode_Startup;
+	icr.DestShorthand = hal_hw_apic_DestShorthand_None;
+
+	printk(WHITE, BLACK, "cpu: startup vector: %#x sz=%ld\n", icr.vector, bootSz);
+	memcpy(mm_dmas_phys2Virt(icr.vector << Page_4KShift), backup, bootSz);
+	memcpy(&hal_cpu_apBootEntry, mm_dmas_phys2Virt(icr.vector << Page_4KShift), bootSz);
+
+	for (int i = 0; i < cpu_num; i++) if (i != cpu_bspIdx) {
+		cpu_Desc *cpu = &cpu_desc[i];
+		hal_hw_apic_setIcrDest(&icr, cpu->hal.apic, cpu->hal.x2apic);
+		hal_hw_apic_writeIcr(*(u64 *)&icr);
+
+		hal_hw_apic_writeIcr(*(u64 *)&icr);
+
+		hal_intr_unmask();
+		while (cpu->state != cpu_Desc_state_Active) hal_hw_hlt();
+		hal_intr_mask();
+	}
+
+	// copy it back
+	memcpy(backup, mm_dmas_phys2Virt(icr.vector << Page_4KShift), bootSz);
+	mm_kfree(backup, mm_Attr_Shared);
+
+	// cancel the map 0x0(virt) -> 0x0(phys)
+	for (int i = 0; i < 256; i++) ((u64 *)mm_dmas_phys2Virt(mm_krlTblPhysAddr))[i] = 0;
 	return res_SUCC;
 }

@@ -28,8 +28,12 @@ void (*hal_cpu_irqList[0x10])(void) = {
 };
 
 intr_handlerDeclare(hal_cpu_intrOfSchedule) {
-	printk(WHITE, RED, "a");
+	// printk(WHITE, RED, "a");
 	task_sche_updCurState();
+}
+
+intr_handlerDeclare(hal_cpu_intrOfPause) {
+	printk(RED, BLACK, "P%d ", task_current->cpuId);
 }
 
 int hal_cpu_initIntr() {
@@ -44,6 +48,14 @@ int hal_cpu_initIntr() {
 		desc->handler = hal_cpu_intrOfSchedule;
 		desc->ctrl = &hal_cpu_intrCtrl;
 		desc->name = "cpu schedule";
+	}
+
+	{
+		intr_Desc *desc = &hal_cpu_intrDesc[1];
+		memset(desc, 0, sizeof(intr_Desc));
+		desc->handler = hal_cpu_intrOfPause;
+		desc->ctrl = &hal_cpu_intrCtrl;
+		desc->name = "cpu pause";
 	}
 
 	return res_SUCC; 

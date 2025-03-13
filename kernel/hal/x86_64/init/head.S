@@ -3,7 +3,7 @@
 
 .globl cpu_desc
 .globl hal_hw_apic_supportFlag
-.globl hal_init_initSMP
+.globl hal_init_initAP
 .globl hal_init_init
 .globl hal_init_stk
 
@@ -70,6 +70,9 @@ switchSeg:
     .quad entry64
 
 entry64:
+
+    lgdt gdtPointer(%rip)
+    
     cli
     movq $0x10, %rax
     movq %rax, %ds
@@ -148,13 +151,13 @@ setupTSS64:
 
 SMPEntry:
     movq %rsi, %rsp
-    leaq hal_init_initSMP(%rip), %rax
+    leaq hal_init_initAP(%rip), %rax
     pushq $0x08
     pushq %rax
     lretq
 
 // goToSmpKernel:
-    // .quad hal_Init_initSMP
+    // .quad hal_Init_initAP
 
 goToKernel:
     .quad hal_init_init

@@ -130,6 +130,6 @@ void hal_hw_apic_edgeAck(intr_Desc *desc);
 
 int hal_hw_apic_init();
 
-int hal_hw_apic_initSmp();
+int hal_hw_apic_initAP();
 
 #endif

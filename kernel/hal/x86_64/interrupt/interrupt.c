@@ -4,6 +4,8 @@
 #include <hal/hardware/apic.h>
 #include <interrupt/desc.h>
 #include <screen/screen.h>
+#include <cpu/desc.h>
+#include <task/api.h>
 
 void hal_intr_setTss(hal_intr_TSS * tss,
     u64 rsp0, u64 rsp1, u64 rsp2, u64 ist1, u64 ist2, u64 ist3, u64 ist4, u64 ist5, u64 ist6, u64 ist7) {
@@ -77,5 +79,13 @@ int hal_intr_init() {
     // set intr gates
     for (int i = 0; i < 24; i++) hal_intr_setIntrGate(hal_init_idtTbl, i + 0x20, 0, hal_intr_entryList[i]);
     
+    return res_SUCC;
+}
+
+int hal_intr_initAP() {
+    cpu_Desc *desc = &cpu_desc[task_current->cpuId];
+    hal_intr_setTr(desc->hal.trIdx);
+    
+    if (hal_hw_apic_initAP() == res_FAIL) return res_FAIL;
     return res_SUCC;
 }

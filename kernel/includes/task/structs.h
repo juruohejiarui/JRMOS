@@ -26,12 +26,13 @@ struct task_ThreadStruct {
 
 	SpinLock pageRecordLck;
 	List pageRecord;
-	RBTree kmallocRecord;
+	RBTree slabRecord;
 
-	hal_mm_PageTbl *pgTbl;
 	SpinLock pgTblLck;
 
 	task_SignalHandler sigHandler[task_nrSignal];
+
+	List tskList;
 
 	hal_task_ThreadStruct hal;
 } __attribute__ ((packed));
@@ -40,7 +41,7 @@ struct task_TaskStruct {
 	u32 cpuId, priority;
 	u64 pid;
 	u64 state;
-	u64 vRuntime, resRuntime;
+	i64 vRuntime, resRuntime;
 
 	task_ThreadStruct *thread;
 

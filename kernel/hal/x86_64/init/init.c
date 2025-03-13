@@ -1,19 +1,30 @@
+#include <hal/cpu/api.h>
 #include <hal/init/init.h>
 #include <hal/hardware/uefi.h>
 #include <hal/hardware/reg.h>
+#include <hal/timer/api.h>
 #include <init/init.h>
 #include <interrupt/api.h>
-#include <hal/cpu/api.h>
 #include <mm/mm.h>
 #include <mm/map.h>
 #include <mm/buddy.h>
 #include <screen/screen.h>
-#include <hal/timer/api.h>
+#include <task/api.h>
 
 u8 hal_init_stk[task_krlStkSize] __attribute__((__section__ (".data.hal_init_stk") )) = {};
 
+void hal_init_test(u64 param) {
+	intr_unmask();
+	printk(WHITE, BLACK, "param:%d\n");
+	while (1) {
+		printk(WHITE, BLACK, "I%d\n");
+		hal_hw_hlt();
+	}
+}
+
 // this is the function called by head.S
 void hal_init_init() {
+	intr_mask();
 	// get the information from uefi table
 	hal_hw_uefi_init();
 
@@ -35,15 +46,42 @@ void hal_init_init() {
 
 	if (hal_timer_init() == res_FAIL) while (1) hal_hw_hlt();
 
+	task_sche_init();
+
 	if (hal_cpu_enableAP() == res_FAIL) while (1) hal_hw_hlt();
+
+	task_initIdle();
+
+	task_sche_enable();
 
 	intr_unmask();
 
 	// int i = 1 / 0;
 
-	while (1) ;
+	for (int i = 0; i < 2; i++)
+		task_newSubTask(hal_init_test, i, 0);
+
+	while (1) {	
+		// printk(WHITE, BLACK, "#%d ", task_current->cpuId);
+		hal_hw_hlt();
+	}
 }
 
-void hal_init_initSMP() {
+void hal_init_initAP() {
+	if (hal_intr_initAP() == res_FAIL) while (1) hal_hw_hlt();
 
+	printk(WHITE, BLACK, "init: cpu #%d initialized\n", task_current->cpuId);
+
+	// int i = 1 / 0;
+
+	task_initIdle();
+
+	intr_unmask();
+
+	cpu_desc[task_current->cpuId].state = cpu_Desc_state_Active;
+
+	while (1) {	
+		// printk(WHITE, BLACK, "#%d ", task_current->cpuId);
+		hal_hw_hlt();
+	}
 }

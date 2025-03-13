@@ -2,6 +2,7 @@
 #include <hal/hardware/apic.h>
 #include <hal/hardware/io.h>
 #include <hal/hardware/reg.h>
+#include <hal/cpu/api.h>
 #include <interrupt/desc.h>
 #include <interrupt/api.h>
 #include <mm/dmas.h>
@@ -15,7 +16,7 @@ hal_hw_apic_RteDesc hal_hw_hpet_rteDesc;
 intr_handlerDeclare(hal_hw_hpet_intrHandler) {
     task_sche_updState();
     timer_updSirq();
-    printk(BLACK, WHITE, "H");
+    // hal_cpu_sendIntr_allExcluSelf(cpu_intr_Pause);
 }
 
 int hal_hw_hpet_init() {

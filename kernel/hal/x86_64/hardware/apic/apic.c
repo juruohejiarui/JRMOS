@@ -1,12 +1,13 @@
 #include <hal/hardware/apic.h>
 #include <hal/hardware/cpu.h>
+#include <hal/hardware/io.h>
 #include <screen/screen.h>
 #include <mm/mm.h>
 #include <mm/map.h>
 #include <mm/buddy.h>
 #include <lib/bit.h>
-#include <hal/hardware/io.h>
 #include <lib/string.h>
+#include <task/api.h>
 
 // the index of RTE register of the specific vector
 #define _idxOfRte(vecId) (((vecId - 0x20) << 1) + 0x10)
@@ -37,10 +38,6 @@ int hal_hw_apic_initLocal() {
 	hal_hw_apic_supportFlag = 0;
 	printk(RED, BLACK, "hw: apic: init local.\n");
 
-	_locApicPg = mm_allocPages(0, mm_Attr_Shared);
-	memset(mm_dmas_phys2Virt(mm_getPhyAddr(_locApicPg)), 0, mm_pageSize);
-	hal_hw_apic_setApicBase(mm_getPhyAddr(_locApicPg));
-
 	u32 a, b, c, d;
 	hal_hw_cpu_cpuid(1, 0, &a, &b, &c, &d);
 	printk(WHITE, BLACK, "CPUID\t01: a:%#010x,b:%#010x,c:%#010x,d:%#010x\n", a, b, c, d);
@@ -70,7 +67,7 @@ int hal_hw_apic_initLocal() {
 		hal_hw_writeMsr(0x1b, val);
 	}
 
-	printk(WHITE, BLACK, "hw: apic: support: ");
+	printk(WHITE, BLACK, "hw: apic: enable: ");
 	u32 x, y;
 	x = hal_hw_readMsr(0x1b);
 	printk(((x & 0x800) ? GREEN : RED), BLACK, "xAPIC ");
@@ -120,6 +117,26 @@ int hal_hw_apic_init() {
 	return res_SUCC;
 }
 
+int hal_hw_apic_initAP() {
+	u64 val = hal_hw_readMsr(0x1b);
+	printk(WHITE, BLACK, "apic: cpu #%d: 0x1b:%#018lx\n", task_current->cpuId, val);
+	bit_set1(&val, 11);
+	if (hal_hw_apic_supportFlag & hal_hw_apic_supportFlag_X2Apic)
+		bit_set1(&val, 10);
+	hal_hw_writeMsr(0x1b, val);
+
+	val = (hal_hw_apic_supportFlag & hal_hw_apic_supportFlag_X2Apic ? hal_hw_readMsr(0x80f) : *(u64 *)mm_dmas_phys2Virt(0xfee000f0));
+	bit_set1(&val, 8);
+	if (hal_hw_apic_supportFlag & hal_hw_apic_supportFlag_EOIBroadcase) bit_set1(&val, 12);
+	if (hal_hw_apic_supportFlag & hal_hw_apic_supportFlag_X2Apic) hal_hw_writeMsr(0x80f, val);
+	else {
+		*(u64 *)mm_dmas_phys2Virt(0xfee000f0) = val;
+		*(u64 *)mm_dmas_phys2Virt(0xfee002f0) = 0x100000;
+	}
+
+	return res_SUCC;
+}
+
 void hal_hw_apic_writeRte(u8 idx, u64 val) {
 	*ioApicMap.idx = idx;
 	hal_hw_mfence();
@@ -153,6 +170,7 @@ void hal_hw_apic_writeIcr(u64 val) {
 		*(u32 *)mm_dmas_phys2Virt(0xfee00310) = (u32)(val >> 32);
 		hal_hw_mfence();
 		*(u32 *)mm_dmas_phys2Virt(0xfee00300) = val & 0xffffffffu;
+		hal_hw_mfence();
 	}
 }
 

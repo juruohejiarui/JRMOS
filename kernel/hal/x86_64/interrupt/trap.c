@@ -3,6 +3,7 @@
 #include <hal/hardware/reg.h>
 #include <hal/init/init.h>
 #include <screen/screen.h>
+#include <task/api.h>
 
 static char *_regName[] = {
 	"r15", "r14", "r13", "r12", "r11", "r10", "r9 ", "r8",
@@ -13,8 +14,10 @@ static char *_regName[] = {
 	"rip", "cs", "rflg", "rsp", "ss"
 };
 
+SpinLock _trapLogLck;
+
 static void _printRegs(u64 rsp) {
-	printk(WHITE, BLACK, "registers: \n");
+	printk(WHITE, BLACK, "proc #%d registers: \n", task_current->cpuId);
 	for (int i = 0; i < sizeof(hal_intr_PtReg) / sizeof(u64); i++)
 		printk(WHITE, BLACK, "%4s=%#018lx%c", _regName[i], *(u64 *)(rsp + i * 8), (i + 1) % 8 == 0 ? '\n' : ' ');
 	// _backtrace((hal_intr_PtReg *)rsp);
@@ -23,9 +26,12 @@ static void _printRegs(u64 rsp) {
 void hal_intr_doDivideError(u64 rsp, u64 errorCode) {
 	u64 *p = NULL;
 	p = (u64 *)(rsp + 0x98);
+	SpinLock_lock(&_trapLogLck);
 	printk(RED,BLACK,"do_divide_error(0),ERROR_CODE:%#018lx,RSP:%#018lx,RIP:%#018lx\t" ,errorCode, rsp, *p);
 	// printk(WHITE, BLACK, "pid = %d\n", Task_current->pid);
 	// Task_current->priority = Task_Priority_Trapped;
+	_printRegs(rsp);
+	SpinLock_unlock(&_trapLogLck);
 	hal_intr_unmask();
 	while(1) hal_hw_hlt();
 }
@@ -163,6 +169,7 @@ void hal_intr_doStackSegmentFault(u64 rsp, u64 errorCode) {
 void hal_intr_doGeneralProtection(u64 rsp, u64 errorCode) {
 	u64 *p = NULL;
 	p = (u64 *)(rsp + 0x98);
+	SpinLock_lock(&_trapLogLck);
 	printk(RED,BLACK,"do_general_protection(13),ERROR_CODE:%#018lx,RSP:%#018lx,RIP:%#018lx\t",errorCode , rsp , *p);
 	// printk(WHITE, BLACK, "pid = %ld\n", Task_current->pid);
 	if (errorCode & 0x01)
@@ -178,6 +185,7 @@ void hal_intr_doGeneralProtection(u64 rsp, u64 errorCode) {
 	}
 	printk(RED,BLACK,"Segment Selector Index:%#018lx\n",errorCode & 0xfff8);
 	_printRegs(rsp);
+	SpinLock_unlock(&_trapLogLck);
 	while(1) hal_hw_hlt();
 }
 
@@ -213,11 +221,8 @@ void hal_intr_doPageFault(u64 rsp, u64 errorCode) {
 	// 	MM_PageTable_map(getCR3(), cr2 & ~0xffful, page->phyAddr, 
 	// 		MM_PageTable_Flag_Presented | MM_PageTable_Flag_Writable | MM_PageTable_Flag_UserPage);
 	// } else {
-	// 	printk(RED,BLACK,"do_page_fault(14),ERROR_CODE:%#018lx,RSP:%#018lx,RIP:%#018lx,CR2:%#018lx\t",errorCode , rsp , *p , cr2);
-		// printk(WHITE, BLACK, "pid = %ld\n", Task_current->pid);
-		// // blank pldEntry means the page is not mapped
-		// Intr_Trap_printRegs(rsp);
-		// printk(RED, BLACK, "Invalid entry : %#018lx\n", pldEntry);
+		SpinLock_lock(&_trapLogLck);
+		printk(RED,BLACK,"do_page_fault(14),ERROR_CODE:%#018lx,RSP:%#018lx,RIP:%#018lx,CR2:%#018lx\t",errorCode , rsp , *p , cr2);
 		if (errorCode & 0x01)
 			printk(RED,BLACK,"The page fault was caused by a non-present page.\n");
 		if (errorCode & 0x02)
@@ -234,6 +239,9 @@ void hal_intr_doPageFault(u64 rsp, u64 errorCode) {
 			printk(RED,BLACK,"The page fault was caused by reading a reserved bit.\n");
 		if (errorCode & 0x80)
 			printk(RED,BLACK,"The page fault was caused by an instruction fetch.\n");
+		_printRegs(rsp);
+		SpinLock_unlock(&_trapLogLck);
+
 		while(1) hal_hw_hlt();
 	// }
 }
@@ -300,4 +308,6 @@ void hal_intr_initTrapGates() {
 	hal_intr_setTrapGate(hal_init_idtTbl, 18, 0, hal_intr_machineCheck);
 	hal_intr_setTrapGate(hal_init_idtTbl, 19, 0, hal_intr_simdError);
 	hal_intr_setTrapGate(hal_init_idtTbl, 20, 0, hal_intr_virtualizationError);
+
+	SpinLock_init(&_trapLogLck);
 }

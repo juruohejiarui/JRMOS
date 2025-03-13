@@ -16,7 +16,11 @@
 #endif
 
 
-task_TaskStruct *task_newSubTask(void *entryAddr, void *arg);
+task_TaskStruct *task_newSubTask(void *entryAddr, u64 arg, u64 attr);
+
+void task_sche_enable();
+void task_sche_disable();
+int task_sche_getState();
 
 void task_sche_updCurState();
 
@@ -27,5 +31,7 @@ void task_sche_init();
 void task_sche_release();
 
 void task_schedule();
+
+void task_initIdle();
 
 #endif

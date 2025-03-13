@@ -26,6 +26,8 @@ offsetRflags	= 0xa8
 offsetRsp		= 0xb0
 offsetSs		= 0xb8
 
+.global task_sche_state
+
 ENTRY(hal_intr_setTr)
     movw %di, %ax
     shlw $3, %ax

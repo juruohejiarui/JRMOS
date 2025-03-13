@@ -89,13 +89,13 @@ typedef struct mm_MemStruct {
 #define mm_slab_mxSizeShift	20
 #define mm_slab_mxSize		(1ul << mm_slab_mxSizeShift)
 
-typedef struct mm_KmallocRecord {
+typedef struct mm_SlabRecord {
 	void *ptr;
 	u64 size;
 	RBNode rbNode;
 	void (*destructor)(void *ptr);
-} mm_KmallocRecord;
+} mm_SlabRecord;
 
 extern mm_MemStruct mm_memStruct; 
- 
+
 #endif

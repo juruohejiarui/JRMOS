@@ -6,6 +6,8 @@
 #include <hal/linkage.h>
 #include <lib/string.h>
 
+extern void hal_intr_retFromIntr();
+
 #define hal_intr_irqName(preffix, num) preffix##num(void)
 
 #define hal_intr_saveAll \
@@ -137,4 +139,6 @@ void hal_intr_setTr(u16 idx);
 static __always_inline__ void hal_intr_cpyTss(hal_intr_TSS *src, u32 *dst) { memcpy(src, dst, sizeof(hal_intr_TSS)); }
 
 int hal_intr_init();
+
+int hal_intr_initAP();
 #endif

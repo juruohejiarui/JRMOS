@@ -9,6 +9,7 @@
 typedef struct hal_task_ThreadStruct {
 	// physical address of pgd
 	u64 pgd;
+	hal_mm_PageTbl *pgTbl;
 } __attribute__ ((packed)) hal_task_ThreadStruct;
 
 typedef struct hal_task_TaskStruct {
