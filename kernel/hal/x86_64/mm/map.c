@@ -5,6 +5,7 @@
 #include <mm/dmas.h>
 #include <screen/screen.h>
 #include <task/api.h>
+#include <lib/string.h>
 
 static __always_inline__ u64 _cvtAttr(u64 attr) {
     u64 cvt = 0x1;
@@ -139,7 +140,31 @@ u64 hal_mm_getMap(u64 virt) {
     return (tbl->entries[idx] & ~0xffful) | (virt & ((1ul << hal_mm_pldShift) - 1));
 }
 
-int hal_mm_map_syncKrl()
-{
+int hal_mm_map_syncKrl() {
+    memcpy(
+        &((hal_mm_PageTbl *)mm_dmas_phys2Virt(mm_krlTblPhysAddr))->entries[256], 
+        &((hal_mm_PageTbl *)mm_dmas_phys2Virt(hal_hw_getCR(3)))->entries[256],
+        sizeof(u64) * 256);
 	return 0;
+}
+
+int hal_mm_map_clrTbl(u64 pgd) {
+    if (pgd == mm_krlTblPhysAddr) return res_SUCC;
+    hal_mm_PageTbl *pgdTbl = mm_dmas_phys2Virt(pgd), *pudTbl, *pmdTbl, *pldTbl;
+    for (int i = 0; i < 256; i++) if (pgdTbl->entries[i]) {
+        pudTbl = mm_dmas_phys2Virt(pgdTbl->entries[i] & ~0xffful);
+        if (mm_dmas_phys2Virt(NULL) == pudTbl || (pmdTbl->entries[i] & 0x80ul)) continue;
+        for (int j = 0; j < hal_mm_nrPageTblEntries; j++) if (pudTbl->entries[j]) {
+            pmdTbl = mm_dmas_phys2Virt(pudTbl->entries[j] & ~0xffful);
+            if (mm_dmas_phys2Virt(NULL) == pmdTbl || (pmdTbl->entries[j] & 0x80ul)) continue;
+            for (int k = 0; k < hal_mm_nrPageTblEntries; k++) if (pmdTbl->entries[k]) {
+                pldTbl = mm_dmas_phys2Virt(pmdTbl->entries[j] & ~0xffful);
+                if (mm_dmas_phys2Virt(NULL) == pldTbl) continue;
+                if (mm_map_freeTbl(pldTbl) == res_FAIL) return res_FAIL;
+            }
+            if (mm_map_freeTbl(pmdTbl) == res_FAIL) return res_FAIL;
+        }
+        if (mm_map_freeTbl(pudTbl) == res_FAIL) return res_FAIL;
+    }
+    return mm_map_freeTbl(pgdTbl);
 }

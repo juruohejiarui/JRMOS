@@ -1,5 +1,6 @@
 #include <task/api.h>
 #include <mm/mm.h>
+#include <mm/buddy.h>
 #include <interrupt/api.h>
 #include <screen/screen.h>
 
@@ -50,7 +51,6 @@ void task_sche_init() {
         RBTree_init(&task_mgr.tasks[i], task_sche_cfsTreeIns);
     }
     RBTree_init(&task_mgr.freeTasks, task_sche_cfsTreeIns);
-    task_mgr.freeTaskNum.value = 0;
     task_sche_state = 0;
     task_pidCnt = 0;
 }
@@ -58,27 +58,29 @@ void task_sche_init() {
 void task_sche_release() {
     task_current->resRuntime = 0;
     task_current->state = task_state_NeedSchedule;
+    hal_task_sche_release();
 }
 
 void task_schedule() {
     RBTree *tasks = &task_mgr.tasks[task_current->cpuId];
+    RBNode *nextTskNode = RBTree_getMin(tasks);
     task_TaskStruct *nextTsk;
-    if (task_current->state == task_state_WaitFree) {
+    if (task_current->flag & task_flag_WaitFree) {
         RBTree_ins(&task_mgr.freeTasks, &task_current->rbNode);
-        Atomic_inc(&task_mgr.freeTaskNum);
+        nextTsk = container(nextTskNode, task_TaskStruct, rbNode);
+        RBTree_del(tasks, nextTskNode);
     } else {
-        task_current->state = task_state_Idle;
         task_current->resRuntime = task_sche_cfsTbl[task_current->priority];
-        RBNode *nextTskNode = RBTree_getMin(tasks);
         if (nextTskNode != NULL) {
             nextTsk = container(nextTskNode, task_TaskStruct, rbNode);
             if (nextTsk->vRuntime < task_current->vRuntime) {
-                RBTree_ins(tasks, &task_current->rbNode);
+                task_current->state = task_state_Idle;
                 RBTree_del(tasks, nextTskNode);
+                RBTree_ins(tasks, &task_current->rbNode);
             } else nextTsk = task_current;
         } else nextTsk = task_current;
     }
-    printk(RED, BLACK, "T%ld\n", nextTsk->pid);
+    nextTsk->state = task_state_Running;
     hal_task_sche_switch(nextTsk);
 }
 
@@ -89,7 +91,7 @@ task_ThreadStruct *task_newThread() {
     thread->allocMem.value = thread->allocVirtMem.value = 0;
     
     SpinLock_init(&thread->pageRecordLck);
-    List_init(&thread->pageRecord);
+    List_init(&thread->pgRecord);
 
     RBTree_init(&thread->slabRecord, mm_slabRecord_insert);
 
@@ -103,12 +105,52 @@ task_ThreadStruct *task_newThread() {
 
     SpinLock_unlock(&mm_map_krlTblLck);
 
-
     return thread;
 }
 
+extern int task_freeThread(task_ThreadStruct *thread);
+extern int task_freeTask(task_TaskStruct *task);
+
 void task_insSubTask(task_TaskStruct *subTsk, task_ThreadStruct *thread) {
+    SpinLock_lock(&thread->tskListLck);
     List_insBefore(&subTsk->list, &thread->tskList);
+    SpinLock_unlock(&thread->tskListLck);
+}
+
+int task_delSubTask(task_TaskStruct *subTsk) {
+    task_ThreadStruct *thread = subTsk->thread;
+    SpinLock_lock(&thread->tskListLck);
+    List_del(&subTsk->list);
+    if (List_isEmpty(&thread->tskList)) {
+        SpinLock_unlock(&thread->tskListLck);
+        return task_freeThread(thread);
+    } else SpinLock_unlock(&thread->tskListLck);
+    return res_SUCC;
+}
+
+int task_freeThread(task_ThreadStruct *thread) {
+    for (List *pageList = thread->pgRecord.next; pageList != &thread->pgRecord; ) {
+        List *nxt = pageList->next;
+        if (mm_freePages(container(pageList, mm_Page, list)) == res_FAIL) return res_FAIL;
+        pageList = nxt;
+    }
+    while (thread->slabRecord.root) {
+        mm_SlabRecord *record = container(thread->slabRecord.root, mm_SlabRecord, rbNode);
+        mm_kfree(record->ptr, mm_Attr_Shared);
+    }
+    if (hal_task_freeThread(thread) == res_FAIL) return res_FAIL;
+
+    mm_kfree(thread, mm_Attr_Shared);
+    return res_SUCC;
+}
+
+int task_freeTask(task_TaskStruct *tsk) {
+    if (task_delSubTask(tsk) == res_FAIL) {
+        printk(RED, BLACK, "task: failed to delete subtask #%ld from thread.\n", tsk->pid);
+        return res_FAIL;
+    }
+    if (hal_task_freeTask(tsk) == res_FAIL) return res_FAIL;
+    return mm_kfree(tsk, mm_Attr_Shared);
 }
 
 void task_initIdle() {
@@ -138,17 +180,54 @@ task_TaskStruct *task_newSubTask(void *entryAddr, u64 arg, u64 attr) {
     tsk->vRuntime = 0;
 
     tsk->thread = task_current->thread;
-    task_insSubTask(tsk, tsk->thread);
-
-    tsk->cpuId = hal_task_dispatchTask(tsk);
 
     memset(tsk->signal, 0, sizeof(tsk->signal));
 
     hal_task_newSubTask(tsk, entryAddr, arg, attr);
+    
+    task_insSubTask(tsk, tsk->thread);
+
+    tsk->cpuId = hal_task_dispatchTask(tsk);
 
     intr_mask();
     RBTree_ins(&task_mgr.tasks[tsk->cpuId], &tsk->rbNode);
     intr_unmask();
 
     return tsk;
+}
+
+void task_exit(u64 res) {
+    /// @todo free simd struct
+
+    hal_task_exit(res);
+
+	hal_task_current->flag |= task_flag_WaitFree;
+
+    while (1) task_sche_release();
+}
+
+u64 task_freeMgr(u64 arg) {
+    while (1) {
+        // printk(WHITE, BLACK, "task: freeMgr: arg=%#018lx\n", arg);
+        task_TaskStruct *tsk = NULL;
+        intr_mask();
+        {
+            RBNode *tskNode = RBTree_getMin(&task_mgr.freeTasks);
+            if (tskNode) {
+                tsk = container(tskNode, task_TaskStruct, rbNode);
+                RBTree_del(&task_mgr.freeTasks, tskNode);
+            }
+        }
+        intr_unmask();
+        if (tsk == NULL) { 
+            task_sche_release();
+            continue;
+        }
+        u64 pid = tsk->pid;
+        if (task_freeTask(tsk) == res_FAIL) {
+            printk(RED, BLACK, "task: failed to free task #%ld.\n", pid);
+        } else printk(GREEN, BLACK, "task: task #%ld is killed\n", pid);
+        task_sche_release();
+    }
+    return 0;
 }

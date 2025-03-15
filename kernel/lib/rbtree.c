@@ -227,8 +227,11 @@ void RBTree_del(RBTree *tree, RBNode *node) {
 }
 
 RBNode *RBTree_getMin(RBTree *tree) {
-	if (tree == NULL || tree->root == NULL) return NULL;
 	SpinLock_lock(&tree->lock);
+	if (tree == NULL || tree->root == NULL) {
+		SpinLock_unlock(&tree->lock);
+		return NULL;
+	}
 	RBNode *res = tree->root;
 	while (res->left) res = res->left;
 	SpinLock_unlock(&tree->lock);
@@ -236,8 +239,11 @@ RBNode *RBTree_getMin(RBTree *tree) {
 }
 
 RBNode *RBTree_getMax(RBTree *tree) {
-	if (tree == NULL || tree->root == NULL) return NULL;
 	SpinLock_lock(&tree->lock);
+	if (tree == NULL || tree->root == NULL) {
+		SpinLock_unlock(&tree->lock);
+		return NULL;
+	}
 	RBNode *res = tree->root;
 	while (res->right) res = res->right;
 	SpinLock_unlock(&tree->lock);
@@ -245,8 +251,11 @@ RBNode *RBTree_getMax(RBTree *tree) {
 }
 
 RBNode *RBTree_getNext(RBTree *tree, RBNode *node) {
-	if (tree == NULL || tree->root == NULL) return NULL;
 	SpinLock_lock(&tree->lock);
+	if (tree == NULL || tree->root == NULL) {
+		SpinLock_unlock(&tree->lock);
+		return NULL;
+	}
 	RBNode *par;
 	if (node->right) {
 		node = node->right;

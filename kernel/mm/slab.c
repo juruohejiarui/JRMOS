@@ -218,6 +218,7 @@ static int _kfree(void *addr) {
                 break;
             }
         }
+        if (find) break;
     }
     if (!find) {
         printk(RED, BLACK, "mm: slab: kfree(): invalid address %#018lx\n", addr);
@@ -248,7 +249,7 @@ void *mm_kmalloc(u64 size, u32 attr, void (*destructor)(void *)) {
         for (i = 0; i < mm_slab_mxSizeShift - mm_slab_mnSizeShift - 1; i++)
             if (_slab[i].size >= size) break;
         if (_addRecord(addr, i, destructor) == res_FAIL) {
-            mm_kfree(addr, attr ^ mm_Attr_Shared);
+            mm_kfree(addr, attr | mm_Attr_Shared);
             return NULL;
         }
     }

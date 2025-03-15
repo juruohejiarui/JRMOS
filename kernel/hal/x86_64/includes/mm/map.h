@@ -57,4 +57,9 @@ int hal_mm_unmap(u64 virt);
 u64 hal_mm_getMap(u64 virt);
 
 int hal_mm_map_syncKrl();
+
+/// @brief clear entired page table (excepts the kernel part)
+/// @param pgd physical address of pgd
+/// @return succ / fail
+int hal_mm_map_clrTbl(u64 pgd);
 #endif

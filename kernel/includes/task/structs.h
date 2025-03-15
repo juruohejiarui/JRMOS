@@ -25,7 +25,7 @@ struct task_ThreadStruct {
 	Atomic allocMem;
 
 	SpinLock pageRecordLck;
-	List pageRecord;
+	List pgRecord;
 	RBTree slabRecord;
 
 	SpinLock pgTblLck;
@@ -33,12 +33,14 @@ struct task_ThreadStruct {
 	task_SignalHandler sigHandler[task_nrSignal];
 
 	List tskList;
+	SpinLock tskListLck;
 
 	hal_task_ThreadStruct hal;
 } __attribute__ ((packed));
 
 struct task_TaskStruct {
 	u32 cpuId, priority;
+	u64 flag;
 	u64 pid;
 	u64 state;
 	i64 vRuntime, resRuntime;
@@ -63,7 +65,6 @@ typedef union task_Union {
 typedef struct task_MgrStruct {
 	RBTree tasks[cpu_mxNum];
 	RBTree freeTasks;
-	Atomic freeTaskNum;
 } task_MgrStruct;
 
 #endif

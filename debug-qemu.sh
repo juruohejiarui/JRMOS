@@ -19,8 +19,8 @@ else
 	echo "debug-qemu: under Linux"
 	sudoFlag="sudo"
 	ovmfPath="/usr/share/OVMF/OVMF_CODE_4M.fd"
-	paramArch="-cpu Haswell \
-		-accel tcg"
+	paramArch="-cpu host \
+		-accel kvm"
 fi
 
 if [ "$osName" = "Linux" ]; then

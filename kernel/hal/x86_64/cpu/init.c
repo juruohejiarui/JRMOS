@@ -178,7 +178,7 @@ int hal_cpu_enableAP() {
 	icr.deliverMode = hal_hw_apic_DeliveryMode_Startup;
 	icr.DestShorthand = hal_hw_apic_DestShorthand_None;
 
-	printk(WHITE, BLACK, "cpu: startup vector: %#x sz=%ld\n", icr.vector, bootSz);
+	printk(WHITE, BLACK, "cpu: startup vector: %#x sz=%ld backup=%#018lx\n", icr.vector, bootSz, backup);
 	memcpy(mm_dmas_phys2Virt(icr.vector << Page_4KShift), backup, bootSz);
 	memcpy(&hal_cpu_apBootEntry, mm_dmas_phys2Virt(icr.vector << Page_4KShift), bootSz);
 
@@ -196,7 +196,11 @@ int hal_cpu_enableAP() {
 
 	// copy it back
 	memcpy(backup, mm_dmas_phys2Virt(icr.vector << Page_4KShift), bootSz);
+
+	printk(WHITE, BLACK, "...");
 	mm_kfree(backup, mm_Attr_Shared);
+
+	printk(WHITE, BLACK, "...");
 
 	// cancel the map 0x0(virt) -> 0x0(phys)
 	for (int i = 0; i < 256; i++) ((u64 *)mm_dmas_phys2Virt(mm_krlTblPhysAddr))[i] = 0;

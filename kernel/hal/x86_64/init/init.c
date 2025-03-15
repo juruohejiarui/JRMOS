@@ -13,13 +13,13 @@
 
 u8 hal_init_stk[task_krlStkSize] __attribute__((__section__ (".data.hal_init_stk") )) = {};
 
-void hal_init_test(u64 param) {
-	intr_unmask();
-	printk(WHITE, BLACK, "param:%d\n");
-	while (1) {
-		printk(WHITE, BLACK, "I%d\n");
+u64 hal_init_test(u64 param) {
+	printk(WHITE, BLACK, "param:%ld ", param);
+	for (int i = 0; i < param * 10; i++) {
+		printk(WHITE, BLACK, "I%d ", param);
 		hal_hw_hlt();
 	}
+	return 0;
 }
 
 // this is the function called by head.S
@@ -58,8 +58,9 @@ void hal_init_init() {
 
 	// int i = 1 / 0;
 
-	for (int i = 0; i < 2; i++)
-		task_newSubTask(hal_init_test, i, 0);
+	task_newSubTask(task_freeMgr, 0, task_attr_Builtin);
+	for (int i = 0; i < cpu_num * 2; i++)
+		task_newSubTask(hal_init_test, i, task_attr_Builtin);
 
 	while (1) {	
 		// printk(WHITE, BLACK, "#%d ", task_current->cpuId);

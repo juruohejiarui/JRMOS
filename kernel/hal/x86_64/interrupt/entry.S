@@ -66,8 +66,8 @@ ENTRY(hal_intr_retFromIntr)
     movq %rsp, %rax
 	andq $-32768, %rax
 	movq task_TaskStruct_state(%rax), %rax
-    cmpq $task_state_NeedSchedule, %rax
-    jne hal_intr_endSchedule
+    cmpq $task_state_Running, %rax
+    je hal_intr_endSchedule
     callq task_schedule
 hal_intr_endSchedule:
 	// get CPU_ID of current task

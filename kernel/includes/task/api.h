@@ -34,4 +34,8 @@ void task_schedule();
 
 void task_initIdle();
 
+void task_exit(u64 res);
+
+u64 task_freeMgr(u64 arg);
+
 #endif

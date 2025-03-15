@@ -110,9 +110,9 @@ int hal_hw_hpet_init() {
             printk(RED, BLACK, "Disable ");
             return res_FAIL;
         }
-        if (cfg & hal_hw_hpet_cfg_LegacyReplace) printk(GREEN, BLACK, "Legacy-Replace ");
+        if (cfg & hal_hw_hpet_cfg_LegacyReplace) printk(GREEN, BLACK, "Legacy-Replace\n");
         else {
-            printk(RED, BLACK, "Legacy-Replace ");
+            printk(RED, BLACK, "Legacy-Replace\n");
             return res_FAIL;
         }
     }

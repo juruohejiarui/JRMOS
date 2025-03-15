@@ -4,6 +4,7 @@
 #include <hal/init/init.h>
 #include <screen/screen.h>
 #include <task/api.h>
+#include <debug/kallsyms.h>
 
 static char *_regName[] = {
 	"r15", "r14", "r13", "r12", "r11", "r10", "r9 ", "r8",
@@ -16,11 +17,57 @@ static char *_regName[] = {
 
 SpinLock _trapLogLck;
 
+static int _lookupKallsyms(u64 address, int level)
+{
+	int index = 0;
+	int level_index = 0;
+	i8 *string = (i8 *)&dbg_kallsyms_names;
+	for(index = 0; index < dbg_kallsyms_syms_num; index++)
+		if(address >= dbg_kallsyms_addr[index] && address < dbg_kallsyms_addr[index+1])
+			break;
+	if(index < dbg_kallsyms_syms_num)
+	{
+		for(level_index = 0; level_index < level; level_index++)
+			printk(RED,BLACK,"  ");
+		printk(RED,BLACK,"+---> ");
+
+		printk(YELLOW,BLACK,"address:%#018lx    (+) %04d function:%s\n",address,address - dbg_kallsyms_addr[index], &string[dbg_kallsyms_idx[index]]);
+		return 0;
+	}
+	else
+		return 1;
+}
+
+SpinLock _backtraceLock;
+void _backtrace(hal_intr_PtReg *regs) {
+	SpinLock_lock(&_backtraceLock);
+	u64 *rbp = (u64 *)regs->rbp;
+	u64 ret_address = regs->rip;
+	int i = 0;
+
+	printk(RED,BLACK,"====================== Task Struct Information =====================\n");
+	printk(RED,BLACK,"regs->rsp:%#018lx,current->thread->rsp:%#018lx,current:%#018lx,current->tss->rsp0:%#018lx\n",
+		regs->rsp, task_current->hal.rsp, task_current, task_current->hal.tss.rsp0);
+	printk(RED,BLACK,"====================== Kernel Stack Backtrace ======================\n");
+
+	for(i = 0;i < 20;i++)
+	{
+		if (_lookupKallsyms(ret_address, i))
+			break; 
+		if ((u64)rbp < (u64)regs->rsp || (u64)rbp > task_current->hal.tss.rsp0)
+			break;
+
+		ret_address = *(rbp + 1);
+		rbp = (u64 *)*rbp;
+	}
+	SpinLock_unlock(&_backtraceLock);
+}
+
 static void _printRegs(u64 rsp) {
 	printk(WHITE, BLACK, "proc #%d registers: \n", task_current->cpuId);
 	for (int i = 0; i < sizeof(hal_intr_PtReg) / sizeof(u64); i++)
 		printk(WHITE, BLACK, "%4s=%#018lx%c", _regName[i], *(u64 *)(rsp + i * 8), (i + 1) % 8 == 0 ? '\n' : ' ');
-	// _backtrace((hal_intr_PtReg *)rsp);
+	_backtrace((hal_intr_PtReg *)rsp);
 }
 
 void hal_intr_doDivideError(u64 rsp, u64 errorCode) {
@@ -53,8 +100,12 @@ void hal_intr_doNMI(u64 rsp, u64 errorCode) {
 void hal_intr_doInt3(u64 rsp, u64 errorCode) {
 	u64 *p = NULL;
 	p = (u64 *)(rsp + 0x98);
+	SpinLock_lock(&_trapLogLck);
 	printk(RED,BLACK,"do_int3(3),ERROR_CODE:%#018lx,RSP:%#018lx,RIP:%#018lx\n",errorCode , rsp , *p);
-	while(1);
+	_printRegs(rsp);
+	SpinLock_unlock(&_trapLogLck);
+	hal_intr_unmask();
+	while(1) hal_hw_hlt();
 }
 
 void hal_intr_doOverflow(u64 rsp, u64 errorCode) {
@@ -171,7 +222,6 @@ void hal_intr_doGeneralProtection(u64 rsp, u64 errorCode) {
 	p = (u64 *)(rsp + 0x98);
 	SpinLock_lock(&_trapLogLck);
 	printk(RED,BLACK,"do_general_protection(13),ERROR_CODE:%#018lx,RSP:%#018lx,RIP:%#018lx\t",errorCode , rsp , *p);
-	// printk(WHITE, BLACK, "pid = %ld\n", Task_current->pid);
 	if (errorCode & 0x01)
 		printk(RED,BLACK,"The exception occurred during the delivery of an event external to the program, such as an interrupt or an exception.\n");
 	if (errorCode & 0x02)
@@ -222,7 +272,7 @@ void hal_intr_doPageFault(u64 rsp, u64 errorCode) {
 	// 		MM_PageTable_Flag_Presented | MM_PageTable_Flag_Writable | MM_PageTable_Flag_UserPage);
 	// } else {
 		SpinLock_lock(&_trapLogLck);
-		printk(RED,BLACK,"do_page_fault(14),ERROR_CODE:%#018lx,RSP:%#018lx,RIP:%#018lx,CR2:%#018lx\t",errorCode , rsp , *p , cr2);
+		printk(RED,BLACK,"do_page_fault(14),ERROR_CODE:%#018lx,RSP:%#018lx,RIP:%#018lx,CR2:%#018lx\n",errorCode , rsp , *p , cr2);
 		if (errorCode & 0x01)
 			printk(RED,BLACK,"The page fault was caused by a non-present page.\n");
 		if (errorCode & 0x02)

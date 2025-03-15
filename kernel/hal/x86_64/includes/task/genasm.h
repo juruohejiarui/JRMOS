@@ -1,15 +1,15 @@
 #ifndef __HAL_TASK_ASM_H__
 #define __HAL_TASK_ASM_H__
 
-#define task_TaskStruct_state  0x10
-#define task_TaskStruct_hal    0x60
-#define task_TaskStruct_thread 0x28
-#define hal_task_TaskStruct_rip    0x60
-#define hal_task_TaskStruct_rsp    0x68
-#define hal_task_TaskStruct_rflags 0x80
+#define task_TaskStruct_state  0x18
+#define task_TaskStruct_hal    0x68
+#define task_TaskStruct_thread 0x30
+#define hal_task_TaskStruct_rip    0x68
+#define hal_task_TaskStruct_rsp    0x70
+#define hal_task_TaskStruct_rflags 0x88
 
-#define task_ThreadStruct_hal 0x260
-#define hal_task_ThreadStruct_pgd 0x260
+#define task_ThreadStruct_hal 0x268
+#define hal_task_ThreadStruct_pgd 0x268
 
 #define task_state_Running			0
 #define task_state_NeedSchedule	0x1

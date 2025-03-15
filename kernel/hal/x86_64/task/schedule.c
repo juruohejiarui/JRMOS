@@ -3,11 +3,17 @@
 #include <hal/interrupt/api.h>
 #include <mm/map.h>
 #include <mm/dmas.h>
+#include <task/api.h>
 #include <cpu/api.h>
 #include <lib/string.h>
+#include <screen/screen.h>
 
 int hal_task_dispatchTask(task_TaskStruct *tsk) {
 	return tsk->pid % cpu_num;
+}
+
+void hal_task_sche_release() {
+	hal_cpu_sendIntr_self(cpu_intr_Schedule);
 }
 
 void hal_task_sche_switchTss(task_TaskStruct *prev, task_TaskStruct *next) {
@@ -15,6 +21,8 @@ void hal_task_sche_switchTss(task_TaskStruct *prev, task_TaskStruct *next) {
 	cpuTss->rsp0 = tskTss->rsp0;
 	cpuTss->rsp2 = tskTss->rsp2;
 	cpuTss->ist2 = tskTss->ist2;
+
+	// printk(WHITE, BLACK, "from %#018lx,rip=%#018lx to %#018lx,rip=%#018lx\n", prev, prev->hal.rip, next, next->hal.rip);
 
 	__asm__ volatile ( "movq %%fs, %0" : "=a"(prev->hal.fs));
 	__asm__ volatile ( "movq %%gs, %0" : "=a"(prev->hal.gs));
@@ -43,33 +51,54 @@ void hal_task_initIdle() {
     hal_task_current->hal.rsp = (u64)curCpu->hal.initStk + task_krlStkSize;
 }
 
+void hal_task_tskEntry(void *entry, u64 arg, u64 attr) {
+	if (~attr & task_attr_Usr) {
+		u64 res = ((u64 (*)(u64))entry)(arg);
+		task_exit(res);
+	} else {
+		/// @todo user entry
+	}
+}
+
+int hal_task_freeThread(task_ThreadStruct *thread) {
+	// clear map table
+	if (hal_mm_map_clrTbl(thread->hal.pgd) == res_FAIL) return res_FAIL;
+	return res_SUCC;
+}
+
+int hal_task_freeTask(task_TaskStruct *tsk) {
+	return res_SUCC;
+}
+
+void hal_task_exit(u64 res) {
+}
+
 void hal_task_newSubTask(task_TaskStruct *tsk, void *entryAddr, u64 arg, u64 attr) {
 	hal_intr_PtReg *ptReg = (hal_intr_PtReg *)(((task_Union *)tsk)->krlStk + task_krlStkSize - sizeof(hal_intr_PtReg));
 	memset(ptReg, 0, sizeof(hal_intr_PtReg));
-	if (attr & task_attr_Usr) {
-		ptReg->cs = hal_mm_segment_UsrCode;
-		ptReg->ds = hal_mm_segment_UsrData;
-		ptReg->es = hal_mm_segment_UsrData;
-		ptReg->ss = hal_mm_segment_UsrData;
-
-		/// @todo allocate user level stack
-	} else {
-		ptReg->cs = hal_mm_segment_KrlCode;
-		ptReg->ds = hal_mm_segment_KrlData;
-		ptReg->es = hal_mm_segment_KrlData;
-		ptReg->ss = hal_mm_segment_KrlData;
-
-		ptReg->rsp = (u64)((task_Union *)tsk)->krlStk + task_krlStkSize;
-	}
 	
-	ptReg->rdi = arg;
-	ptReg->rip = (u64)entryAddr;
+	ptReg->cs = hal_mm_segment_KrlCode;
+	ptReg->ds = hal_mm_segment_KrlData;
+	ptReg->es = hal_mm_segment_KrlData;
+	ptReg->ss = hal_mm_segment_KrlData;
 
-	tsk->hal.fs = tsk->hal.gs = hal_mm_segment_UsrData;
+	tsk->hal.fs = tsk->hal.gs = hal_mm_segment_KrlData;
+
+	ptReg->rsp = (u64)((task_Union *)tsk)->krlStk + task_krlStkSize;
+	ptReg->rdi = (u64)entryAddr;
+	ptReg->rsi = arg;
+	ptReg->rdx = attr;
+	
+	ptReg->rflags = (1ul << 9);
+	ptReg->rip = (u64)hal_task_tskEntry;
+
 	tsk->hal.rflags = 0;
 	tsk->hal.rip = (u64)hal_intr_retFromIntr;
-	tsk->hal.rsp = ptReg->rsp;
-	hal_intr_setTss(&tsk->hal.tss, 
-		ptReg->rsp, ptReg->rsp, ptReg->rsp, ptReg->rsp, ptReg->rsp, 
-		0, 0, 0, 0, 0);
+	tsk->hal.rsp = (u64)ptReg;
+	{
+		register u64 intrRsp = (u64)((task_Union *)tsk)->krlStk + task_krlStkSize;
+		hal_intr_setTss(&tsk->hal.tss, 
+			intrRsp, intrRsp, intrRsp, intrRsp, intrRsp,
+			intrRsp, intrRsp, intrRsp, intrRsp, intrRsp);
+	}
 }
