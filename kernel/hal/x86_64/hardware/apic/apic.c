@@ -38,6 +38,8 @@ int hal_hw_apic_initLocal() {
 	hal_hw_apic_supportFlag = 0;
 	printk(RED, BLACK, "hw: apic: init local.\n");
 
+	hal_hw_apic_setApicBase(mm_getPhyAddr(mm_allocPages(0, mm_Attr_Shared)));
+
 	u32 a, b, c, d;
 	hal_hw_cpu_cpuid(1, 0, &a, &b, &c, &d);
 	printk(WHITE, BLACK, "CPUID\t01: a:%#010x,b:%#010x,c:%#010x,d:%#010x\n", a, b, c, d);

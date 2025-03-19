@@ -71,9 +71,9 @@ void write_src(void)
 	long position = 0;
 
 	printf(".section .rodata\n\n");
-	printf(".globl kallsyms_addresses\n");
+	printf(".globl dbg_kallsyms_addr\n");
 	printf(".align 8\n\n");
-	printf("kallsyms_addresses:\n");
+	printf("dbg_kallsyms_addr:\n");
 	for(i = 0,last_addr = 0;i < count;i++) 
 	{
 		if(!symbol_valid(&table[i]))
@@ -87,15 +87,15 @@ void write_src(void)
 	}
 	putchar('\n');
 
-	printf(".globl kallsyms_syms_num\n");
+	printf(".globl dbg_kallsyms_syms_num\n");
 	printf(".align 8\n\n");
-	printf("kallsyms_syms_num:\n");
+	printf("dbg_kallsyms_syms_num:\n");
 	printf("\t.quad\t%d\n",valid);
 	putchar('\n');
 
-	printf(".globl kallsyms_index\n");
+	printf(".globl dbg_kallsyms_idx\n");
 	printf(".align 8\n\n");
-	printf("kallsyms_index:\n");
+	printf("dbg_kallsyms_idx:\n");
 	for(i = 0,last_addr = 0;i < count;i++) 
 	{
 		if(!symbol_valid(&table[i]))
@@ -109,9 +109,9 @@ void write_src(void)
 	}
 	putchar('\n');
 
-	printf(".globl kallsyms_names\n");
+	printf(".globl dbg_kallsyms_names\n");
 	printf(".align 8\n\n");
-	printf("kallsyms_names:\n");
+	printf("dbg_kallsyms_names:\n");
 	for(i = 0,last_addr = 0;i < count;i++) 
 	{
 		if(!symbol_valid(&table[i]))

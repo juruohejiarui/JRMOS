@@ -41,7 +41,7 @@ static __always_inline__ void hal_hw_writeMsr(u64 msrAddr, u64 data) {
     __asm__ volatile (
         "wrmsr \n\t"
         :
-        : "c"(msrAddr), "A"(data & 0xFFFFFFFF), "d"((data >> 32) & 0xFFFFFFFF)
+        : "c"(msrAddr), "A"(data & 0xFFFFFFFFul), "d"((data >> 32) & 0xFFFFFFFFul)
         : "memory"
     );
 }
