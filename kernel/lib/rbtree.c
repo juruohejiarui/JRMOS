@@ -14,6 +14,8 @@ static __always_inline__ void _setCol(RBNode *node, int col) {
 	node->unionParCol = (node->unionParCol & ~1ul) | col;
 }
 
+static RBNode *_getNext(RBTree *tree, RBNode *node);
+
 static void _rotLeft(RBTree *tree, RBNode *node) {
 	RBNode *right = node->right;
 	if ((node->right = right->left) != NULL) _setParent(right->left, node);
@@ -45,10 +47,11 @@ static __always_inline__ void _linkNode(RBNode **src, RBNode *node, RBNode *par)
 	*src = node;
 }
 
-void RBTree_init(RBTree *tree, RBTree_Insert insert) {
+void RBTree_init(RBTree *tree, RBTree_Insert insert, RBTree_Comparator cmp) {
 	SpinLock_init(&tree->lock);
-	tree->root = NULL;
+	tree->root = tree->left = NULL;
 	tree->insert = insert;
+	tree->cmp = cmp;
 }
 
 static __always_inline__ void _fixAfterIns(RBTree *tree, RBNode *node) {
@@ -102,7 +105,7 @@ void RBTree_ins(RBTree *tree, RBNode *node) {
 	if (tree == NULL || node == NULL) return ;
 	SpinLock_lock(&tree->lock);
 	if (tree->root == NULL) {
-		tree->root = node;
+		tree->root = tree->left = node;
 		node->left = node->right = NULL;
 		node->unionParCol = 1;
 		SpinLock_unlock(&tree->lock);
@@ -182,6 +185,8 @@ static __always_inline__ void _fixAfterDel(RBTree *tree, RBNode *node, RBNode *p
 void RBTree_del(RBTree *tree, RBNode *node) {
 	if (tree == NULL || node == NULL) return ;
 	SpinLock_lock(&tree->lock);
+
+	if (tree->left == node) tree->left = _getNext(tree, node);
 	RBNode *child, *par;
 	int col;
 	if (node->left == NULL) child = node->right;
@@ -226,19 +231,18 @@ void RBTree_del(RBTree *tree, RBNode *node) {
 	SpinLock_unlock(&tree->lock);
 }
 
-RBNode *RBTree_getMin(RBTree *tree) {
+RBNode *RBTree_getLeft(RBTree *tree) {
 	SpinLock_lock(&tree->lock);
 	if (tree == NULL || tree->root == NULL) {
 		SpinLock_unlock(&tree->lock);
 		return NULL;
 	}
-	RBNode *res = tree->root;
-	while (res->left) res = res->left;
+	RBNode *res = tree->left;
 	SpinLock_unlock(&tree->lock);
 	return res;
 }
 
-RBNode *RBTree_getMax(RBTree *tree) {
+RBNode *RBTRee_getRight(RBTree *tree) {
 	SpinLock_lock(&tree->lock);
 	if (tree == NULL || tree->root == NULL) {
 		SpinLock_unlock(&tree->lock);
@@ -250,21 +254,25 @@ RBNode *RBTree_getMax(RBTree *tree) {
 	return res;
 }
 
+static RBNode *_getNext(RBTree *tree, RBNode *node) {
+	RBNode *par;
+	if (node->right) {
+		node = node->right;
+		while (node->left) node = node->left;
+		return node;
+	}
+	while ((par = parent(node)) && node == par->right)
+		node = par;
+	return par;
+}
+
 RBNode *RBTree_getNext(RBTree *tree, RBNode *node) {
 	SpinLock_lock(&tree->lock);
 	if (tree == NULL || tree->root == NULL) {
 		SpinLock_unlock(&tree->lock);
 		return NULL;
 	}
-	RBNode *par;
-	if (node->right) {
-		node = node->right;
-		while (node->left) node = node->left;
-		SpinLock_unlock(&tree->lock);
-		return node;
-	}
-	while ((par = parent(node)) && node == par->right)
-		node = par;
+	node = _getNext(tree, node);
 	SpinLock_unlock(&tree->lock);
 	return node;
 }

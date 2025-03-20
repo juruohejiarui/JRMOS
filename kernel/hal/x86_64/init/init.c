@@ -59,7 +59,7 @@ void hal_init_init() {
 	// int i = 1 / 0;
 
 	task_newSubTask(task_freeMgr, 0, task_attr_Builtin);
-	for (int i = 0; i < cpu_num * 2; i++)
+	for (int i = 0; i < cpu_num * 3; i++)
 		task_newSubTask(hal_init_test, i, task_attr_Builtin);
 
 	while (1) {	

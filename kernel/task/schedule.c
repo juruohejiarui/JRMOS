@@ -48,9 +48,9 @@ void task_sche_updState() {
 
 void task_sche_init() {
     for (int i = 0; i < cpu_num; i++) {
-        RBTree_init(&task_mgr.tasks[i], task_sche_cfsTreeIns);
+        RBTree_init(&task_mgr.tasks[i], task_sche_cfsTreeIns, task_sche_cfsTreeCmp);
     }
-    RBTree_init(&task_mgr.freeTasks, task_sche_cfsTreeIns);
+    RBTree_init(&task_mgr.freeTasks, task_sche_cfsTreeIns, task_sche_cfsTreeCmp);
     task_sche_state = 0;
     task_pidCnt = 0;
 }
@@ -63,7 +63,8 @@ void task_sche_release() {
 
 void task_schedule() {
     RBTree *tasks = &task_mgr.tasks[task_current->cpuId];
-    RBNode *nextTskNode = RBTree_getMin(tasks);
+    RBNode *nextTskNode = RBTree_getLeft(tasks);
+    // printk(WHITE, BLACK, "nexTsk:%#018lx\t", nextTskNode);
     task_TaskStruct *nextTsk;
     if (task_current->flag & task_flag_WaitFree) {
         RBTree_ins(&task_mgr.freeTasks, &task_current->rbNode);
@@ -93,7 +94,7 @@ task_ThreadStruct *task_newThread() {
     SpinLock_init(&thread->pageRecordLck);
     List_init(&thread->pgRecord);
 
-    RBTree_init(&thread->slabRecord, mm_slabRecord_insert);
+    RBTree_init(&thread->slabRecord, mm_slabRecord_insert, mm_slabRecord_comparator);
 
     memset(thread->sigHandler, 0, sizeof(thread->sigHandler));
 
@@ -212,7 +213,7 @@ u64 task_freeMgr(u64 arg) {
         task_TaskStruct *tsk = NULL;
         intr_mask();
         {
-            RBNode *tskNode = RBTree_getMin(&task_mgr.freeTasks);
+            RBNode *tskNode = RBTree_getLeft(&task_mgr.freeTasks);
             if (tskNode) {
                 tsk = container(tskNode, task_TaskStruct, rbNode);
                 RBTree_del(&task_mgr.freeTasks, tskNode);

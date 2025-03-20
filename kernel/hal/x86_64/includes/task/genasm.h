@@ -8,8 +8,8 @@
 #define hal_task_TaskStruct_rsp    0x70
 #define hal_task_TaskStruct_rflags 0x88
 
-#define task_ThreadStruct_hal 0x268
-#define hal_task_ThreadStruct_pgd 0x268
+#define task_ThreadStruct_hal 0x278
+#define hal_task_ThreadStruct_pgd 0x278
 
 #define task_state_Running			0
 #define task_state_NeedSchedule	0x1

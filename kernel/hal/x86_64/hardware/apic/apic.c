@@ -38,7 +38,12 @@ int hal_hw_apic_initLocal() {
 	hal_hw_apic_supportFlag = 0;
 	printk(RED, BLACK, "hw: apic: init local.\n");
 
-	hal_hw_apic_setApicBase(mm_getPhyAddr(mm_allocPages(0, mm_Attr_Shared)));
+	_locApicPg = mm_allocPages(0, mm_Attr_Shared);
+	if (_locApicPg == NULL) {
+		printk(RED, BLACK, "hw: apic: failed to allocate page for ApicBase.\n");
+		return res_FAIL;
+	}
+	hal_hw_apic_setApicBase(mm_getPhyAddr(_locApicPg));
 
 	u32 a, b, c, d;
 	hal_hw_cpu_cpuid(1, 0, &a, &b, &c, &d);
@@ -70,10 +75,11 @@ int hal_hw_apic_initLocal() {
 	}
 
 	printk(WHITE, BLACK, "hw: apic: enable: ");
-	u32 x, y;
+	u64 x, y;
 	x = hal_hw_readMsr(0x1b);
 	printk(((x & 0x800) ? GREEN : RED), BLACK, "xAPIC ");
 	printk(((x & 0x400) ? GREEN : RED), BLACK, "x2APIC\n");
+	printk(WHITE, BLACK, "hw: apic: msr 0x1b: %#018lx\n", x);
 
 	// enable SVR[8] and SVR[12]
 	{
@@ -121,7 +127,7 @@ int hal_hw_apic_init() {
 
 int hal_hw_apic_initAP() {
 	u64 val = hal_hw_readMsr(0x1b);
-	printk(WHITE, BLACK, "apic: cpu #%d: 0x1b:%#018lx\n", task_current->cpuId, val);
+	printk(WHITE, BLACK, "hw: apic: cpu #%d: msr 0x1b:%#018lx\n", task_current->cpuId, val);
 	bit_set1(&val, 11);
 	if (hal_hw_apic_supportFlag & hal_hw_apic_supportFlag_X2Apic)
 		bit_set1(&val, 10);
