@@ -56,11 +56,7 @@ void hal_init_init() {
 
 	intr_unmask();
 
-	// int i = 1 / 0;
-
 	task_newSubTask(task_freeMgr, 0, task_attr_Builtin);
-	for (int i = 0; i < cpu_num * 3; i++)
-		task_newSubTask(hal_init_test, i, task_attr_Builtin);
 
 	while (1) {	
 		// printk(WHITE, BLACK, "#%d ", task_current->cpuId);
@@ -70,8 +66,6 @@ void hal_init_init() {
 
 void hal_init_initAP() {
 	if (hal_intr_initAP() == res_FAIL) while (1) hal_hw_hlt();
-
-	// int i = 1 / 0;
 
 	task_initIdle();
 
