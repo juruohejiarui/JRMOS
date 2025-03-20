@@ -183,6 +183,7 @@ int hal_cpu_enableAP() {
 	memcpy(&hal_cpu_apBootEntry, mm_dmas_phys2Virt(icr.vector << Page_4KShift), bootSz);
 
 	for (int i = 0; i < cpu_num; i++) if (i != cpu_bspIdx) {
+		printk(WHITE, BLACK, "cpu: try enabling proc#%d...\r", i);
 		cpu_Desc *cpu = &cpu_desc[i];
 		hal_hw_apic_setIcrDest(&icr, cpu->hal.apic, cpu->hal.x2apic);
 		hal_hw_apic_writeIcr(*(u64 *)&icr);
@@ -190,7 +191,9 @@ int hal_cpu_enableAP() {
 		hal_hw_apic_writeIcr(*(u64 *)&icr);
 
 		hal_intr_unmask();
-		while (cpu->state != cpu_Desc_state_Active) hal_hw_hlt();
+		while (cpu->state != cpu_Desc_state_Active) {
+			hal_hw_hlt();
+		}
 		hal_intr_mask();
 	}
 

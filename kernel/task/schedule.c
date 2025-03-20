@@ -100,6 +100,7 @@ task_ThreadStruct *task_newThread() {
 
     SpinLock_init(&thread->pgTblLck);
 
+    SpinLock_init(&thread->tskListLck);
     List_init(&thread->tskList);
 
     hal_task_newThread(&thread->hal);
@@ -159,6 +160,7 @@ void task_initIdle() {
     cpu_Desc *curCpu = &cpu_desc[task_current->cpuId];
     task_current->priority = 0;
     task_current->state = 0;
+    task_current->flag = 0;
 
     task_current->resRuntime = 1;
     task_current->vRuntime = 0;

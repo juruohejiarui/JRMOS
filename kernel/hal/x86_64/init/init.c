@@ -71,8 +71,6 @@ void hal_init_init() {
 void hal_init_initAP() {
 	if (hal_intr_initAP() == res_FAIL) while (1) hal_hw_hlt();
 
-	printk(WHITE, BLACK, "init: cpu #%d initialized\n", task_current->cpuId);
-
 	// int i = 1 / 0;
 
 	task_initIdle();
@@ -81,8 +79,10 @@ void hal_init_initAP() {
 
 	cpu_desc[task_current->cpuId].state = cpu_Desc_state_Active;
 
+	printk(WHITE, BLACK, "init: cpu #%d initialized\n", task_current->cpuId);
+	hal_hw_mfence();
+
 	while (1) {	
-		// printk(WHITE, BLACK, "#%d ", task_current->cpuId);
 		hal_hw_hlt();
 	}
 }

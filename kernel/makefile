@@ -1,6 +1,6 @@
 HOSTC=gcc
 HOSTCPP=g++
-C_STD=c99
+C_STD=c11
 CPP_STD=c++20
 
 ARCH_HOST=$(shell uname -m)

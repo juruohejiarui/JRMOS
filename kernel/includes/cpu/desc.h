@@ -19,7 +19,7 @@
 // when you need to modify the structure of this descriptor
 // please update the corresponding constant in cpu/asmdesc.h
 typedef struct cpu_Desc {
-    u64 state;
+    volatile u64 state;
     SpinLock intrMskLck;
     u64 intrMsk[4];
     u32 intrUsage, intrFree;
