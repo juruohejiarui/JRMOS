@@ -8,6 +8,7 @@
 #define task_usrStkSize	(1ull << 23)
 
 #define task_krlAddrSt	(0xffff800000000000ul)
+#define task_usrStkTop  (0x0000fffffffffff0ul)
 
 #define task_level_Kernel   0x0
 #define task_level_User     0x3

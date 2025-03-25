@@ -39,6 +39,8 @@
 #error no definition of mm_dmas_mapSize	for this arch!
 #endif
 
+#define mm_usrAddrSt	(0x0ul)
+
 extern char mm_symbol_text;
 extern char mm_symbol_etext;
 extern char mm_symbol_rodata;

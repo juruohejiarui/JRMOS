@@ -33,3 +33,6 @@ hal_task_sche_switch_back:
 	popq %rbp
 
 	retq
+
+/* load data and */
+ENTRY(hal_task_syscall_)
