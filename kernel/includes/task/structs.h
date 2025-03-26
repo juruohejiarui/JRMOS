@@ -57,6 +57,13 @@ struct task_TaskStruct {
 
 typedef struct task_TaskStruct task_TaskStruct;
 
+struct task_UsrStruct {
+	task_TaskStruct *tsk;
+	hal_task_UsrStruct hal;
+} __attribute__ ((packed));
+
+typedef struct task_UsrStruct task_UsrStruct;
+
 typedef union task_Union {
 	task_TaskStruct task;
 	u8 krlStk[task_krlStkSize];

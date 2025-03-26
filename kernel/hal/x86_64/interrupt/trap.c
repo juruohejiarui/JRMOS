@@ -2,6 +2,8 @@
 #include <hal/interrupt/trap.h>
 #include <hal/hardware/reg.h>
 #include <hal/init/init.h>
+#include <mm/mm.h>
+#include <mm/buddy.h>
 #include <screen/screen.h>
 #include <task/api.h>
 #include <debug/kallsyms.h>
@@ -239,11 +241,11 @@ void hal_intr_doGeneralProtection(u64 rsp, u64 errorCode) {
 	while(1) hal_hw_hlt();
 }
 
-// static int _isStkGrow(u64 vAddr, u64 rsp) {
-// 	if (vAddr <= Task_userStackEnd)
-// 		return vAddr >= min(rsp - 32, Task_userStackEnd - Page_4KSize + 0x10) && vAddr >= Task_userStackEnd - Task_userStackSize;
-// 	else return 0;
-// }
+static int _isStkGrow(u64 vAddr, u64 rsp) {
+	if (vAddr <= task_current->hal.rsp2 && vAddr > task_current->hal.rsp2 - task_usrStkSize)
+		return vAddr >= rsp - 32;
+	else return 0;
+}
 
 void hal_intr_doPageFault(u64 rsp, u64 errorCode) {
 	u64 *p = NULL;
@@ -253,24 +255,23 @@ void hal_intr_doPageFault(u64 rsp, u64 errorCode) {
 	// u64 pldEntry = MM_PageTable_getPldEntry(getCR3(), cr2);
 	// only has attributes
 	// if ((pldEntry & ~0xffful) == 0 && (pldEntry & 0xffful)) {
-	// 	// map this virtual address without physics page
-	// 	Page *page = MM_Buddy_alloc(0, Page_Flag_Active);
-	// 	// printk(WHITE, BLACK, " Task %d allocate one page %#018lx->%#018lx\n", Task_current->pid, page->phyAddr, cr2 & ~0xffful);
-	// 	MM_PageTable_map(getCR3(), cr2 & ~0xffful, page->phyAddr, pldEntry | MM_PageTable_Flag_Presented);
+		// map this virtual address without physics page
+		// Page *page = MM_Buddy_alloc(0, Page_Flag_Active);
+		// printk(WHITE, BLACK, " Task %d allocate one page %#018lx->%#018lx\n", Task_current->pid, page->phyAddr, cr2 & ~0xffful);
+		// MM_PageTable_map(getCR3(), cr2 & ~0xffful, page->phyAddr, pldEntry | MM_PageTable_Flag_Presented);
 		
 	// } else if (pldEntry & ~0xffful) {
 	// 	// has been presented, fault because of the old TLB
 	// 	// printk(BLACK, WHITE, "[Trap]");
 	// 	// printk(WHITE, BLACK, "Task %d old TLB\n");
 	// 	flushTLB();
-	// } else if (_isStkGrow(cr2, ((PtReg *)rsp)->rsp)) {
-	// 	Page *page = MM_Buddy_alloc(0, Page_Flag_Active);
-	// 	// printk(YELLOW,BLACK,"do_page_fault(14),ERROR_CODE:%#018lx,RSP:%#018lx,RIP:%#018lx,CR2:%#018lx\t",errorCode , rsp , *p , cr2);
-	// 	// printk(BLACK, WHITE, "[Trap] Task %d need one stack page %#018lx->%#018lx\n", Task_current->pid, page->phyAddr, cr2 & ~0xffful);
-	// 	if (Task_current->mem->pgdPhyAddr != getCR3()) hal_hw_hlt();
-	// 	MM_PageTable_map(getCR3(), cr2 & ~0xffful, page->phyAddr, 
-	// 		MM_PageTable_Flag_Presented | MM_PageTable_Flag_Writable | MM_PageTable_Flag_UserPage);
-	// } else {
+	// } else 
+	if (_isStkGrow(cr2, ((hal_intr_PtReg *)rsp)->rsp)) {
+		mm_Page *page = mm_allocPages(0, mm_Attr_Shared2U);
+		printk(YELLOW,BLACK,"do_page_fault(14),ERROR_CODE:%#018lx,RSP:%#018lx,RIP:%#018lx,CR2:%#018lx\t",errorCode , rsp , *p , cr2);
+		printk(BLACK, WHITE, "[Trap] Task %d need one stack page %#018lx->%#018lx\n", task_current->pid, mm_getPhyAddr(page), cr2 & ~0xffful);
+		mm_map(cr2 & ~0xffful, mm_getPhyAddr(page), mm_Attr_Shared2U | mm_Attr_Exist);
+	} else {
 		SpinLock_lock(&_trapLogLck);
 		printk(RED,BLACK,"do_page_fault(14),ERROR_CODE:%#018lx,RSP:%#018lx,RIP:%#018lx,CR2:%#018lx\n",errorCode , rsp , *p , cr2);
 		if (errorCode & 0x01)
@@ -293,7 +294,7 @@ void hal_intr_doPageFault(u64 rsp, u64 errorCode) {
 		SpinLock_unlock(&_trapLogLck);
 
 		while(1) hal_hw_hlt();
-	// }
+	}
 }
 
 void hal_intr_doX87FPUError(u64 rsp, u64 errorCode) {

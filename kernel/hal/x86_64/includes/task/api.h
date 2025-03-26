@@ -27,6 +27,17 @@ static __always_inline__ task_TaskStruct *hal_task_getCurrent() {
 
 #define hal_task_current hal_task_getCurrent()
 
+
+#define HAL_TASK_CURRENTUSR
+
+static __always_inline__ task_UsrStruct *hal_task_getCurrentUsr() {
+    register task_UsrStruct *usr;
+	__asm__ volatile ( " andq %%rsp, %0		\n\t" : "=r"(usr) : "0"(~(task_usrStkSize - 1)) : "memory");
+    return usr;
+}
+
+#define hal_task_currentUsr hal_task_getCurrentUsr()
+
 int hal_task_dispatchTask(task_TaskStruct *tsk);
 
 void hal_task_sche_release();

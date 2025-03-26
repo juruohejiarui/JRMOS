@@ -103,6 +103,6 @@ system_tmp: $(ALLOBJS)
 	@echo "[GEN] kallsyms.o"
 
 clean:
-	rm -rf $(ALLOBJS) $(ALLTMPS) $(ALLGENOBJS) $(ALLGENTMPS)
+	rm -rf $(ALLOBJS) $(ALLTMPS) $(ALLGENOBJS) $(ALLGENSCRIPTS)
 	rm system system_tmp kernel.bin ./Tools/hal/kallsyms.o ./Tools/hal/kallsyms.S ./Tools/hal/kallsyms ./Tools/rely
 	rm .depend .gendepend

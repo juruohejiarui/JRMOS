@@ -16,7 +16,7 @@ debug(){
 			-vga virtio \
 			-accel tcg"
 	else
-		echo "debug-qemu: under Linux"
+		echo "debug-qemu: under amd64"
 		sudoFlag="sudo"
 		ovmfPath="/usr/share/OVMF/OVMF_CODE_4M.fd"
 		paramArch="-cpu host \

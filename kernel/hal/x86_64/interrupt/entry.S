@@ -1,30 +1,6 @@
 #include <hal/linkage.h>
 #include <hal/task/genasm.h>
-
-offsetR15		= 0x00
-offsetR14		= 0x08
-offsetR13		= 0x10
-offsetR12		= 0x18
-offsetR11		= 0x20
-offsetR10		= 0x28
-offsetR9		= 0x30
-offsetR8		= 0x38
-offsetRbx		= 0x40
-offsetRcx		= 0x48
-offsetRdx		= 0x50
-offsetRsi		= 0x58
-offsetRdi		= 0x60
-offsetRbp		= 0x68
-offsetDs		= 0x70
-offsetEs		= 0x78
-offsetRax		= 0x80
-offsetFunc		= 0x88
-offsetErrorCode	= 0x90
-offsetRip		= 0x98
-offsetCs		= 0xa0
-offsetRflags	= 0xa8
-offsetRsp		= 0xb0
-offsetSs		= 0xb8
+#include <hal/interrupt/genasm.h>
 
 .global task_sche_state
 
@@ -64,7 +40,7 @@ ENTRY(hal_intr_restoreAll)
 retFromException:
 ENTRY(hal_intr_retFromIntr)
     movq %rsp, %rax
-	andq $-32768, %rax
+	andq $-(task_krlStkSize), %rax
 	movq task_TaskStruct_state(%rax), %rax
     cmpq $task_state_Running, %rax
     je hal_intr_endSchedule
@@ -105,8 +81,8 @@ errorCode:
     pushq %r14
     pushq %r15
 
-    movq offsetErrorCode(%rsp), %rsi
-    movq offsetFunc(%rsp), %rdx
+    movq hal_intr_PtReg_errCode(%rsp), %rsi
+    movq hal_intr_PtReg_func(%rsp), %rdx
     movq $0x10, %rdi
     movq %rdi, %ds
     movq %rdi, %es

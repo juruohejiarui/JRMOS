@@ -10,6 +10,7 @@
 #include <mm/buddy.h>
 #include <screen/screen.h>
 #include <task/api.h>
+#include <task/syscall.h>
 
 u8 hal_init_stk[task_krlStkSize] __attribute__((__section__ (".data.hal_init_stk") )) = {};
 
@@ -50,6 +51,8 @@ void hal_init_init() {
 
 	if (hal_cpu_enableAP() == res_FAIL) while (1) hal_hw_hlt();
 
+	if (task_syscall_init() == res_FAIL) while (1) hal_hw_hlt();
+
 	task_initIdle();
 
 	task_sche_enable();
@@ -57,7 +60,6 @@ void hal_init_init() {
 	intr_unmask();
 
 	task_newSubTask(task_freeMgr, 0, task_attr_Builtin);
-
 	while (1) {	
 		// printk(WHITE, BLACK, "#%d ", task_current->cpuId);
 		hal_hw_hlt();
@@ -66,6 +68,8 @@ void hal_init_init() {
 
 void hal_init_initAP() {
 	if (hal_intr_initAP() == res_FAIL) while (1) hal_hw_hlt();
+
+	if (task_syscall_init() == res_FAIL) while (1) hal_hw_hlt();
 
 	task_initIdle();
 
