@@ -24,6 +24,7 @@ static u64 _nrTblGrp, _nrTbl;
 
 static SpinLock _cacheLck;
 SpinLock mm_map_krlTblLck;
+SpinLock mm_map_dbgLck;
 
 static int _initCache() {
     _nrTblGrp = 1;
@@ -101,6 +102,12 @@ int mm_map_syncKrl() {
         return res;
     }
     return res_SUCC;
+}
+
+void mm_dbg(u64 virt) {
+    SpinLock_lock(&mm_map_dbgLck);
+    hal_mm_dbg(virt);
+    SpinLock_unlock(&mm_map_dbgLck);
 }
 
 int mm_map(u64 virt, u64 phys, u64 attr) {

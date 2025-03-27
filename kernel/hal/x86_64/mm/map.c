@@ -10,8 +10,54 @@
 static __always_inline__ u64 _cvtAttr(u64 attr) {
     u64 cvt = 0x1;
     if (attr & mm_Attr_Shared2U)    cvt |= (1ul << 2);
+    if (attr & mm_Attr_Writable)    cvt |= (1ul << 1);
     if (attr & mm_Attr_Exist)       cvt |= (1ul << 0);
     return cvt;
+}
+
+
+void hal_mm_dbg(u64 virt) {
+    printk(WHITE, BLACK, "mm: map: dbg(): virt: %#018lx\n", virt);
+    hal_mm_PageTbl *tbl, *subTbl;
+
+    tbl = virt >= task_krlAddrSt ? mm_dmas_phys2Virt(mm_krlTblPhysAddr) : mm_dmas_phys2Virt(hal_hw_getCR(3));
+    printk(WHITE, BLACK, " \tpgd tbl: %#018lx\n", tbl);
+
+    u64 idx = (virt & hal_mm_pgdIdxMask) >> hal_mm_pgdShift;
+    tbl = (hal_mm_PageTbl *)mm_dmas_phys2Virt(tbl->entries[idx] & ~0xffful);
+    if (!tbl) {
+        printk(WHITE, BLACK, " \tpud: NULL\n");
+        return;
+    }
+    printk(WHITE, BLACK, " \tpud tbl: %#018lx\n", tbl);
+
+    idx = (virt & hal_mm_pudIdxMask) >> hal_mm_pudShift;
+    
+    tbl = (hal_mm_PageTbl *)mm_dmas_phys2Virt(tbl->entries[idx] & ~0xffful);
+    if (tbl->entries[idx] & 0x80) {
+        printk(WHITE, BLACK, " \t1G mapping: %#018lx\n", tbl->entries[idx]);
+        return;
+    }
+    if (!tbl) {
+        printk(WHITE, BLACK, " \tpmd tbl: NULL\n");
+        return;
+    }
+    printk(WHITE, BLACK, " \tpmd tbl: %#018lx\n", tbl);
+    
+    idx = (virt & hal_mm_pmdIdxMask) >> hal_mm_pmdShift;
+    if (tbl->entries[idx] & 0x80) {
+        printk(WHITE, BLACK, " \t2M mapping: %#018lx\n", tbl->entries[idx]);
+        return;
+    }
+    tbl = (hal_mm_PageTbl *)mm_dmas_phys2Virt(tbl->entries[idx] & ~0xffful);
+    if (!tbl) {
+        printk(WHITE, BLACK, " \tpld tbl: NULL\n");
+        return;
+    }
+    printk(WHITE, BLACK, " \tpld tbl: %#018lx\n", tbl);
+    
+    idx = (virt & hal_mm_pldIdxMask) >> hal_mm_pldShift;
+    printk(WHITE, BLACK, " \tphy addr: %#018lx\n", tbl->entries[idx]);
 }
  
 int hal_mm_map(u64 virt, u64 phys, u64 attr) {

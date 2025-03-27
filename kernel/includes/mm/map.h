@@ -8,6 +8,13 @@
 
 extern Atomic mm_map_krlTblModiJiff;
 extern SpinLock mm_map_krlTblLck;
+extern SpinLock mm_map_dbgLck;
+
+#ifdef HAL_MM_DBG
+void mm_dbg(u64 virt);
+#else
+#error no definition of mm_dbg for this arch!
+#endif
 
 #ifdef HAL_MM_MAP
 int mm_map(u64 virt, u64 phys, u64 attr);

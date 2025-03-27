@@ -15,6 +15,7 @@
 #define mm_Attr_MMU			0x20u
 #define mm_Attr_System		0x40u
 #define mm_Attr_Exist		0x80u
+#define mm_Attr_Writable	0x100u
 
 #define mm_kernelAddr	((void *)(task_krlAddrSt + 0x100000ul))
 

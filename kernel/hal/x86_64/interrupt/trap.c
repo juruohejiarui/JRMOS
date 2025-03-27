@@ -270,7 +270,7 @@ void hal_intr_doPageFault(u64 rsp, u64 errorCode) {
 		mm_Page *page = mm_allocPages(0, mm_Attr_Shared2U);
 		printk(YELLOW,BLACK,"do_page_fault(14),ERROR_CODE:%#018lx,RSP:%#018lx,RIP:%#018lx,CR2:%#018lx\t",errorCode , rsp , *p , cr2);
 		printk(BLACK, WHITE, "[Trap] Task %d need one stack page %#018lx->%#018lx\n", task_current->pid, mm_getPhyAddr(page), cr2 & ~0xffful);
-		mm_map(cr2 & ~0xffful, mm_getPhyAddr(page), mm_Attr_Shared2U | mm_Attr_Exist);
+		mm_map(cr2 & ~0xffful, mm_getPhyAddr(page), mm_Attr_Shared2U | mm_Attr_Exist | mm_Attr_Writable);
 	} else {
 		SpinLock_lock(&_trapLogLck);
 		printk(RED,BLACK,"do_page_fault(14),ERROR_CODE:%#018lx,RSP:%#018lx,RIP:%#018lx,CR2:%#018lx\n",errorCode , rsp , *p , cr2);

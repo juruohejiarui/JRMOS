@@ -193,11 +193,13 @@ ENTRY(hal_task_syscall_backUsr)
 	// recover fs, gs
 	movq %rsp, %rbx
 	andq $-(task_usrStkSize), %rbx
+	hlt
 	// switch fs & gs
 	movq hal_task_UsrStruct_usrFs(%rbx), %rax
 	movq %rax, %fs
 	movq hal_task_UsrStruct_usrGs(%rbx), %rax
 	movq %rax, %gs
+
 
 	popq %rbx
 	popq %rbp

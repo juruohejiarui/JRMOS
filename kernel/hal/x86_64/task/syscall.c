@@ -14,8 +14,9 @@ int hal_task_syscall_toUsr(void (*entry)(u64), u64 param, void *usrStk) {
 		if (!pg)
 			return res_FAIL;
 		printk(WHITE, BLACK, "allocate page %#018lx\n", mm_getPhyAddr(pg));
-		if (mm_map((u64)usrStk, mm_getPhyAddr(pg), mm_Attr_Shared2U | mm_Attr_Exist) == res_FAIL)
+		if (mm_map((u64)usrStk, mm_getPhyAddr(pg), mm_Attr_Shared2U | mm_Attr_Exist | mm_Attr_Writable) == res_FAIL)
 			return res_FAIL;
+		mm_dbg((u64)usrStk);
 		printk(WHITE, BLACK, "finish map %#018lx->%#018lx\n", mm_getPhyAddr(pg), usrStk);
 		usr = (task_UsrStruct *)usrStk;
 	}
@@ -24,19 +25,20 @@ int hal_task_syscall_toUsr(void (*entry)(u64), u64 param, void *usrStk) {
 	usr->hal.krlFs = usr->hal.krlGs = hal_mm_segment_KrlData;
 	usr->hal.usrFs = usr->hal.usrGs = hal_mm_segment_UsrData;
 
-	printk(WHITE, BLACK, "task #%d to user space\n", task_current->pid);
-	while (1) hal_hw_hlt();
-
-	task_current->hal.rsp2 = task_current->hal.usrStkTop = (u64)usrStk + task_usrStkSize;
+	// minuss 16 bytes for the return address and the rbp
+	task_current->hal.rsp2 = (u64)usrStk + task_usrStkSize - sizeof(u64) * 2;
+	task_current->hal.usrStkTop = (u64)usrStk + task_usrStkSize;
 
 	// push r11 and rcx
 	__asm__ volatile (
-		"cli		\n\t"
-		"pushq %0	\n\t"
-		"pushq %1	\n\t"
-		"jmpq *%2	\n\t"
+		"cli				\n\t"
+		"pushq %0			\n\t"
+		"xor %%rax, %%rax	\n\t"
+		"pushq %%rax		\n\t"
+		"leaq hal_task_syscall_backUsr(%%rip), %%rax	\n\t"
+		"jmpq *%%rax		\n\t"
 		:
-		: "a"(0ul), "b"(entry), "c"(hal_task_syscall_backUsr), "D"(param)
+		: "b"(entry), "D"(param)
 		: "memory"
 	);
 }
