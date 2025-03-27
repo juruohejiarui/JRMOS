@@ -24,6 +24,8 @@
 
 task_TaskStruct *task_newSubTask(void *entryAddr, u64 arg, u64 attr);
 
+task_TaskStruct *task_newTask(void *entryAddr, u64 arg, u64 attr);
+
 void task_sche_enable();
 void task_sche_disable();
 int task_sche_getState();

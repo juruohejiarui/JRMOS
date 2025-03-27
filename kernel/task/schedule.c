@@ -180,7 +180,7 @@ task_TaskStruct *task_newSubTask(void *entryAddr, u64 arg, u64 attr) {
     tsk->priority = 0;
     tsk->state = 0;
     tsk->resRuntime = 1;
-    tsk->vRuntime = 0;
+    tsk->vRuntime = task_current->vRuntime;
 
     tsk->thread = task_current->thread;
 
@@ -199,6 +199,30 @@ task_TaskStruct *task_newSubTask(void *entryAddr, u64 arg, u64 attr) {
     return tsk;
 }
 
+task_TaskStruct *task_newTask(void *entryAddr, u64 arg, u64 attr) {
+    task_Union *tskUnion = mm_kmalloc(sizeof(task_Union), mm_Attr_Shared, NULL);
+    task_TaskStruct *tsk = &tskUnion->task;
+    tsk->pid = task_pidCnt++;
+    tsk->priority = 0;
+    tsk->state = 0;
+    tsk->resRuntime = 1;
+    tsk->vRuntime = task_current->vRuntime;
+
+    tsk->thread = task_newThread();
+    
+    hal_task_newTask(tsk, entryAddr, arg, attr);
+
+    task_insSubTask(tsk, tsk->thread);
+
+    tsk->cpuId = hal_task_dispatchTask(tsk);
+    
+    intr_mask();
+    RBTree_ins(&task_mgr.tasks[tsk->cpuId], &tsk->rbNode);
+    intr_unmask();
+
+    return tsk;
+}
+
 void task_exit(u64 res) {
     /// @todo free simd struct
 
@@ -210,6 +234,7 @@ void task_exit(u64 res) {
 }
 
 u64 task_freeMgr(u64 arg) {
+    u64 tot = 0;
     while (1) {
         // printk(WHITE, BLACK, "task: freeMgr: arg=%#018lx\n", arg);
         task_TaskStruct *tsk = NULL;
@@ -229,7 +254,7 @@ u64 task_freeMgr(u64 arg) {
         u64 pid = tsk->pid;
         if (task_freeTask(tsk) == res_FAIL) {
             printk(RED, BLACK, "task: failed to free task #%ld.\n", pid);
-        } else printk(GREEN, BLACK, "task: task #%ld is killed\n", pid);
+        } else printk(GREEN, BLACK, "task: task #%ld is killed, tot=%ld\n", pid, ++tot);
         task_sche_release();
     }
     return 0;

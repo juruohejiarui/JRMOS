@@ -14,7 +14,7 @@ static __always_inline__ int hal_task_getLevel() {
         :
         : "memory"
     );
-    return cs ? task_level_User : task_level_Kernel;
+    return cs & 3 ? task_level_User : task_level_Kernel;
 }
 
 #define HAL_TASK_CURRENT
@@ -53,6 +53,8 @@ void hal_task_newThread(hal_task_ThreadStruct *thread);
 void hal_task_initIdle();
 
 void hal_task_newSubTask(task_TaskStruct *tsk, void *entryAddr, u64 arg, u64 attr);
+
+void hal_task_newTask(task_TaskStruct *tsk, void *entryAddr, u64 arg, u64 attr);
 
 int hal_task_freeThread(task_ThreadStruct *thread);
 

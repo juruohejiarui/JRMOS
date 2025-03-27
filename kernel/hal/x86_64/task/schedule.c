@@ -1,6 +1,7 @@
 #include <hal/task/api.h>
 #include <hal/interrupt/desc.h>
 #include <hal/interrupt/api.h>
+#include <hal/task/syscall.h>
 #include <mm/map.h>
 #include <mm/dmas.h>
 #include <task/api.h>
@@ -56,7 +57,8 @@ void hal_task_tskEntry(void *entry, u64 arg, u64 attr) {
 		u64 res = ((u64 (*)(u64))entry)(arg);
 		task_exit(res);
 	} else {
-		/// @todo user entry
+		/// @todo allocation of user stack
+		hal_task_syscall_toUsr(entry, arg, (void *)0x100000);
 	}
 }
 
@@ -101,4 +103,8 @@ void hal_task_newSubTask(task_TaskStruct *tsk, void *entryAddr, u64 arg, u64 att
 			intrRsp, intrRsp, intrRsp, intrRsp, intrRsp,
 			intrRsp, intrRsp, intrRsp, intrRsp, intrRsp);
 	}
+}
+
+void hal_task_newTask(task_TaskStruct *tsk, void *entryAddr, u64 arg, u64 attr) {
+	hal_task_newSubTask(tsk, entryAddr, arg, attr);
 }

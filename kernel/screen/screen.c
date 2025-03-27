@@ -7,6 +7,7 @@
 #include <mm/buddy.h>
 #include <task/api.h>
 #include <interrupt/api.h>
+#include <task/syscall.h>
 #include "font.h"
 
 struct Position {
@@ -23,6 +24,8 @@ static SpinLock _printLck, _bufLck;
 
 screen_Info *screen_info;
 
+static void _printStr(unsigned int fcol, unsigned int bcol, const char *str, int len);
+
 void screen_init() {
 	_bufAddr = NULL;
 	memset(_lineLen, 0, sizeof(_lineLen));
@@ -37,6 +40,9 @@ void screen_init() {
 	position.fbAddr = mm_dmas_phys2Virt(screen_info->frameBufBase);
 
 	_lineSize = screen_info->pixelPreLine * screen_charHeight;
+
+    // register syscall
+    task_syscall_tbl[task_syscall_print] = _printStr;
 }
 
 int screen_enableBuf() {
@@ -284,7 +290,7 @@ void putchar(unsigned int fcol, unsigned int bcol, char ch) {
     }
 }
 
-static __always_inline__ void _printStr(unsigned int fcol, unsigned int bcol, const char *str, int len) {
+static void _printStr(unsigned int fcol, unsigned int bcol, const char *str, int len) {
     // close the interrupt if it is open now
 	u64 prevState = intr_state();
 	if (prevState) intr_mask();
@@ -314,5 +320,7 @@ void printk(unsigned int fcol, unsigned int bcol, const char *fmt, ...) {
     va_start(args, fmt);
     len = _sprintf(buf, fmt, args);
     va_end(args);
-    _printStr(fcol, bcol, buf, len);
+    if (task_getLevel() == task_level_Kernel)
+        _printStr(fcol, bcol, buf, len);
+    else task_syscall4(task_syscall_print, fcol, bcol, buf, len);
 }

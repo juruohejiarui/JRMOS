@@ -1,5 +1,6 @@
 #include <hal/task/syscall.h>
 #include <hal/hardware/reg.h>
+#include <screen/screen.h>
 #include <task/api.h>
 #include <mm/mm.h>
 #include <mm/map.h>
@@ -20,10 +21,14 @@ int hal_task_syscall_toUsr(void (*entry)(u64), u64 param, void *usrStk) {
 	usr->hal.krlFs = usr->hal.krlGs = hal_mm_segment_KrlData;
 	usr->hal.usrFs = usr->hal.usrGs = hal_mm_segment_UsrData;
 
-	task_current->hal.rsp2 = (u64)usrStk + task_usrStkSize;
+	task_current->hal.rsp2 = task_current->hal.usrStkTop = (u64)usrStk + task_usrStkSize;
+
+	printk(WHITE, BLACK, "task #%d to user space\n", task_current->pid);
+	while (1) hal_hw_hlt();
 
 	// push r11 and rcx
 	__asm__ volatile (
+		"cli		\n\t"
 		"pushq %0	\n\t"
 		"pushq %1	\n\t"
 		"jmpq *%2	\n\t"

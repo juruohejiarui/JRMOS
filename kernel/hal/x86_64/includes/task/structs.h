@@ -14,6 +14,7 @@ typedef struct hal_task_ThreadStruct {
 
 typedef struct hal_task_TaskStruct {
 	u64 rip, rsp, rsp2, fs, gs, rflags;
+	u64 usrStkTop;
 	hal_intr_TSS tss;
 } __attribute__ ((packed)) hal_task_TaskStruct;
 

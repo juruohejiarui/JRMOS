@@ -7,7 +7,12 @@
 #define task_syscall_tblSize 0x100
 extern void *task_syscall_tbl[task_syscall_tblSize];
 
+#define task_syscall_print  0x0
+#define task_syscall_exit   0x1
+
 int task_syscall_init();
+
+int task_syscall_toUsr(void (*entry)(u64), u64 param, void *stkPtr);
 
 #define task_syscall0 hal_task_syscall0
 #define task_syscall1 hal_task_syscall1

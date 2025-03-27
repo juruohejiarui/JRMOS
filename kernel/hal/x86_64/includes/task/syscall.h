@@ -41,4 +41,6 @@ void hal_task_syscall_backUsr();
 
 int hal_task_syscall_init();
 
+int hal_task_syscall_toUsr(void (*entry)(u64), u64 param, void *stkPtr);
+
 #endif

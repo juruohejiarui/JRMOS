@@ -242,7 +242,7 @@ void hal_intr_doGeneralProtection(u64 rsp, u64 errorCode) {
 }
 
 static int _isStkGrow(u64 vAddr, u64 rsp) {
-	if (vAddr <= task_current->hal.rsp2 && vAddr > task_current->hal.rsp2 - task_usrStkSize)
+	if (vAddr <= task_current->hal.usrStkTop && vAddr >= task_current->hal.usrStkTop - task_usrStkSize)
 		return vAddr >= rsp - 32;
 	else return 0;
 }
