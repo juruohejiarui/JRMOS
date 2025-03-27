@@ -13,18 +13,21 @@ int hal_task_syscall_toUsr(void (*entry)(u64), u64 param, void *usrStk) {
 		mm_Page *pg = mm_allocPages(0, mm_Attr_Shared2U);
 		if (!pg)
 			return res_FAIL;
-		if (!mm_map((u64)usrStk, mm_getPhyAddr(pg), mm_Attr_Shared2U | mm_Attr_Exist))
+		printk(WHITE, BLACK, "allocate page %#018lx\n", mm_getPhyAddr(pg));
+		if (mm_map((u64)usrStk, mm_getPhyAddr(pg), mm_Attr_Shared2U | mm_Attr_Exist) == res_FAIL)
 			return res_FAIL;
+		printk(WHITE, BLACK, "finish map %#018lx->%#018lx\n", mm_getPhyAddr(pg), usrStk);
 		usr = (task_UsrStruct *)usrStk;
 	}
+
 	usr->tsk = task_current;
 	usr->hal.krlFs = usr->hal.krlGs = hal_mm_segment_KrlData;
 	usr->hal.usrFs = usr->hal.usrGs = hal_mm_segment_UsrData;
 
-	task_current->hal.rsp2 = task_current->hal.usrStkTop = (u64)usrStk + task_usrStkSize;
-
 	printk(WHITE, BLACK, "task #%d to user space\n", task_current->pid);
 	while (1) hal_hw_hlt();
+
+	task_current->hal.rsp2 = task_current->hal.usrStkTop = (u64)usrStk + task_usrStkSize;
 
 	// push r11 and rcx
 	__asm__ volatile (
