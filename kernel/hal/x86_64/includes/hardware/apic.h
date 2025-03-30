@@ -118,7 +118,11 @@ static __always_inline__ void hal_hw_apic_setApicBase(u64 base) { hal_hw_writeMs
 void hal_hw_apic_writeRte(u8 idx, u64 val);
 u64 hal_hw_apic_readRte(u8 idx);
 
+static __always_inline__ u32 hal_hw_apic_makeIcr32(u32 vec, u32 shorthand) {
+	return vec | (hal_hw_apic_Level_Assert << 14) | (shorthand << 18);
+}
 void hal_hw_apic_writeIcr(u64 val);
+void hal_hw_apic_writeIcr32(u32 val);
 
 int hal_hw_apic_install(intr_Desc *desc, void *arg);
 int hal_hw_apic_uninstall(intr_Desc *desc);

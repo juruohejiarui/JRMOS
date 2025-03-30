@@ -2,6 +2,7 @@
 #define __HAL_CPU_API_H__
 
 #include <cpu/desc.h>
+#include <hal/hardware/apic.h>
 
 #define hal_cpu_getvar(name) ({ \
     __typeof__(((cpu_Desc *)NULL)->name) val; \
@@ -28,11 +29,17 @@ int hal_cpu_enableAP();
 
 int hal_cpu_initIntr();
 
-void hal_cpu_sendIntr_all(u64 irq);
+static __always_inline__ void hal_cpu_sendIntr_allExcluSelf(u64 irq){
+	hal_hw_apic_writeIcr32(hal_hw_apic_makeIcr32(irq, hal_hw_apic_DestShorthand_AllExcludingSelf));
+}
 
-void hal_cpu_sendIntr_allExcluSelf(u64 irq);
+static __always_inline__ void hal_cpu_sendIntr_self(u64 irq){
+	hal_hw_apic_writeIcr32(hal_hw_apic_makeIcr32(irq, hal_hw_apic_DestShorthand_Self));
+}
 
-void hal_cpu_sendIntr_self(u64 irq);
+static __always_inline__ void hal_cpu_sendIntr_all(u64 irq){
+	hal_hw_apic_writeIcr(hal_hw_apic_makeIcr32(irq, hal_hw_apic_DestShorthand_AllIncludingSelf));
+}
 
 void hal_cpu_sendIntr(u64 irq, u32 cpuId);
 

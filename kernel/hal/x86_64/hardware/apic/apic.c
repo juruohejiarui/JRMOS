@@ -182,6 +182,14 @@ void hal_hw_apic_writeIcr(u64 val) {
 	}
 }
 
+void hal_hw_apic_writeIcr32(u32 val) {
+	if (hal_hw_apic_supportFlag & hal_hw_apic_supportFlag_X2Apic) hal_hw_writeMsr(0x830, val);
+	else {
+		*(u32 *)mm_dmas_phys2Virt(0xfee00300) = val;
+		hal_hw_mfence();
+	}
+}
+
 int hal_hw_apic_install(intr_Desc *desc, void *arg) {
 	u64 val = *(u64 *)arg;
 	((hal_hw_apic_RteDesc *)&val)->mask = hal_hw_apic_Mask_Masked;

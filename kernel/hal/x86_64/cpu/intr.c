@@ -61,54 +61,9 @@ int hal_cpu_initIntr() {
 	return res_SUCC; 
 }
 
-void hal_cpu_sendIntr_allExcluSelf(u64 irq){
-	hal_hw_apic_IcrDesc icr;
-	*(u64 *)&icr = 0;
-	icr.vector = irq;
-	icr.level = hal_hw_apic_Level_Assert;
-	icr.deliverMode = hal_hw_apic_DeliveryMode_Fixed;
-	icr.destMode = hal_hw_apic_DestMode_Physical;
-	icr.triggerMode = hal_hw_apic_TriggerMode_Edge;
-	icr.DestShorthand = hal_hw_apic_DestShorthand_AllExcludingSelf;
-
-	hal_hw_apic_writeIcr(*(u64 *)&icr);
-}
-
-void hal_cpu_sendIntr_self(u64 irq){
-	hal_hw_apic_IcrDesc icr;
-	*(u64 *)&icr = 0;
-	icr.vector = irq;
-	icr.level = hal_hw_apic_Level_Assert;
-	icr.deliverMode = hal_hw_apic_DeliveryMode_Fixed;
-	icr.destMode = hal_hw_apic_DestMode_Physical;
-	icr.triggerMode = hal_hw_apic_TriggerMode_Edge;
-	icr.DestShorthand = hal_hw_apic_DestShorthand_Self;
-
-	hal_hw_apic_writeIcr(*(u64 *)&icr);
-}
-
-void hal_cpu_sendIntr_all(u64 irq){
-	hal_hw_apic_IcrDesc icr;
-	*(u64 *)&icr = 0;
-	icr.vector = irq;
-	icr.level = hal_hw_apic_Level_Assert;
-	icr.deliverMode = hal_hw_apic_DeliveryMode_Fixed;
-	icr.destMode = hal_hw_apic_DestMode_Physical;
-	icr.triggerMode = hal_hw_apic_TriggerMode_Edge;
-	icr.DestShorthand = hal_hw_apic_DestShorthand_AllIncludingSelf;
-
-	hal_hw_apic_writeIcr(*(u64 *)&icr);
-}
-
 void hal_cpu_sendIntr(u64 irq, u32 cpuId) {
 	hal_hw_apic_IcrDesc icr;
-	*(u64 *)&icr = 0;
-	icr.vector = irq;
-	icr.level = hal_hw_apic_Level_Assert;
-	icr.deliverMode = hal_hw_apic_DeliveryMode_Fixed;
-	icr.destMode = hal_hw_apic_DestMode_Physical;
-	icr.triggerMode = hal_hw_apic_TriggerMode_Edge;
-	icr.DestShorthand = hal_hw_apic_DestShorthand_None;
+	*(u64 *)&icr = hal_hw_apic_makeIcr32(irq, hal_hw_apic_DestShorthand_None);
 
 	hal_hw_apic_setIcrDest(&icr, cpu_desc[cpuId].hal.apic, cpu_desc[cpuId].hal.x2apic);
 
