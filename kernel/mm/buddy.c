@@ -70,9 +70,10 @@ int mm_buddy_init() {
     return res_SUCC;
 }
 
-void mm_buddy_debug(int showDetail) {
-    printk(WHITE, BLACK, "mm: buddy: usage %ld B=%ld Mb/%ld B=%ld Mb\r", _buddy.totUsage, _buddy.totUsage >> 20, _buddy.tot, _buddy.tot >> 20);
-    if (!showDetail) return ;
+void mm_buddy_debug(int detail) {
+    printk(WHITE, BLACK, "mm: buddy: usage %ldB=%ldMb/%ldB=%ldMb ", _buddy.totUsage, _buddy.totUsage >> 20, _buddy.tot, _buddy.tot >> 20);
+    if (!detail)
+        return ;
     printk(WHITE, BLACK, "\n");
     for (int i = 0; i <= mm_buddy_mxOrd; i++) {
         printk(YELLOW, BLACK, "[%2d] ", i);

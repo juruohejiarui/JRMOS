@@ -59,6 +59,7 @@ void task_sche_init() {
 
 void task_sche_release() {
     task_current->resRuntime = 0;
+    task_current->vRuntime++;
     task_current->state = task_state_NeedSchedule;
     hal_task_sche_release();
 }

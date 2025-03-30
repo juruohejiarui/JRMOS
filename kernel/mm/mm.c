@@ -121,4 +121,6 @@ mm_Page *mm_init_allocPage(u64 num, u32 attr) {
 
 void mm_dbg() {
     mm_buddy_debug(0);
+    mm_slab_debug(0);
+    printk(WHITE, BLACK, "\r");
 }

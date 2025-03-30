@@ -105,7 +105,17 @@ int mm_slab_init() {
     return res_SUCC;
 }
 
-void mm_slab_debug() {
+void mm_slab_debug(int detail) {
+    if (!detail) {
+        u64 tot = 0, totUsage = 0;
+        for (int i = 0; i < mm_slab_mxSizeShift - mm_slab_mnSizeShift + 1; i++) {
+            Slab *slab = &_slab[i];
+            tot += slab->size * slab->freeCnt;
+            totUsage += slab->size * slab->usingCnt;
+        }
+        printk(WHITE, BLACK, "mm: slab: usage %ldB=%ldMb/%ldB=%ldMb ", totUsage, totUsage >> 20, tot, tot >> 20);
+        return ;
+    }
     printk(WHITE, BLACK, "mm: slab:\n");
     for (int i = 0; i < mm_slab_mxSizeShift - mm_slab_mnSizeShift + 1; i++) {
         Slab *slab = &_slab[i];
