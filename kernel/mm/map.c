@@ -57,7 +57,10 @@ hal_mm_PageTbl *mm_map_allocTbl() {
     if (!intrState) intr_unmask();
 
     page->attr |= mm_Attr_Allocated | mm_Attr_MMU;
-    return mm_dmas_phys2Virt(mm_getPhyAddr(page));
+
+    hal_mm_PageTbl *tbl = mm_dmas_phys2Virt(mm_getPhyAddr(page));
+    memset(tbl, 0, sizeof(hal_mm_PageTbl));
+    return tbl;
 }
 
 int mm_map_freeTbl(hal_mm_PageTbl *tbl) {

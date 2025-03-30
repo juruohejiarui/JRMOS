@@ -92,7 +92,8 @@ task_ThreadStruct *task_newThread() {
     if (thread == NULL) {
         printk(RED, BLACK, "task: failed to allocate thread structure.\n");
         return NULL;
-    } 
+    }
+    memset(thread, 0, sizeof(task_ThreadStruct));
     SpinLock_lock(&mm_map_krlTblLck);
     thread->krlTblModiJiff.value = mm_map_krlTblModiJiff.value;
     thread->allocMem.value = thread->allocVirtMem.value = 0;
@@ -137,7 +138,6 @@ int task_delSubTask(task_TaskStruct *subTsk) {
 }
 
 int task_freeThread(task_ThreadStruct *thread) {
-    printk(WHITE, BLACK, "task: delete thread %#018lx\n", thread);
     for (List *pageList = thread->pgRecord.next; pageList != &thread->pgRecord; ) {
         List *nxt = pageList->next;
         if (mm_freePages(container(pageList, mm_Page, list)) == res_FAIL) return res_FAIL;
@@ -181,6 +181,7 @@ void task_initIdle() {
 
 task_TaskStruct *task_newSubTask(void *entryAddr, u64 arg, u64 attr) {
     task_Union *tskUnion = mm_kmalloc(sizeof(task_Union), mm_Attr_Shared, NULL);
+    memset(tskUnion, 0, sizeof(task_Union));
     task_TaskStruct *tsk = &tskUnion->task;
 
     tsk->pid = task_pidCnt++;
@@ -213,6 +214,7 @@ task_TaskStruct *task_newSubTask(void *entryAddr, u64 arg, u64 attr) {
 
 task_TaskStruct *task_newTask(void *entryAddr, u64 arg, u64 attr) {
     task_Union *tskUnion = mm_kmalloc(sizeof(task_Union), mm_Attr_Shared, NULL);
+    memset(tskUnion, 0, sizeof(task_Union));
     if (tskUnion == NULL) {
         printk(RED, BLACK, "task: failed to allocate task structure.\n");
         return NULL;
@@ -253,7 +255,6 @@ task_TaskStruct *task_newTask(void *entryAddr, u64 arg, u64 attr) {
 
 void task_exit(u64 res) {
     intr_mask();
-    printk(WHITE, BLACK, "task: exit(): task #%d: %#018lx res=%#018lx\n", task_current->pid, task_current, res);
     /// @todo free simd struct
 
     hal_task_exit(res);
