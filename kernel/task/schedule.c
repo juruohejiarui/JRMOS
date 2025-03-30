@@ -182,6 +182,7 @@ void task_initIdle() {
 task_TaskStruct *task_newSubTask(void *entryAddr, u64 arg, u64 attr) {
     task_Union *tskUnion = mm_kmalloc(sizeof(task_Union), mm_Attr_Shared, NULL);
     task_TaskStruct *tsk = &tskUnion->task;
+
     tsk->pid = task_pidCnt++;
     tsk->priority = 0;
     tsk->state = 0;

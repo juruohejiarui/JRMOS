@@ -320,9 +320,15 @@ void printk(unsigned int fcol, unsigned int bcol, const char *fmt, ...) {
     va_start(args, fmt);
     len = _sprintf(buf, fmt, args);
     va_end(args);
-    if (task_getLevel() == task_level_Kernel)
-        _printStr(fcol, bcol, buf, len);
-    else {
-        task_syscall4(task_syscall_print, fcol, bcol, buf, len);
-    }
+    _printStr(fcol, bcol, buf, len);
+}
+
+void printu(unsigned int fcol, unsigned int bcol, const char *fmt, ...) {
+    char buf[4096] = {0};
+    int len = 0;
+    va_list args;
+    va_start(args, fmt);
+    len = _sprintf(buf, fmt, args);
+    va_end(args);
+    task_syscall4(task_syscall_print, fcol, bcol, buf, len);
 }

@@ -81,12 +81,12 @@ void hal_intr_doDivideError(u64 rsp, u64 errorCode) {
 	p = (u64 *)(rsp + 0x98);
 	SpinLock_lock(&_trapLogLck);
 	printk(RED,BLACK,"do_divide_error(0),ERROR_CODE:%#018lx,RSP:%#018lx,RIP:%#018lx\t" ,errorCode, rsp, *p);
-	// printk(WHITE, BLACK, "pid = %d\n", Task_current->pid);
-	// Task_current->priority = Task_Priority_Trapped;
 	_printRegs(rsp);
 	SpinLock_unlock(&_trapLogLck);
-	hal_intr_unmask();
-	while(1) hal_hw_hlt();
+
+	hal_intr_PtReg *regs = (void *)rsp;
+	regs->rip = (u64)task_exit;
+	regs->rdi = -1;
 }
 
 void hal_intr_doDebug(u64 rsp, u64 errorCode) {
@@ -241,7 +241,10 @@ void hal_intr_doGeneralProtection(u64 rsp, u64 errorCode) {
 	printk(RED,BLACK,"Segment Selector Index:%#018lx\n",errorCode & 0xfff8);
 	_printRegs(rsp);
 	SpinLock_unlock(&_trapLogLck);
-	while(1) hal_hw_hlt();
+	
+	hal_intr_PtReg *regs = (void *)rsp;
+	regs->rip = (u64)task_exit;
+	regs->rdi = -1;
 }
 
 static int _isStkGrow(u64 vAddr, u64 rsp) {
@@ -271,10 +274,10 @@ void hal_intr_doPageFault(u64 rsp, u64 errorCode) {
 	// } else 
 	if (_isStkGrow(cr2, ((hal_intr_PtReg *)rsp)->rsp)) {
 		mm_Page *page = mm_allocPages(0, mm_Attr_Shared2U);
-		SpinLock_lock(&_trapLogLck);
-		printk(ORANGE, BLACK, "[Trap] Task %d need one stack page %#018lx->%#018lx\n", task_current->pid, mm_getPhyAddr(page), cr2 & ~0xffful);
-		// _printRegs(rsp);
-		SpinLock_unlock(&_trapLogLck);
+		// SpinLock_lock(&_trapLogLck);
+		// // printk(ORANGE, BLACK, "[Trap] Task %d need one stack page %#018lx->%#018lx\n", task_current->pid, mm_getPhyAddr(page), cr2 & ~0xffful);
+		// // _printRegs(rsp);
+		// SpinLock_unlock(&_trapLogLck);
 		mm_map(cr2 & ~0xffful, mm_getPhyAddr(page), mm_Attr_Shared2U | mm_Attr_Exist | mm_Attr_Writable);
 	} else {
 		SpinLock_lock(&_trapLogLck);
@@ -299,7 +302,9 @@ void hal_intr_doPageFault(u64 rsp, u64 errorCode) {
 		_printRegs(rsp);
 		SpinLock_unlock(&_trapLogLck);
 
-		while(1) hal_hw_hlt();
+		hal_intr_PtReg *regs = (void *)rsp;
+		regs->rip = (u64)task_exit;
+		regs->rdi = -1;
 	}
 }
 

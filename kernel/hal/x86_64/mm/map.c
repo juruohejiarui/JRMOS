@@ -254,13 +254,13 @@ int hal_mm_map_clrTbl(u64 pgd) {
     hal_mm_PageTbl *pgdTbl = mm_dmas_phys2Virt(pgd), *pudTbl, *pmdTbl, *pldTbl;
     for (int i = 0; i < 256; i++) if (pgdTbl->entries[i]) {
         pudTbl = mm_dmas_phys2Virt(pgdTbl->entries[i] & ~0xffful);
-        if (mm_dmas_phys2Virt(NULL) == pudTbl || (pmdTbl->entries[i] & 0x80ul)) continue;
+        if (mm_dmas_phys2Virt(NULL) == pudTbl) continue;
         for (int j = 0; j < hal_mm_nrPageTblEntries; j++) if (pudTbl->entries[j]) {
             pmdTbl = mm_dmas_phys2Virt(pudTbl->entries[j] & ~0xffful);
             if (mm_dmas_phys2Virt(NULL) == pmdTbl || (pmdTbl->entries[j] & 0x80ul)) continue;
             for (int k = 0; k < hal_mm_nrPageTblEntries; k++) if (pmdTbl->entries[k]) {
-                pldTbl = mm_dmas_phys2Virt(pmdTbl->entries[j] & ~0xffful);
-                if (mm_dmas_phys2Virt(NULL) == pldTbl) continue;
+                pldTbl = mm_dmas_phys2Virt(pmdTbl->entries[k] & ~0xffful);
+                if (mm_dmas_phys2Virt(NULL) == pldTbl || (pmdTbl->entries[k] & 0x80ul)) continue;
                 if (mm_map_freeTbl(pldTbl) == res_FAIL) return res_FAIL;
             }
             if (mm_map_freeTbl(pmdTbl) == res_FAIL) return res_FAIL;
