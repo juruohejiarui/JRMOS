@@ -88,9 +88,9 @@ typedef struct mm_MemStruct {
 } mm_MemStruct;
 
 #define mm_slab_mnSizeShift	5
-#define mm_slab_mnSize		(1ul << mm_slab_mnSizeShift)
+#define mm_slab_mnSize		(1ull<< mm_slab_mnSizeShift)
 #define mm_slab_mxSizeShift	20
-#define mm_slab_mxSize		(1ul << mm_slab_mxSizeShift)
+#define mm_slab_mxSize		(1ull<< mm_slab_mxSizeShift)
 
 typedef struct mm_SlabRecord {
 	void *ptr;

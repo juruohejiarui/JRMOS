@@ -1,12 +1,17 @@
 #include <task/syscall.h>
 #include <task/api.h>
+#include <screen/screen.h>
 
 void *task_syscall_tbl[task_syscall_tblSize];
 
-int task_syscall_init() {
-	if (!hal_task_syscall_init()) return res_FAIL;
-
+void task_syscall_initTbl() {
 	task_syscall_tbl[task_syscall_exit] = task_exit;
+	task_syscall_tbl[task_syscall_release] = task_sche_release;
+}
+
+int task_syscall_init() {
+	if (hal_task_syscall_init() == res_FAIL) return res_FAIL;
+	printk(WHITE, BLACK, "syscall: cpu #%d: initialized\n", task_current->cpuId);
 	return res_SUCC;
 }
 

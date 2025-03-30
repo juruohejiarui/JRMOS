@@ -47,4 +47,10 @@ static __always_inline__ void hal_hw_writeMsr(u64 msrAddr, u64 data) {
 }
 
 #define hal_hw_hlt() __asm__ volatile ("hlt	\n\t" : : : "memory");
+
+#define hal_msr_IA32_EFER			0xC0000080
+
+#define hal_msr_IA32_FS_BASE		0xC0000100
+#define hal_msr_IA32_GS_BASE		0xC0000101
+#define hal_msr_IA32_KERNEL_GS_BASE 0xC0000102
 #endif

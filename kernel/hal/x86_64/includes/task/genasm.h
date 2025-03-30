@@ -6,17 +6,11 @@
 #define task_TaskStruct_thread 0x30
 #define hal_task_TaskStruct_rip    0x68
 #define hal_task_TaskStruct_rsp    0x70
-#define hal_task_TaskStruct_rsp2    0x78
-#define hal_task_TaskStruct_rflags 0x90
+#define hal_task_TaskStruct_usrRsp 0x90
+#define hal_task_TaskStruct_rflags 0x88
 
 #define task_ThreadStruct_hal 0x278
 #define hal_task_ThreadStruct_pgd 0x278
-
-#define task_UsrStruct_tsk	0
-#define hal_task_UsrStruct_usrFs 0x18
-#define hal_task_UsrStruct_usrGs 0x20
-#define hal_task_UsrStruct_krlFs 0x8
-#define hal_task_UsrStruct_krlGs 0x10
 
 #define task_usrStkSize 0x800000
 #define task_krlStkSize 0x8000

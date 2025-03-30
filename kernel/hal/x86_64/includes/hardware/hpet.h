@@ -30,12 +30,12 @@ typedef struct hal_hw_hpet_XsdtDesc {
 } __attribute__((packed)) hal_hw_hpet_XsdtDesc;
 
 #define hal_hw_hpet_capId	0x0
-#define hal_hw_hpet_capId_64bit				(1ul << 13)
-#define hal_hw_hpet_capId_LegacyReplace		(1ul << 15)
+#define hal_hw_hpet_capId_64bit				(1ull<< 13)
+#define hal_hw_hpet_capId_LegacyReplace		(1ull<< 15)
 
 #define hal_hw_hpet_cfg		0x10
-#define hal_hw_hpet_cfg_Enable			(1ul << 0)
-#define hal_hw_hpet_cfg_LegacyReplace	(1ul << 1)
+#define hal_hw_hpet_cfg_Enable			(1ull<< 0)
+#define hal_hw_hpet_cfg_LegacyReplace	(1ull<< 1)
 
 #define hal_hw_hpet_intrState	0x20
 
@@ -43,18 +43,18 @@ typedef struct hal_hw_hpet_XsdtDesc {
 
 #define hal_hw_hpet_timerCfgCap	0x100
 // interrupt type of this timer: 0: edge, 1: level
-#define hal_hw_hpet_timerCfgCap_IntrT	(1ul << 1)
-#define hal_hw_hpet_timerCfgCap_Enable	(1ul << 2)
-#define hal_hw_hpet_timerCfgCap_Period	(1ul << 3)
-#define hal_hw_hpet_timerCfgCap_PeriodCap	(1ul << 4)
-#define hal_hw_hpet_timerCfgCap_64Cap		(1ul << 5)
+#define hal_hw_hpet_timerCfgCap_IntrT	(1ull<< 1)
+#define hal_hw_hpet_timerCfgCap_Enable	(1ull<< 2)
+#define hal_hw_hpet_timerCfgCap_Period	(1ull<< 3)
+#define hal_hw_hpet_timerCfgCap_PeriodCap	(1ull<< 4)
+#define hal_hw_hpet_timerCfgCap_64Cap		(1ull<< 5)
 // 1: allow software to directly set periodic timer's accumulator.
-#define hal_hw_hpet_timerCfgCap_SetVal		(1ul << 6)
+#define hal_hw_hpet_timerCfgCap_SetVal		(1ull<< 6)
 // 1: force a 64-bit timer to perform as in 32-bit mode. No effect on 32-bit timer
-#define hal_hw_hpet_timerCfgCap_32bit		(1ul << 8)
-#define hal_hw_hpet_timerCfgCap_fsbEnable	(1ul << 14)
-#define hal_hw_hpet_timerCfgCap_fsbCap		(1ul << 15)
-#define hal_hw_hpet_timerCfgCap_Irq(x)		(1ul << ((x) + 32))
+#define hal_hw_hpet_timerCfgCap_32bit		(1ull<< 8)
+#define hal_hw_hpet_timerCfgCap_fsbEnable	(1ull<< 14)
+#define hal_hw_hpet_timerCfgCap_fsbCap		(1ull<< 15)
+#define hal_hw_hpet_timerCfgCap_Irq(x)		(1ull<< ((x) + 32))
 
 #define hal_hw_hpet_timerCfgCap_CapPart	(hal_hw_hpet_timerCfgCap_PeriodCap | hal_hw_hpet_timerCfgCap_64Cap | hal_hw_hpet_timerCfgCap_fsbCap)
 

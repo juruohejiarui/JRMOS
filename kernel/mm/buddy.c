@@ -30,7 +30,7 @@ static __always_inline__ void _revBit(mm_Page *page) {
 }
 
 static __always_inline__ mm_Page *_getBuddy(mm_Page *page) {
-    return mm_buddy_isRight(page) ? page - (1ul << page->ord) : page + (1ul << page->ord);
+    return mm_buddy_isRight(page) ? page - (1ull<< page->ord) : page + (1ull<< page->ord);
 }
 
 int mm_buddy_init() {
@@ -56,14 +56,14 @@ int mm_buddy_init() {
         mm_Zone *zone = &mm_memStruct.zones[i];
         for (u64 addr = zone->availSt; addr < zone->phyAddrEd; ) {
             u32 ord = addr ? min(mm_buddy_mxOrd, bit_ffs64(addr) - mm_pageShift - 1) : mm_buddy_mxOrd;
-            while (addr + (1ul << (ord + mm_pageShift)) > zone->phyAddrEd) ord--;
+            while (addr + (1ull<< (ord + mm_pageShift)) > zone->phyAddrEd) ord--;
             mm_Page *page = mm_getDesc(addr);
             page->buddyId = 1;
             page->attr |= mm_Attr_HeadPage;
             page->ord = ord;
             List_insBefore(&page->list, &_buddy.freeLst[ord]);
-            addr += (1ul << (ord + mm_pageShift));
-            _buddy.tot += (1ul << (ord + mm_pageShift));
+            addr += (1ull<< (ord + mm_pageShift));
+            _buddy.tot += (1ull<< (ord + mm_pageShift));
         }
     }
     
@@ -107,7 +107,7 @@ mm_Page *mm_allocPages(u64 log2Size, u32 attr) {
         _revBit(rPage);
         List_insBefore(&rPage->list, &_buddy.freeLst[i - 1]);
     }
-    _buddy.totUsage += (1ul << (log2Size + mm_pageShift));
+    _buddy.totUsage += (1ull<< (log2Size + mm_pageShift));
     SpinLock_unlock(&_buddyLck);
     if (!intrState) intr_unmask();
     resPage->attr = attr | mm_Attr_HeadPage | mm_Attr_Allocated;
@@ -126,7 +126,7 @@ int mm_freePages(mm_Page *pages) {
     int intrState = intr_state();
     intr_mask();
     SpinLock_lock(&_buddyLck);
-    _buddy.totUsage -= (1ul << (pages->ord + mm_pageShift));
+    _buddy.totUsage -= (1ull<< (pages->ord + mm_pageShift));
     pages->attr &= ~mm_Attr_Allocated;
     for (int i = pages->ord; i <= mm_buddy_mxOrd; i++) {
         _revBit(pages);

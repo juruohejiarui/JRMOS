@@ -66,9 +66,13 @@ void _backtrace(hal_intr_PtReg *regs) {
 }
 
 static void _printRegs(u64 rsp) {
-	printk(WHITE, BLACK, "proc #%d registers: \n", task_current->cpuId);
+	printk(WHITE, BLACK, "proc #%d task #%d registers: \n", task_current->cpuId, task_current->pid);
 	for (int i = 0; i < sizeof(hal_intr_PtReg) / sizeof(u64); i++)
-		printk(WHITE, BLACK, "%4s=%#018lx%c", _regName[i], *(u64 *)(rsp + i * 8), (i + 1) % 8 == 0 ? '\n' : ' ');
+		printk(WHITE, BLACK, "%4s=%#018lx%c", _regName[i], *(u64 *)(rsp + i * 8), ((i + 1) % 8 == 0 || i == sizeof(hal_intr_PtReg) / sizeof(u64) - 1) ? '\n' : ' ');
+	// print msr
+	printk(WHITE, BLACK, "msr: IA32_KERNEL_GS_BASE:%#018lx, IA32_GS_BASE:%#018lx\n",
+		hal_hw_readMsr(hal_msr_IA32_KERNEL_GS_BASE), hal_hw_readMsr(hal_msr_IA32_GS_BASE));
+	printk(WHITE, BLACK, "cr3: %#018lx\n", hal_hw_getCR(3));
 	_backtrace((hal_intr_PtReg *)rsp);
 }
 
@@ -128,7 +132,6 @@ void hal_intr_doUndefinedOpcode(u64 rsp, u64 errorCode) {
 	u64 *p = NULL;
 	p = (u64 *)(rsp + 0x98);
 	printk(RED,BLACK,"do_undefined_opcode(6),ERROR_CODE:%#018lx,RSP:%#018lx,RIP:%#018lx\n",errorCode , rsp , *p);
-	// printk(WHITE, BLACK, "processor : %d\n", SMP_getCurCPUIndex());
 	while(1);
 }
 
@@ -243,7 +246,7 @@ void hal_intr_doGeneralProtection(u64 rsp, u64 errorCode) {
 
 static int _isStkGrow(u64 vAddr, u64 rsp) {
 	if (vAddr <= task_current->hal.usrStkTop && vAddr >= task_current->hal.usrStkTop - task_usrStkSize)
-		return vAddr >= rsp - 32;
+		return 1;
 	else return 0;
 }
 
@@ -268,12 +271,15 @@ void hal_intr_doPageFault(u64 rsp, u64 errorCode) {
 	// } else 
 	if (_isStkGrow(cr2, ((hal_intr_PtReg *)rsp)->rsp)) {
 		mm_Page *page = mm_allocPages(0, mm_Attr_Shared2U);
-		printk(YELLOW,BLACK,"do_page_fault(14),ERROR_CODE:%#018lx,RSP:%#018lx,RIP:%#018lx,CR2:%#018lx\t",errorCode , rsp , *p , cr2);
-		printk(BLACK, WHITE, "[Trap] Task %d need one stack page %#018lx->%#018lx\n", task_current->pid, mm_getPhyAddr(page), cr2 & ~0xffful);
+		SpinLock_lock(&_trapLogLck);
+		printk(ORANGE, BLACK, "[Trap] Task %d need one stack page %#018lx->%#018lx\n", task_current->pid, mm_getPhyAddr(page), cr2 & ~0xffful);
+		// _printRegs(rsp);
+		SpinLock_unlock(&_trapLogLck);
 		mm_map(cr2 & ~0xffful, mm_getPhyAddr(page), mm_Attr_Shared2U | mm_Attr_Exist | mm_Attr_Writable);
 	} else {
 		SpinLock_lock(&_trapLogLck);
 		printk(RED,BLACK,"do_page_fault(14),ERROR_CODE:%#018lx,RSP:%#018lx,RIP:%#018lx,CR2:%#018lx\n",errorCode , rsp , *p , cr2);
+		mm_map_dbg(cr2);
 		if (errorCode & 0x01)
 			printk(RED,BLACK,"The page fault was caused by a non-present page.\n");
 		if (errorCode & 0x02)
@@ -325,7 +331,7 @@ void hal_intr_doSIMDError(u64 rsp, u64 errorCode) {
 	// printk(WHITE, BLACK, "task %ld on processor %d\n", Task_current->pid, SMP_getCurCPUIndex());
 	// u32 mxcsr = SIMD_getMXCSR();
 	// printk(WHITE, BLACK, "mxcsr:%#010x\t", mxcsr);
-	// mxcsr &= ~((1ul << 6) - 1);
+	// mxcsr &= ~((1ull<< 6) - 1);
 	// SIMD_setMXCSR(mxcsr);
 	while(1) hal_hw_hlt();
 }
@@ -338,27 +344,27 @@ void hal_intr_doVirtualizationError(u64 rsp, u64 errorCode) {
 }
 
 void hal_intr_initTrapGates() {
-	hal_intr_setTrapGate(hal_init_idtTbl, 0, 0, hal_intr_divideError);
-	hal_intr_setTrapGate(hal_init_idtTbl, 1, 0, hal_intr_debug);
-	hal_intr_setIntrGate(hal_init_idtTbl, 2, 0, hal_intr_nmi);
-	hal_intr_setSystemGate(hal_init_idtTbl, 3, 0, hal_intr_int3);
-	hal_intr_setSystemGate(hal_init_idtTbl, 4, 0, hal_intr_overflow);
-	hal_intr_setSystemGate(hal_init_idtTbl, 5, 0, hal_intr_bounds);
-	hal_intr_setTrapGate(hal_init_idtTbl, 6, 0, hal_intr_undefinedOpcode);
-	hal_intr_setTrapGate(hal_init_idtTbl, 7, 0, hal_intr_devNotAvailable);
-	hal_intr_setTrapGate(hal_init_idtTbl, 8, 0, hal_intr_doubleFault);
-	hal_intr_setTrapGate(hal_init_idtTbl, 9, 0, hal_intr_coprocessorSegmentOverrun);
-	hal_intr_setTrapGate(hal_init_idtTbl, 10, 0, hal_intr_invalidTSS);
-	hal_intr_setTrapGate(hal_init_idtTbl, 11, 0, hal_intr_segmentNotPresent);
-	hal_intr_setTrapGate(hal_init_idtTbl, 12, 0, hal_intr_stackSegmentFault);
-	hal_intr_setTrapGate(hal_init_idtTbl, 13, 0, hal_intr_generalProtection);
-	hal_intr_setTrapGate(hal_init_idtTbl, 14, 0, hal_intr_pageFault);
+	hal_intr_setTrapGate(hal_init_idtTbl, 0, 2, hal_intr_divideError);
+	hal_intr_setTrapGate(hal_init_idtTbl, 1, 2, hal_intr_debug);
+	hal_intr_setIntrGate(hal_init_idtTbl, 2, 2, hal_intr_nmi);
+	hal_intr_setSystemGate(hal_init_idtTbl, 3, 2, hal_intr_int3);
+	hal_intr_setSystemGate(hal_init_idtTbl, 4, 2, hal_intr_overflow);
+	hal_intr_setSystemGate(hal_init_idtTbl, 5, 2, hal_intr_bounds);
+	hal_intr_setTrapGate(hal_init_idtTbl, 6, 2, hal_intr_undefinedOpcode);
+	hal_intr_setTrapGate(hal_init_idtTbl, 7, 2, hal_intr_devNotAvailable);
+	hal_intr_setTrapGate(hal_init_idtTbl, 8, 2, hal_intr_doubleFault);
+	hal_intr_setTrapGate(hal_init_idtTbl, 9, 2, hal_intr_coprocessorSegmentOverrun);
+	hal_intr_setTrapGate(hal_init_idtTbl, 10, 2, hal_intr_invalidTSS);
+	hal_intr_setTrapGate(hal_init_idtTbl, 11, 2, hal_intr_segmentNotPresent);
+	hal_intr_setTrapGate(hal_init_idtTbl, 12, 2, hal_intr_stackSegmentFault);
+	hal_intr_setTrapGate(hal_init_idtTbl, 13, 2, hal_intr_generalProtection);
+	hal_intr_setTrapGate(hal_init_idtTbl, 14, 2, hal_intr_pageFault);
 	// 15 reserved
-	hal_intr_setTrapGate(hal_init_idtTbl, 16, 0, hal_intr_x87FPUError);
-	hal_intr_setTrapGate(hal_init_idtTbl, 17, 0, hal_intr_alignmentCheck);
-	hal_intr_setTrapGate(hal_init_idtTbl, 18, 0, hal_intr_machineCheck);
-	hal_intr_setTrapGate(hal_init_idtTbl, 19, 0, hal_intr_simdError);
-	hal_intr_setTrapGate(hal_init_idtTbl, 20, 0, hal_intr_virtualizationError);
+	hal_intr_setTrapGate(hal_init_idtTbl, 16, 2, hal_intr_x87FPUError);
+	hal_intr_setTrapGate(hal_init_idtTbl, 17, 2, hal_intr_alignmentCheck);
+	hal_intr_setTrapGate(hal_init_idtTbl, 18, 2, hal_intr_machineCheck);
+	hal_intr_setTrapGate(hal_init_idtTbl, 19, 2, hal_intr_simdError);
+	hal_intr_setTrapGate(hal_init_idtTbl, 20, 2, hal_intr_virtualizationError);
 
 	SpinLock_init(&_trapLogLck);
 }

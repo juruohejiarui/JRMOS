@@ -15,12 +15,7 @@
 #error No definition of task_current() for this arch!
 #endif
 
-#ifdef HAL_TASK_CURRENTUSR
-#define task_currentUsr hal_task_currentUsr
-#else 
-#error No definition of task_currentUsr() for this arch!
-#endif
-
+#define task_union(taskStruct) ((task_Union *)(taskStruct))
 
 task_TaskStruct *task_newSubTask(void *entryAddr, u64 arg, u64 attr);
 

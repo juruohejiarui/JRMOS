@@ -48,7 +48,7 @@ void screen_init() {
 int screen_enableBuf() {
     u64 bufSize = screen_info->pixelPreLine * screen_info->verRes * sizeof(u32);
     u64 log2BufSize = 0;
-    while ((1ul << log2BufSize) < bufSize) log2BufSize++;
+    while ((1ull<< log2BufSize) < bufSize) log2BufSize++;
     mm_Page *pages = mm_allocPages(max(0, log2BufSize - mm_pageShift), mm_Attr_Shared);
     if (pages == NULL) return res_FAIL;
     _bufAddr = mm_dmas_phys2Virt(mm_getPhyAddr(pages));
@@ -322,5 +322,7 @@ void printk(unsigned int fcol, unsigned int bcol, const char *fmt, ...) {
     va_end(args);
     if (task_getLevel() == task_level_Kernel)
         _printStr(fcol, bcol, buf, len);
-    else task_syscall4(task_syscall_print, fcol, bcol, buf, len);
+    else {
+        task_syscall4(task_syscall_print, fcol, bcol, buf, len);
+    }
 }

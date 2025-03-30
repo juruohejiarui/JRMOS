@@ -97,7 +97,7 @@ int mm_init() {
 
 mm_Page *mm_divPageGrp(mm_Page *grpHdr) {
     if (!grpHdr->ord) return NULL;
-    mm_Page *rPart = grpHdr + (1ul << (--grpHdr->ord));
+    mm_Page *rPart = grpHdr + (1ull<< (--grpHdr->ord));
     rPart->ord = grpHdr->ord;
     rPart->attr = grpHdr->attr;
     rPart->buddyId = mm_buddy_rson(grpHdr->buddyId);

@@ -3,6 +3,9 @@
 #include <mm/buddy.h>
 #include <interrupt/api.h>
 #include <screen/screen.h>
+#include <cpu/api.h>
+
+#include <hal/hardware/reg.h>
 
 static task_MgrStruct task_mgr;
 
@@ -28,7 +31,6 @@ static __always_inline__ int task_sche_cfsTreeCmp(RBNode *a, RBNode *b) {
 RBTree_insert(task_sche_cfsTreeIns, task_sche_cfsTreeCmp)
 
 void task_sche_updCurState() {
-    // printk(RED, BLACK, "C%d", task_current->cpuId);
     register u64 tmp = task_sche_cfsTbl[task_current->priority];
     task_current->vRuntime += tmp;
     task_current->resRuntime -= tmp;
@@ -49,6 +51,7 @@ void task_sche_updState() {
 void task_sche_init() {
     for (int i = 0; i < cpu_num; i++) {
         RBTree_init(&task_mgr.tasks[i], task_sche_cfsTreeIns, task_sche_cfsTreeCmp);
+        cpu_desc[i].tskTree = &task_mgr.tasks[i];
     }
     RBTree_init(&task_mgr.freeTasks, task_sche_cfsTreeIns, task_sche_cfsTreeCmp);
     task_sche_state = 0;
@@ -61,10 +64,10 @@ void task_sche_release() {
     hal_task_sche_release();
 }
 
+int cnt = 0;
 void task_schedule() {
-    RBTree *tasks = &task_mgr.tasks[task_current->cpuId];
+    RBTree *tasks = cpu_getvar(tskTree);
     RBNode *nextTskNode = RBTree_getLeft(tasks);
-    // printk(WHITE, BLACK, "nexTsk:%#018lx\t", nextTskNode);
     task_TaskStruct *nextTsk;
     if (task_current->flag & task_flag_WaitFree) {
         RBTree_ins(&task_mgr.freeTasks, &task_current->rbNode);
@@ -157,7 +160,6 @@ int task_freeTask(task_TaskStruct *tsk) {
 
 void task_initIdle() {
     task_current->pid = task_pidCnt++;
-    cpu_Desc *curCpu = &cpu_desc[task_current->cpuId];
     task_current->priority = 0;
     task_current->state = 0;
     task_current->flag = 0;
@@ -190,7 +192,12 @@ task_TaskStruct *task_newSubTask(void *entryAddr, u64 arg, u64 attr) {
     
     task_insSubTask(tsk, tsk->thread);
 
-    tsk->cpuId = hal_task_dispatchTask(tsk);
+    if (hal_task_dispatchTask(tsk) == res_FAIL) {
+        printk(RED, BLACK, "task: failed to dispatch task #%ld.\n", tsk->pid);
+        task_delSubTask(tsk);
+        mm_kfree(tsk, mm_Attr_Shared);
+        return NULL;
+    }
 
     intr_mask();
     RBTree_ins(&task_mgr.tasks[tsk->cpuId], &tsk->rbNode);
@@ -214,7 +221,12 @@ task_TaskStruct *task_newTask(void *entryAddr, u64 arg, u64 attr) {
 
     task_insSubTask(tsk, tsk->thread);
 
-    tsk->cpuId = hal_task_dispatchTask(tsk);
+    if (hal_task_dispatchTask(tsk) == res_FAIL) {
+        printk(RED, BLACK, "task: failed to dispatch task #%ld.\n", tsk->pid);
+        task_delSubTask(tsk);
+        mm_kfree(tsk, mm_Attr_Shared);
+        return NULL;
+    }
     
     intr_mask();
     RBTree_ins(&task_mgr.tasks[tsk->cpuId], &tsk->rbNode);

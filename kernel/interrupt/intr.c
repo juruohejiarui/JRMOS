@@ -32,7 +32,7 @@ int intr_alloc(intr_Desc *desc, int intrNum) {
     for (int i = 0x0; i < 0x100 - intrNum; i++) {
         int flag = -1;
         for (int j = intrNum - 1; j >= 0; j--)
-            if (cpu_desc[bstCpu].intrMsk[(i + j) / 64] & (1ul << ((i + j) % 64))) {
+            if (cpu_desc[bstCpu].intrMsk[(i + j) / 64] & (1ull<< ((i + j) % 64))) {
                 flag = j;
                 break;
             }

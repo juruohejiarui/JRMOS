@@ -69,7 +69,7 @@ int hal_hw_hpet_init() {
     }
 
     // get the minimum tick of HPET
-    u64 minTick = (cap >> 32) & ((1ul << 32) - 1);
+    u64 minTick = (cap >> 32) & ((1ull<< 32) - 1);
     printk(WHITE, BLACK, "minTick=%ld\n", minTick);
 
     // set and check check configuration and capability of timer 0

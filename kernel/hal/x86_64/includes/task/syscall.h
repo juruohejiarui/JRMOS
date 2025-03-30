@@ -5,13 +5,79 @@
 #include <lib/funcgen.h>
 #include <hal/interrupt/desc.h>
 
-u64 hal_task_syscall_api0(u64 index);
-u64 hal_task_syscall_api1(u64 index, u64 arg0);
-u64 hal_task_syscall_api2(u64 index, u64 arg0, u64 arg1);
-u64 hal_task_syscall_api3(u64 index, u64 arg0, u64 arg1, u64 arg2);
-u64 hal_task_syscall_api4(u64 index, u64 arg0, u64 arg1, u64 arg2, u64 arg3);
-u64 hal_task_syscall_api5(u64 index, u64 arg0, u64 arg1, u64 arg2, u64 arg3, u64 arg4);
-u64 hal_task_syscall_api6(u64 index, u64 arg0, u64 arg1, u64 arg2, u64 arg3, u64 arg4, u64 arg5);
+#define _call_syscallInst \
+__asm__ volatile ( \
+	"syscall			\n\t" \
+	: "=a"(val) \
+	: "D"(idx), "S"((u64)&regs) \
+	: "memory" \
+); 
+
+static __always_inline__ u64 hal_task_syscall_api0(u64 idx) {
+	hal_intr_PtReg regs; u64 val;
+	_call_syscallInst
+	return val;
+}
+
+static __always_inline__ u64 hal_task_syscall_api1(u64 idx, u64 arg0) {
+	hal_intr_PtReg regs; u64 val;
+	regs.rdi = arg0;
+	_call_syscallInst
+	return val;
+}
+
+static __always_inline__ u64 hal_task_syscall_api2(u64 idx, u64 arg0, u64 arg1) {
+	hal_intr_PtReg regs; u64 val;
+	regs.rdi = arg0;
+	regs.rsi = arg1;
+	_call_syscallInst
+	return val;
+}
+
+static __always_inline__ u64 hal_task_syscall_api3(u64 idx, u64 arg0, u64 arg1, u64 arg2) {
+	hal_intr_PtReg regs; u64 val;
+	regs.rdi = arg0;
+	regs.rsi = arg1;
+	regs.rdx = arg2;
+	_call_syscallInst
+	return val;
+}
+
+static __always_inline__ u64 hal_task_syscall_api4(u64 idx, u64 arg0, u64 arg1, u64 arg2, u64 arg3) {
+	hal_intr_PtReg regs; u64 val;
+	regs.rdi = arg0;
+	regs.rsi = arg1;
+	regs.rdx = arg2;
+	regs.rcx = arg3;
+	_call_syscallInst
+	return val;
+}
+
+static __always_inline__ u64 hal_task_syscall_api5(u64 idx, u64 arg0, u64 arg1, u64 arg2, u64 arg3, u64 arg4) {
+	hal_intr_PtReg regs; u64 val;
+	regs.rdi = arg0;
+	regs.rsi = arg1;
+	regs.rdx = arg2;
+	regs.rcx = arg3;
+	regs.r8 = arg4;
+	_call_syscallInst
+	return val;
+}
+
+static __always_inline__ u64 hal_task_syscall_api6(u64 idx, u64 arg0, u64 arg1, u64 arg2, u64 arg3, u64 arg4, u64 arg5) {
+	hal_intr_PtReg regs; u64 val;
+	regs.rdi = arg0;
+	regs.rsi = arg1;
+	regs.rdx = arg2;
+	regs.rcx = arg3;
+	regs.r8 = arg4;
+	regs.r9 = arg5;
+	_call_syscallInst
+
+	return val;
+}
+
+#undef _call_syscallInst
 
 #define hal_task_syscall0(index) \
 	hal_task_syscall_api0(index)

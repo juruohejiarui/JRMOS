@@ -11,4 +11,8 @@
 
 #define cpu_sendIntr hal_cpu_sendIntr
 
+#define cpu_getvar hal_cpu_getvar
+
+#define cpu_setvar hal_cpu_setvar
+
 #endif

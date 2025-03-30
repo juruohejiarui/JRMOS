@@ -65,13 +65,13 @@ int mm_slab_init() {
         u64 size = (mm_slab_mxSizeShift - mm_slab_mnSizeShift + 1) * sizeof(SlabBlk);
         for (int i = 0; i < mm_slab_mxSizeShift - mm_slab_mnSizeShift + 1; i++) {
             _slab[i].szShift = i + mm_slab_mnSizeShift;
-            _slab[i].size = (1ul << (i + mm_slab_mnSizeShift));
+            _slab[i].size = (1ull<< (i + mm_slab_mnSizeShift));
             size += upAlign(Page_2MSize / _slab[i].size, 64) / 64 * sizeof(u64);
         }
         size = upAlign(size, mm_pageSize);
         printk(WHITE, BLACK, "mm: slab: initialization memory %ld\n", size);
         u64 log2Size = 0;
-        while ((1ul << log2Size) < (size >> mm_pageShift)) log2Size++;
+        while ((1ull<< log2Size) < (size >> mm_pageShift)) log2Size++;
         page = mm_allocPages(log2Size, mm_Attr_Shared);
             
         if (page == NULL) {
@@ -197,7 +197,7 @@ static void *_kmalloc(u64 size) {
 
     for (u64 j = 0; j < blk->colCnt; j++) {
         if (blk->colMap[j >> 6] == ~0x0ul) { j += 64; break; }
-        if (blk->colMap[j >> 6] & (1ul << (j & 63))) continue;
+        if (blk->colMap[j >> 6] & (1ull<< (j & 63))) continue;
         bit_set1(&blk->colMap[j >> 6], j & 63);
         blk->usingCnt++, blk->freeCnt--;
         _slab[id].usingCnt++, _slab[id].freeCnt--;

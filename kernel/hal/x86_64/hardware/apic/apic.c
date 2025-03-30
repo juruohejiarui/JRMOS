@@ -50,19 +50,19 @@ int hal_hw_apic_initLocal() {
 	printk(WHITE, BLACK, "CPUID\t01: a:%#010x,b:%#010x,c:%#010x,d:%#010x\n", a, b, c, d);
 
 	printk(WHITE, BLACK, "hw: apic: support: ");
-	if (d & (1ul << 9))
+	if (d & (1ull<< 9))
 		printk(GREEN, BLACK, "xAPIC ");
 	else {
 		printk(RED, BLACK, "xAPIC ");
 		return res_FAIL;
 	}
 	
-	if (c & (1ul << 21))
+	if (c & (1ull<< 21))
 		printk(GREEN, BLACK, "x2APIC "),
 		hal_hw_apic_supportFlag |= hal_hw_apic_supportFlag_X2Apic;
 	else printk(RED, BLACK, "x2APIC ");
 
-	if (*(u64 *)mm_dmas_phys2Virt(0xfee00030) & (1ul << 24))
+	if (*(u64 *)mm_dmas_phys2Virt(0xfee00030) & (1ull<< 24))
 		printk(GREEN, BLACK, "EOI-broadcase\n"),
 		hal_hw_apic_supportFlag |= hal_hw_apic_supportFlag_EOIBroadcase;
 	else printk(RED, BLACK, "EOI-broadcase\n");
@@ -190,7 +190,7 @@ int hal_hw_apic_install(intr_Desc *desc, void *arg) {
 }
 
 int hal_hw_apic_uninstall(intr_Desc *desc) {
-	hal_hw_apic_writeRte(_idxOfRte(desc->vecId), (1ul << 16));
+	hal_hw_apic_writeRte(_idxOfRte(desc->vecId), (1ull<< 16));
 	return res_SUCC;
 }
 

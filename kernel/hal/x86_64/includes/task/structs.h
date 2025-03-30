@@ -13,14 +13,12 @@ typedef struct hal_task_ThreadStruct {
 } __attribute__ ((packed)) hal_task_ThreadStruct;
 
 typedef struct hal_task_TaskStruct {
-	u64 rip, rsp, rsp2, fs, gs, rflags;
-	u64 usrStkTop;
+	u64 rip, rsp, fs, gs, rflags;
+	// user space
+	u64 usrRsp, usrStkTop;
+	// storage of IA32_GS_BASE and IA32_FS_BASE
+	u64 gsBase, fsBase;
 	hal_intr_TSS tss;
 } __attribute__ ((packed)) hal_task_TaskStruct;
-
-typedef struct hal_task_UsrStruct {
-	// fs and gs of kernel and user
-	u64 krlFs, krlGs, usrFs, usrGs;
-} __attribute__ ((packed)) hal_task_UsrStruct;
 
 #endif

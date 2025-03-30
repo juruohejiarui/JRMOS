@@ -7,8 +7,11 @@
 #define task_syscall_tblSize 0x100
 extern void *task_syscall_tbl[task_syscall_tblSize];
 
-#define task_syscall_print  0x0
-#define task_syscall_exit   0x1
+#define task_syscall_print  	0x0
+#define task_syscall_exit   	0x1
+#define task_syscall_release	0x2
+
+void task_syscall_initTbl();
 
 int task_syscall_init();
 

@@ -1,5 +1,6 @@
 #include <hal/task/genasm.h>
 #include <hal/interrupt/genasm.h>
+#include <hal/cpu/genasm.h>
 #include <hal/linkage.h>
 
 .global task_syscall_tbl
@@ -27,6 +28,7 @@ ENTRY(hal_task_sche_switch)
 	je hal_task_sche_switchCR3_end
 	movq %rax, %cr3
 hal_task_sche_switchCR3_end:
+	movq %rdi, %gs:hal_cpu_Desc_curKrlStk
 	movq hal_task_TaskStruct_rsp(%rdi), %rsp
 	movq hal_task_TaskStruct_rip(%rdi), %rax
 	jmp *%rax
@@ -37,171 +39,76 @@ hal_task_sche_switch_back:
 
 	retq
 
-ENTRY(hal_task_syscall_api0) 
-	endbr64
-	pushq %rbp
-	movq %rsp, %rbp
-	movq %rdi, %rax
-
-	syscall
-
-	popq %rbp
-	retq
-
-// u64 hal_task_syscall1(u64 index, u64 arg0)
-ENTRY(hal_task_syscall_api1) 
-	endbr64
-	pushq %rbp
-	movq %rsp, %rbp
-	movq %rdi, %rax
-	movq %rsi, %rdi
-
-	syscall
-
-	popq %rbp
-	retq
-
-// u64 hal_task_syscall2(u64 index, u64 arg0, u64 arg1)
-ENTRY(hal_task_syscall_api2) 
-	endbr64
-	pushq %rbp
-	movq %rsp, %rbp
-	movq %rdi, %rax
-	movq %rsi, %rdi
-	movq %rdx, %rsi
-
-	syscall
-
-	popq %rbp
-	retq
-
-// u64 hal_task_syscall3(u64 index, u64 arg0, u64 arg1, u64 arg2)
-ENTRY(hal_task_syscall_api3) 
-	endbr64
-	pushq %rbp
-	movq %rsp, %rbp
-	movq %rdi, %rax
-	movq %rsi, %rdi
-	movq %rdx, %rsi
-	movq %rcx, %r10
-
-	syscall
-
-	popq %rbp
-	retq
-
-// u64 hal_task_syscall4(u64 index, u64 arg0, u64 arg1, u64 arg2, u64 arg3)
-ENTRY(hal_task_syscall_api4) 
-	endbr64
-	pushq %rbp
-	movq %rsp, %rbp
-	movq %rdi, %rax
-	movq %rsi, %rdi
-	movq %rdx, %rsi
-	movq %rcx, %r10
-	movq %r8, %r12
-
-	syscall
-
-	popq %rbp
-	retq
-
-// u64 hal_task_syscall5(u64 index, u64 arg0, u64 arg1, u64 arg2, u64 arg3, u64 arg4)
-ENTRY(hal_task_syscall_api5) 
-	endbr64
-	pushq %rbp
-	movq %rsp, %rbp
-	movq %rdi, %rax
-	movq %rsi, %rdi
-	movq %rdx, %rsi
-	movq %rcx, %r10
-	movq %r8, %r12
-	movq %r9, %r8
-
-	syscall
-
-	popq %rbp
-	retq
-
-// u64 hal_task_syscall6(u64 index, u64 arg0, u64 arg1, u64 arg2, u64 arg3, u64 arg4, u64 arg5)
-ENTRY(hal_task_syscall_api6) 
-	endbr64
-	pushq %rbp
-	movq %rsp, %rbp
-	movq %rdi, %rax
-	movq %rsi, %rdi
-	movq %rdx, %rsi
-	movq %rcx, %r10
-	movq %r8, %r12
-	movq %r9, %r8
-	movq 16(%rsp), %r9
-
-	syscall
-
-	popq %rbp
-	retq
-
 // before enter this function,
-// rax : syscall index
-// rdi, rsi, r10, r12, r8, r9: paramters
+// rdi: syscall idx
+// rsi: syscall args
 ENTRY(hal_task_syscall_entryKrl)
+	endbr64
 	pushq %rbp
-	pushq %rax
 	movq %rsp, %rbp
-	movq %rsp, %rdx
-	andq $-(task_usrStkSize), %rdx
-	// switch fs & gs
-	movq hal_task_UsrStruct_krlFs, %rax
-	movq %rax, %fs
-	movq hal_task_UsrStruct_krlGs, %rax
-	movq %rax, %gs
 	
-	// save user stack pointer
-	movq task_UsrStruct_tsk(%rax), %rdx
-	movq %rsp, hal_task_TaskStruct_rsp2(%rdx)
+	pushq %rbx
 
-	// switch stack
-	leaq task_krlStkSize(%rdx), %rsp
+	// switch es and ds
+	movq $0x10, %rbx
+	movq %rbx, %ds
+	movq %rbx, %es
+	
+	// save user stack and get kernel stack from hal_task_curKrlStk
+	movq %gs:hal_cpu_Desc_curKrlStk, %rax
+	movq %rsp, hal_task_TaskStruct_usrRsp(%rax)
+	movq %rax, %rsp
+	addq $task_krlStkSize, %rsp
 
 	// save rip and rflags
 	pushq %rcx
 	pushq %r11
 	
 	// load the pointer of syscall function
-	movq (%rbp), %rax
-	leaq task_syscall_tbl(%rip), %rbx
-	movq (%rbx, %rax, 8), %rax
-	// keep rdi and rsi as 1-st and 2-nd parameters
-	// load 3-rd and 4-th parameters to rdx, rcx
-	movq %r10, %rdx
-	movq %r12, %rcx
-	// keep r8, r9 as 5-th and 6-th paramters
+	leaq task_syscall_tbl(%rip), %rax
+	movq (%rax, %rdi, 8), %rax
+
+	pushq %rdi
+	pushq %rsi
+	pushq %rdx
+	pushq %rcx
+	pushq %r8
+	pushq %r9
+
+	movq hal_intr_PtReg_rdi(%rsi), %rdi
+	movq hal_intr_PtReg_rdx(%rsi), %rdx
+	movq hal_intr_PtReg_rcx(%rsi), %rcx
+	movq hal_intr_PtReg_r8(%rsi), %r8
+	movq hal_intr_PtReg_r9(%rsi), %r9
+	movq hal_intr_PtReg_rsi(%rsi), %rsi
 
 	// move to the syscall function
-	pushq hal_task_syscall_backUsr(%rip)
 	sti
-	jmpq *%rax
+	callq *%rax
+
+	popq %r9
+	popq %r8
+	popq %rcx
+	popq %rdx
+	popq %rsi
+	popq %rdi
+
 ENTRY(hal_task_syscall_backUsr)
 	cli
 	// recover user stack pointer, rip and rflags
-	popq %r11
-	popq %rcx
 	movq %rsp, %rbx
 	andq $-(task_krlStkSize), %rbx
-	movq hal_task_TaskStruct_rsp2(%rbx), %rsp
 
-	// recover fs, gs
-	movq %rsp, %rbx
-	andq $-(task_usrStkSize), %rbx
-	hlt
-	// switch fs & gs
-	movq hal_task_UsrStruct_usrFs(%rbx), %rax
-	movq %rax, %fs
-	movq hal_task_UsrStruct_usrGs(%rbx), %rax
-	movq %rax, %gs
+	popq %r11
+	popq %rcx
+	movq hal_task_TaskStruct_usrRsp(%rbx), %rsp
 
+	// switch es and ds
+	movq $0x33, %rbx
+	movq %rbx, %ds
+	movq %rbx, %es
 
 	popq %rbx
+
 	popq %rbp
-	
 	sysretq

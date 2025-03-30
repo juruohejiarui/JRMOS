@@ -1,5 +1,7 @@
 {
     "files.associations": {
         "*.h": "c",
+        "charconv": "c",
+        "*.tcc": "c"
     }
 }

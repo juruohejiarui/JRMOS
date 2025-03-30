@@ -71,6 +71,7 @@ hal_cpu_apCode32:
 	rdmsr
 
 	bts $8, %eax
+	bts $0, %eax
 	wrmsr
 
 	// enable PE and paging
@@ -84,7 +85,7 @@ hal_cpu_apCode32:
 .code64
 .balign 4
 hal_cpu_apCode64:
-	movq $0x20, %rax
+	movq $0x10, %rax
 	movq %rax, %ds
 	movq %rax, %es
 	movq %rax, %fs

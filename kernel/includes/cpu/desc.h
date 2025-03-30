@@ -5,6 +5,7 @@
 #include <interrupt/desc.h>
 #include <softirq/desc.h>
 #include <lib/spinlock.h>
+#include <lib/rbtree.h>
 
 #define cpu_mxNum hal_cpu_mxNum
 
@@ -22,11 +23,12 @@ typedef struct cpu_Desc {
     volatile u64 state;
     SpinLock intrMskLck;
     u64 intrMsk[4];
-    u32 intrUsage, intrFree;
     u64 sirqMsk;
     u64 sirqFlag;
-    u32 sirqUsage, sirqFree;
+    u16 intrUsage, intrFree;
+    u16 sirqUsage, sirqFree;
     softirq_Desc sirq[64];
+    RBTree *tskTree;
     hal_cpu_Desc hal;
 } __attribute__ ((packed)) cpu_Desc;
 

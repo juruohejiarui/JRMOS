@@ -14,14 +14,14 @@ int main() {
 		"#define task_TaskStruct_thread %#lx\n"
 		"#define hal_task_TaskStruct_rip    %#lx\n"
 		"#define hal_task_TaskStruct_rsp    %#lx\n"
-		"#define hal_task_TaskStruct_rsp2    %#lx\n"
+		"#define hal_task_TaskStruct_usrRsp %#lx\n"
 		"#define hal_task_TaskStruct_rflags %#lx\n\n",
 		offsetof(task_TaskStruct, state),
 		offsetof(task_TaskStruct, hal),
 		offsetof(task_TaskStruct, thread),
 		offsetof(task_TaskStruct, hal) + offsetof(hal_task_TaskStruct, rip),
 		offsetof(task_TaskStruct, hal) + offsetof(hal_task_TaskStruct, rsp),
-		offsetof(task_TaskStruct, hal) + offsetof(hal_task_TaskStruct, rsp2),
+		offsetof(task_TaskStruct, hal) + offsetof(hal_task_TaskStruct, usrRsp),
 		offsetof(task_TaskStruct, hal) + offsetof(hal_task_TaskStruct, rflags));
 	fwrite(buf, strlen(buf), 1, file);
 	sprintf(buf, 
@@ -29,19 +29,6 @@ int main() {
 		"#define hal_task_ThreadStruct_pgd %#lx\n\n",
 		offsetof(task_ThreadStruct, hal),
 		offsetof(task_ThreadStruct, hal) + offsetof(hal_task_ThreadStruct, pgd));
-	fwrite(buf, strlen(buf), 1, file);
-
-	sprintf(buf, 
-		"#define task_UsrStruct_tsk	%#lx\n"
-		"#define hal_task_UsrStruct_usrFs %#lx\n"
-		"#define hal_task_UsrStruct_usrGs %#lx\n"
-		"#define hal_task_UsrStruct_krlFs %#lx\n"
-		"#define hal_task_UsrStruct_krlGs %#lx\n\n",
-		offsetof(task_UsrStruct, tsk),
-		offsetof(task_UsrStruct, hal) + offsetof(hal_task_UsrStruct, usrFs),
-		offsetof(task_UsrStruct, hal) + offsetof(hal_task_UsrStruct, usrGs),
-		offsetof(task_UsrStruct, hal) + offsetof(hal_task_UsrStruct, krlFs),
-		offsetof(task_UsrStruct, hal) + offsetof(hal_task_UsrStruct, krlGs));
 	fwrite(buf, strlen(buf), 1, file);
 
 	sprintf(buf,

@@ -11,7 +11,7 @@
 #include <task/api.h>
 
 #define nrTblCacheShift 10
-#define nrTblCache (1ul << nrTblCacheShift)
+#define nrTblCache (1ull<< nrTblCacheShift)
 
 #define pgNumPerTbl (upAlign(sizeof(hal_mm_PageTbl), mm_pageSize) >> mm_pageShift)
 
@@ -28,7 +28,7 @@ SpinLock mm_map_dbgLck;
 
 static int _initCache() {
     _nrTblGrp = 1;
-    _nrTbl = (1ul << nrTblCacheShift);
+    _nrTbl = (1ull<< nrTblCacheShift);
     return (_tblGrpCache[0] = mm_allocPages(nrTblCacheShift + _allocLg2, mm_Attr_Shared)) ? res_SUCC : res_FAIL;
     
 }
@@ -104,9 +104,9 @@ int mm_map_syncKrl() {
     return res_SUCC;
 }
 
-void mm_dbg(u64 virt) {
+void mm_map_dbg(u64 virt) {
     SpinLock_lock(&mm_map_dbgLck);
-    hal_mm_dbg(virt);
+    hal_mm_map_dbg(virt);
     SpinLock_unlock(&mm_map_dbgLck);
 }
 

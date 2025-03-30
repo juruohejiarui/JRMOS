@@ -20,11 +20,11 @@
 #define hal_mm_pldIdxMask   (Page_2MSize - Page_4KSize)
 #define hal_mm_pmdIdxMask   (Page_1GSize - Page_2MSize)
 #define hal_mm_pudIdxMask   (hal_mm_pgdSize - Page_1GSize)
-#define hal_mm_pgdIdxMask   ((1ul << 48) - hal_mm_pgdSize)
+#define hal_mm_pgdIdxMask   ((1ull << 48) - hal_mm_pgdSize)
 
 #define hal_mm_nrPageTblEntries 512
 
-#define HAL_MM_DBG
+#define HAL_MM_MAP_DBG
 #define HAL_MM_MAP
 #define HAL_MM_UNMAP
 #define HAL_MM_GETMAP
@@ -47,7 +47,7 @@ typedef struct hal_mm_PageTbl hal_mm_PageTbl;
 #define hal_mm_state_Premap 0x1
 #define hal_mm_state_Mapped 0x2
 
-void hal_mm_dbg(u64 virt);
+void hal_mm_map_dbg(u64 virt);
 
 int hal_mm_map(u64 virt, u64 phys, u64 attr);
 

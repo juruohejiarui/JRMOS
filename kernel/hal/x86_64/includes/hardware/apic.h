@@ -98,8 +98,8 @@ typedef struct hal_hw_apic_IcrDesc {
 
 extern u64 hal_hw_apic_supportFlag;
 
-#define hal_hw_apic_supportFlag_X2Apic			(1ul << 0)
-#define hal_hw_apic_supportFlag_EOIBroadcase	(1ul << 1)
+#define hal_hw_apic_supportFlag_X2Apic			(1ull<< 0)
+#define hal_hw_apic_supportFlag_EOIBroadcase	(1ull<< 1)
 
 extern intr_Ctrl hal_hw_apic_intrCtrl;
 
@@ -113,7 +113,7 @@ static __always_inline__ u32 hal_hw_apic_getApicId() {
 
 
 static __always_inline__ u64 hal_hw_apic_getApicBase() { return hal_hw_readMsr(0x1b); }
-static __always_inline__ void hal_hw_apic_setApicBase(u64 base) { hal_hw_writeMsr(0x1b, base | (hal_hw_readMsr(0x1b) & ((1ul << 12) - 1))); }
+static __always_inline__ void hal_hw_apic_setApicBase(u64 base) { hal_hw_writeMsr(0x1b, base | (hal_hw_readMsr(0x1b) & ((1ull<< 12) - 1))); }
 
 void hal_hw_apic_writeRte(u8 idx, u64 val);
 u64 hal_hw_apic_readRte(u8 idx);
