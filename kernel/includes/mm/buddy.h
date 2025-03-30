@@ -12,7 +12,7 @@
 
 int mm_buddy_init();
 
-void mm_buddy_debug();
+void mm_buddy_debug(int showDetail);
 
 mm_Page *mm_allocPages(u64 log2Size, u32 attr);
 

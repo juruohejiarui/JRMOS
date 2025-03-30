@@ -118,3 +118,7 @@ mm_Page *mm_init_allocPage(u64 num, u32 attr) {
     }
     return NULL;
 }
+
+void mm_dbg() {
+    mm_buddy_debug(0);
+}

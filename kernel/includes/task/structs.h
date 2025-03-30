@@ -50,7 +50,7 @@ struct task_TaskStruct {
 	RBNode rbNode;
 	List list;
 
-	u8 signal[8];
+	u64 signal;
  
 	hal_task_TaskStruct hal;
 } __attribute__ ((packed));

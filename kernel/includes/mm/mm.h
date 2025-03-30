@@ -5,6 +5,8 @@
 
 int mm_init();
 
+void mm_dbg();
+
 mm_Page *mm_divPageGrp(mm_Page *grpHdr);
 // get the page descriptor for a specific physical address
 static __always_inline__ mm_Page *mm_getDesc(u64 phyAddr) { return &mm_memStruct.pages[phyAddr >> mm_pageShift]; }

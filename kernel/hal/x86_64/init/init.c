@@ -16,15 +16,16 @@ u8 hal_init_stk[task_krlStkSize] __attribute__((__section__ (".data.hal_init_stk
 
 u64 hal_init_testUsr(u64 param) {
 	for (int i = 0; i < param * 1000; i++) {
-		if (i % 100 == 0) task_syscall0(task_syscall_release);
-		printk(RED, BLACK, "U%2d ", param);
+		task_syscall0(task_syscall_release);
+		// if (i % 100 == 0) printk(RED, BLACK, "U%2d ", param);
 	}
 	task_syscall1(task_syscall_exit, 0);
 	return 0;
 }
 u64 hal_init_test(u64 param) {
 	for (int i = 0; i < param * 1000; i++) {
-		if (i % 100 == 0) printk(WHITE, BLACK, "K%2d ", param);
+		// if (i % 100 == 0) printk(WHITE, BLACK, "K%2d ", param);
+		if (i == 114 * param) task_signal_set(task_current, 1);
 		hal_hw_hlt();
 	}
 	return 0;
@@ -68,13 +69,14 @@ void hal_init_init() {
 
 	intr_unmask();
 
-	task_newTask(task_freeMgr, 0, task_attr_Builtin);
+	task_newSubTask(task_freeMgr, 0, task_attr_Builtin);
 
-	for (int i = 0; i < cpu_num * 2; i++) task_newTask(hal_init_test, i, task_attr_Builtin); 
+	for (int i = 0; i < cpu_num * 20; i++) task_newTask(hal_init_test, i, task_attr_Builtin); 
 
-	for (int i = 0; i < cpu_num * 2; i++) task_newTask(hal_init_testUsr, i, task_attr_Builtin | task_attr_Usr);
-	while (1) {	
-		// printk(BLACK, WHITE, "#%d", task_current->cpuId);
+	for (int i = 0; i < cpu_num * 20; i++) task_newTask(hal_init_testUsr, i, task_attr_Builtin | task_attr_Usr);
+
+	while (1) {
+		mm_dbg();
 		hal_hw_hlt();
 	}
 }

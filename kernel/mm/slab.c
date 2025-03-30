@@ -139,7 +139,7 @@ static __always_inline__ int _newSlabBlk(int sizeId) {
         blk->colCnt = blk->freeCnt;
         blk->colLen = upAlign(blk->colCnt, 64) / 64;
     } else {
-        u64 colCnt = Page_2MSize >> _slab[sizeId].szShift, colLen = upAlign(colCnt * sizeof(u64), 64) / 64;
+        u64 colCnt = Page_2MSize >> _slab[sizeId].szShift, colLen = upAlign(colCnt, 64) / 64;
         blk = _kmalloc(sizeof(SlabBlk) + colLen * sizeof(u64));
         if (blk == NULL) {
             printk(RED, BLACK, "mm: slab: newSlabBlk(): failed to allocate slab block with size=%d\n", sizeof(SlabBlk) + colLen * sizeof(u64));
@@ -154,7 +154,7 @@ static __always_inline__ int _newSlabBlk(int sizeId) {
     blk->page = pages;
 
     memset(blk->colMap, 0xff, blk->colLen * sizeof(u64));
-    for (int j = 0; j < blk->colCnt; j++) bit_set0(blk->colMap + (j >> 6), j % 63);
+    for (int j = 0; j < blk->colCnt; j++) bit_set0(blk->colMap + (j >> 6), j & 63);
 
     List_init(&blk->list);
     List_insBehind(&blk->list, &_slab[sizeId].blkList);
@@ -196,14 +196,15 @@ static void *_kmalloc(u64 size) {
     }
 
     for (u64 j = 0; j < blk->colCnt; j++) {
-        if (blk->colMap[j >> 6] == ~0x0ul) { j += 64; break; }
-        if (blk->colMap[j >> 6] & (1ull<< (j & 63))) continue;
+        if (blk->colMap[j >> 6] == (~0x0ull)) { j += 63; continue; }
+        if (blk->colMap[j >> 6] & (1ull << (j & 63))) continue;
         bit_set1(&blk->colMap[j >> 6], j & 63);
         blk->usingCnt++, blk->freeCnt--;
         _slab[id].usingCnt++, _slab[id].freeCnt--;
-        
         return blk->addr + (j << _slab[id].szShift);
     }
+    
+    while (1) ;
     return NULL;
 }
 
@@ -228,7 +229,8 @@ static int _kfree(void *addr) {
     bit_set0(blk->colMap + (idx >> 6), idx & 63);
     blk->freeCnt++, blk->usingCnt--;
     _slab[sizeId].freeCnt++, _slab[sizeId].usingCnt--;
-    if (blk->usingCnt == 0 && _slab[sizeId].freeCnt >= blk->colCnt * 3 / 2 && _slab[sizeId].blkList.next != &blk->list)
+    if (blk->usingCnt == 0 && _slab[sizeId].freeCnt >= blk->colCnt * 3 / 2
+         && !(_slab[sizeId].blkList.next == &blk->list && _slab[sizeId].blkList.prev == &blk->list))
         return _freeSlabBlk(sizeId, blk);
     return res_SUCC;
 }
@@ -246,7 +248,7 @@ void *mm_kmalloc(u64 size, u32 attr, void (*destructor)(void *)) {
     if (!intrState) intr_unmask();
     if (addr && (~attr & mm_Attr_Shared)) {
         int i;
-        for (i = 0; i < mm_slab_mxSizeShift - mm_slab_mnSizeShift - 1; i++)
+        for (i = 0; i < mm_slab_mxSizeShift - mm_slab_mnSizeShift + 1; i++)
             if (_slab[i].size >= size) break;
         if (_addRecord(addr, i, destructor) == res_FAIL) {
             mm_kfree(addr, attr | mm_Attr_Shared);

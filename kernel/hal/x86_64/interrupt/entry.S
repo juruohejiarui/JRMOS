@@ -41,6 +41,13 @@ retFromException:
 ENTRY(hal_intr_retFromIntr)
     movq %rsp, %rax
 	andq $-(task_krlStkSize), %rax
+    movq task_TaskStruct_signal(%rax), %rbx
+    testq %rbx, %rbx
+    jz hal_intr_trySchedule
+    pushq %rax
+    callq task_signal_scan
+    popq %rax
+hal_intr_trySchedule:
 	movq task_TaskStruct_state(%rax), %rax
     cmpq $task_state_Running, %rax
     je hal_intr_endSchedule

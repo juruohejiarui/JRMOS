@@ -10,6 +10,7 @@ int main() {
 	fwrite(buf, strlen(buf), 1, file);
 	sprintf(buf, 
 		"#define task_TaskStruct_state  %#lx\n"
+		"#define task_TaskStruct_signal	%#lx\n"
 		"#define task_TaskStruct_hal    %#lx\n"
 		"#define task_TaskStruct_thread %#lx\n"
 		"#define hal_task_TaskStruct_rip    %#lx\n"
@@ -17,6 +18,7 @@ int main() {
 		"#define hal_task_TaskStruct_usrRsp %#lx\n"
 		"#define hal_task_TaskStruct_rflags %#lx\n\n",
 		offsetof(task_TaskStruct, state),
+		offsetof(task_TaskStruct, signal),
 		offsetof(task_TaskStruct, hal),
 		offsetof(task_TaskStruct, thread),
 		offsetof(task_TaskStruct, hal) + offsetof(hal_task_TaskStruct, rip),

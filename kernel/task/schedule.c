@@ -4,8 +4,7 @@
 #include <interrupt/api.h>
 #include <screen/screen.h>
 #include <cpu/api.h>
-
-#include <hal/hardware/reg.h>
+#include <lib/bit.h>
 
 static task_MgrStruct task_mgr;
 
@@ -90,6 +89,10 @@ void task_schedule() {
 
 task_ThreadStruct *task_newThread() {
     task_ThreadStruct *thread = mm_kmalloc(sizeof(task_ThreadStruct), mm_Attr_Shared, NULL);
+    if (thread == NULL) {
+        printk(RED, BLACK, "task: failed to allocate thread structure.\n");
+        return NULL;
+    } 
     SpinLock_lock(&mm_map_krlTblLck);
     thread->krlTblModiJiff.value = mm_map_krlTblModiJiff.value;
     thread->allocMem.value = thread->allocVirtMem.value = 0;
@@ -134,6 +137,7 @@ int task_delSubTask(task_TaskStruct *subTsk) {
 }
 
 int task_freeThread(task_ThreadStruct *thread) {
+    printk(WHITE, BLACK, "task: delete thread %#018lx\n", thread);
     for (List *pageList = thread->pgRecord.next; pageList != &thread->pgRecord; ) {
         List *nxt = pageList->next;
         if (mm_freePages(container(pageList, mm_Page, list)) == res_FAIL) return res_FAIL;
@@ -167,7 +171,7 @@ void task_initIdle() {
     task_current->resRuntime = 1;
     task_current->vRuntime = 0;
 
-    memset(task_current->signal, 0, sizeof(task_current->signal));
+    memset(&task_current->signal, 0, sizeof(task_current->signal));
 
     task_current->thread = task_newThread();
     task_insSubTask(task_current, task_current->thread);
@@ -186,7 +190,7 @@ task_TaskStruct *task_newSubTask(void *entryAddr, u64 arg, u64 attr) {
 
     tsk->thread = task_current->thread;
 
-    memset(tsk->signal, 0, sizeof(tsk->signal));
+    memset(&tsk->signal, 0, sizeof(tsk->signal));
 
     hal_task_newSubTask(tsk, entryAddr, arg, attr);
     
@@ -208,6 +212,10 @@ task_TaskStruct *task_newSubTask(void *entryAddr, u64 arg, u64 attr) {
 
 task_TaskStruct *task_newTask(void *entryAddr, u64 arg, u64 attr) {
     task_Union *tskUnion = mm_kmalloc(sizeof(task_Union), mm_Attr_Shared, NULL);
+    if (tskUnion == NULL) {
+        printk(RED, BLACK, "task: failed to allocate task structure.\n");
+        return NULL;
+    }
     task_TaskStruct *tsk = &tskUnion->task;
     tsk->pid = task_pidCnt++;
     tsk->priority = 0;
@@ -216,6 +224,13 @@ task_TaskStruct *task_newTask(void *entryAddr, u64 arg, u64 attr) {
     tsk->vRuntime = task_current->vRuntime;
 
     tsk->thread = task_newThread();
+
+    if (tsk->thread == NULL) {
+        mm_kfree(tskUnion, mm_Attr_Shared);
+        return NULL;
+    }
+
+    memset(&tsk->signal, 0, sizeof(tsk->signal));
     
     hal_task_newTask(tsk, entryAddr, arg, attr);
 
@@ -236,12 +251,15 @@ task_TaskStruct *task_newTask(void *entryAddr, u64 arg, u64 attr) {
 }
 
 void task_exit(u64 res) {
+    intr_mask();
+    printk(WHITE, BLACK, "task: exit(): %#018lx res=%#018lx\n", task_current, res);
     /// @todo free simd struct
 
     hal_task_exit(res);
 
 	hal_task_current->flag |= task_flag_WaitFree;
 
+    intr_unmask();
     while (1) task_sche_release();
 }
 
@@ -270,4 +288,27 @@ u64 task_freeMgr(u64 arg) {
         task_sche_release();
     }
     return 0;
+}
+
+void task_signal_setHandler(u64 signal, void (*handler)(u64)) {
+    task_current->thread->sigHandler[signal] = handler;
+}
+
+void task_signal_set(task_TaskStruct *target, u64 signal) {
+    task_current->signal |= (1ull << signal);
+}
+
+void task_signal_scan() {
+    for (int i = 0; i < 64; i++) if (task_current->signal & (1ul << i)) {
+        bit_set0(&task_current->signal, i);
+        void (*handler)(u64);
+        if (!(handler = task_current->thread->sigHandler[i])) {
+            printk(RED, BLACK, "task: signal: no handler for signal #%d\n", i);
+            task_exit(-1);
+        } else {
+            intr_unmask();
+            handler(i);
+            intr_mask();
+        }
+    }
 }
