@@ -13,6 +13,7 @@
 int hal_task_dispatchTask(task_TaskStruct *tsk) {
 	tsk->cpuId = tsk->pid % cpu_num;
 	tsk->hal.gsBase = (u64)&cpu_desc[tsk->cpuId];
+	tsk->hal.fsBase = 0;
 	return res_SUCC;
 }
 
@@ -63,8 +64,8 @@ void hal_task_initIdle() {
 
 	hal_task_current->hal.fs = hal_task_current->hal.gs = hal_mm_segment_KrlData;
 
-	hal_task_current->hal.gsBase = hal_hw_readMsr(hal_msr_IA32_GS_BASE);
-	hal_task_current->hal.fsBase = hal_hw_readMsr(hal_msr_IA32_FS_BASE);
+	hal_task_current->hal.gsBase = (u64)&cpu_desc[task_current->cpuId];
+	hal_task_current->hal.fsBase = 0;
     hal_task_current->hal.rsp = (u64)cpu_getvar(hal.initStk) + task_krlStkSize;
 }
 

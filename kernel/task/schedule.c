@@ -253,7 +253,7 @@ task_TaskStruct *task_newTask(void *entryAddr, u64 arg, u64 attr) {
 
 void task_exit(u64 res) {
     intr_mask();
-    printk(WHITE, BLACK, "task: exit(): %#018lx res=%#018lx\n", task_current, res);
+    printk(WHITE, BLACK, "task: exit(): task #%d: %#018lx res=%#018lx\n", task_current->pid, task_current, res);
     /// @todo free simd struct
 
     hal_task_exit(res);
