@@ -5,6 +5,7 @@
 #include <screen/screen.h>
 #include <cpu/api.h>
 #include <lib/bit.h>
+#include <lib/algorithm.h>
 
 static task_MgrStruct task_mgr;
 
@@ -22,8 +23,8 @@ int task_sche_getState() { return task_sche_state; }
 
 static __always_inline__ int task_sche_cfsTreeCmp(RBNode *a, RBNode *b) {
     register task_TaskStruct
-        *ta = container(a, task_TaskStruct, rbNode),
-        *tb = container(b, task_TaskStruct, rbNode);
+        *ta = container(a, task_TaskStruct, rbNd),
+        *tb = container(b, task_TaskStruct, rbNd);
     return (ta->vRuntime != tb->vRuntime ? ta->vRuntime < tb->vRuntime : (u64)ta < (u64)tb);
 }
 
@@ -32,8 +33,8 @@ RBTree_insert(task_sche_cfsTreeIns, task_sche_cfsTreeCmp)
 void task_sche_updCurState() {
     register u64 tmp = task_sche_cfsTbl[task_current->priority];
     task_current->vRuntime += tmp;
-    if (cpu_getvar(tskTree)->left != NULL
-        && task_current->vRuntime > container(cpu_getvar(tskTree)->left, task_TaskStruct, rbNode)->vRuntime)
+    if (cpu_getvar(tsks)->left != NULL
+        && task_current->vRuntime > container(cpu_getvar(tsks)->left, task_TaskStruct, rbNd)->vRuntime)
         task_current->state = task_state_NeedSchedule;
 }
 
@@ -50,57 +51,126 @@ void task_sche_updState() {
 void task_sche_init() {
     for (int i = 0; i < cpu_num; i++) {
         RBTree_init(&task_mgr.tasks[i], task_sche_cfsTreeIns, task_sche_cfsTreeCmp);
-        List_init(&task_mgr.preemptLst[i]);
-        SpinLock_init(&task_mgr.preemptLstLck[i]);
-        cpu_desc[i].tskTree = &task_mgr.tasks[i];
-        cpu_desc[i].preemptLst = &task_mgr.preemptLst[i];
-        cpu_desc[i].preemptLstLck = &task_mgr.preemptLstLck[i];
+        List_init(&task_mgr.preemptTsks[i]);
+        List_init(&task_mgr.sleepTsks[i]);
+        SpinLock_init(&task_mgr.scheLck[i]);
+
+        cpu_desc[i].tsks = &task_mgr.tasks[i];
+        cpu_desc[i].preemptTsks = &task_mgr.preemptTsks[i];
+        cpu_desc[i].sleepTsks = &task_mgr.sleepTsks[i];
+        cpu_desc[i].scheLck = &task_mgr.scheLck[i];
     }
-    RBTree_init(&task_mgr.freeTasks, task_sche_cfsTreeIns, task_sche_cfsTreeCmp);
+    SafeList_init(&task_mgr.freeTsks);
     task_sche_state = 0;
     task_pidCnt = 0;
 }
 
 void task_sche_yield() {
-    task_current->vRuntime += task_sche_cfsTbl[task_current->priority] >> 1;
+    task_current->vRuntime += max(1, task_sche_cfsTbl[task_current->priority] >> 1);
     task_current->state = task_state_NeedSchedule;
     hal_task_sche_yield();
 }
 
+void task_sche_sleep() {
+    task_current->flag |= task_flag_WaitSleep;
+    task_sche_yield();
+}
+
+void task_sche_wake(task_TaskStruct *task) {
+    // mask interrupt
+    register int intrState = intr_state();
+    if (intrState) intr_mask();
+    SpinLock_lock(&task_mgr.scheLck[task->cpuId]);
+    if (task->state == task_state_Sleep) {
+        task->state = task_state_Idle;
+        List_del(&task->scheNd);
+        RBTree_ins(&task_mgr.tasks[task->cpuId], &task->rbNd);
+    }
+    SpinLock_unlock(&task_mgr.scheLck[task->cpuId]);
+    if (intrState) intr_unmask();
+}
+
 void task_sche_preempt(task_TaskStruct *task) {
+    // mask interrupt
+    register int intrState = intr_state();
+    if (intrState) intr_mask();
+    SpinLock_lock(&task_mgr.scheLck[task->cpuId]);
+    switch (task->state) {
+        case task_state_Idle:
+            RBTree_del(&task_mgr.tasks[task->cpuId], &task->rbNd);
+            List_insTail(&task_mgr.preemptTsks[task->cpuId], &task->preemptNd);
+            break;
+        case task_state_NeedSchedule:
+            task->state = task_state_Running;
+            break;
+        case task_state_Sleep:
+            task->state = task_state_Idle;
+            List_del(&task->scheNd);
+            RBTree_ins(&task_mgr.tasks[task->cpuId], &task->rbNd);
+            break;
+        default:
+            break;
+    }
+    SpinLock_unlock(&task_mgr.scheLck[task->cpuId]);
+    if (intrState) intr_unmask();
+}
+
+void task_sche_enablePreempt() {
+    Atomic_dec(&cpu_desc[task_current->cpuId].preemptCnt);
+}
+
+void task_sche_disablePreempt() {
+    Atomic_inc(&cpu_desc[task_current->cpuId].preemptCnt);
 }
 
 int cnt = 0;
-void task_schedule() {
-    task_TaskStruct *nxtTsk;
-    SpinLock_lock(cpu_getvar(preemptLstLck));
-    if (!List_isEmpty(cpu_getvar(preemptLst))) {
-        register List *nxtTskLst = cpu_getvar(preemptLst)->next;
-        nxtTsk = container(nxtTskLst, task_TaskStruct, preemptLst);
-        List_del(nxtTskLst);
-        SpinLock_unlock(cpu_getvar(preemptLstLck));
+
+// state transition for current task when switch to other task
+static void task_sche_hangCur() {
+    if (task_current->flag & task_flag_WaitSleep) {
+        task_current->flag ^= task_flag_WaitSleep;
+        task_current->state = task_state_Sleep;
+        List_insTail(cpu_getvar(sleepTsks), &task_current->scheNd);
+    } else if (task_current->flag & task_flag_WaitFree) {
+        task_current->flag ^= task_flag_WaitFree;
+        task_current->state = task_state_Free;
+        SafeList_insTail(&task_mgr.freeTsks, &task_current->scheNd);
     } else {
-        SpinLock_unlock(cpu_getvar(preemptLstLck));
-        RBTree *tasks = cpu_getvar(tskTree);
-        RBNode *nxtTskNode = RBTree_getLeft(tasks);
-        tasks = cpu_getvar(tskTree);
-        nxtTskNode = RBTree_getLeft(tasks);
-        if (task_current->flag & task_flag_WaitFree) {
-            RBTree_ins(&task_mgr.freeTasks, &task_current->rbNode);
-            nxtTsk = container(nxtTskNode, task_TaskStruct, rbNode);
-            RBTree_del(tasks, nxtTskNode);
-        } else {
-            if (nxtTskNode != NULL) {
-                nxtTsk = container(nxtTskNode, task_TaskStruct, rbNode);
-                if (nxtTsk->vRuntime < task_current->vRuntime) {
-                    task_current->state = task_state_Idle;
-                    RBTree_del(tasks, nxtTskNode);
-                    RBTree_ins(tasks, &task_current->rbNode);
-                } else nxtTsk = task_current;
-            } else nxtTsk = task_current;
-        }
+        task_current->state = task_state_Idle;
+        RBTree_ins(cpu_getvar(tsks), &task_current->rbNd);
     }
-    nxtTsk->state = task_state_Running;
+}
+
+void task_schedule() {
+    if (SpinLock_isLocked(cpu_getvar(scheLck))) {
+        // printk(RED, BLACK, "task: cpu #%d: schedule is locked.\n", task_current->cpuId);
+        return ;
+    }
+    task_current->flag ^= task_state_NeedSchedule;
+    SpinLock_lock(cpu_getvar(scheLck));
+    task_TaskStruct *nxtTsk;
+    // search for the next task
+    if (!cpu_getvar(preemptCnt.value) && !List_isEmpty(cpu_getvar(preemptTsks))) {
+        task_sche_hangCur();
+        task_current->state = task_state_Idle;
+        RBTree_ins(cpu_getvar(tsks), &task_current->rbNd);
+        nxtTsk = container(cpu_getvar(preemptTsks)->next, task_TaskStruct, preemptNd);
+        List_del(&nxtTsk->preemptNd);
+    } else {
+        RBNode *nxtTskNd = RBTree_getLeft(cpu_getvar(tsks));
+        if (!nxtTskNd) goto noNeedToSche;
+        nxtTsk = container(nxtTskNd, task_TaskStruct, rbNd);
+        if (nxtTsk->vRuntime > task_current->vRuntime) goto noNeedToSche;
+        RBTree_del(cpu_getvar(tsks), &nxtTsk->rbNd);
+        task_sche_hangCur();
+        nxtTsk->state = task_state_Running;
+        goto needSche;
+        noNeedToSche:
+        SpinLock_unlock(cpu_getvar(scheLck));
+        return ;
+    }
+    needSche:
+    SpinLock_unlock(cpu_getvar(scheLck));
     hal_task_sche_switch(nxtTsk);
 }
 
@@ -125,8 +195,7 @@ task_ThreadStruct *task_newThread() {
 
     SpinLock_init(&thread->pgTblLck);
 
-    SpinLock_init(&thread->tskListLck);
-    List_init(&thread->tskList);
+    SafeList_init(&thread->tskList);
 
     hal_task_newThread(&thread->hal);
 
@@ -139,25 +208,20 @@ extern int task_freeThread(task_ThreadStruct *thread);
 extern int task_freeTask(task_TaskStruct *task);
 
 void task_insSubTask(task_TaskStruct *subTsk, task_ThreadStruct *thread) {
-    SpinLock_lock(&thread->tskListLck);
-    List_insBefore(&subTsk->list, &thread->tskList);
-    SpinLock_unlock(&thread->tskListLck);
+    SafeList_insTail(&thread->tskList, &subTsk->threadNd);
 }
 
 int task_delSubTask(task_TaskStruct *subTsk) {
     task_ThreadStruct *thread = subTsk->thread;
-    SpinLock_lock(&thread->tskListLck);
-    List_del(&subTsk->list);
-    if (List_isEmpty(&thread->tskList)) {
-        SpinLock_unlock(&thread->tskListLck);
+    SafeList_del(&thread->tskList, &subTsk->threadNd);
+    if (SafeList_isEmpty(&thread->tskList))
         return task_freeThread(thread);
-    } else SpinLock_unlock(&thread->tskListLck);
     return res_SUCC;
 }
 
 int task_freeThread(task_ThreadStruct *thread) {
-    for (List *pageList = thread->pgRecord.next; pageList != &thread->pgRecord; ) {
-        List *nxt = pageList->next;
+    for (ListNode *pageList = thread->pgRecord.next; pageList != &thread->pgRecord; ) {
+        ListNode *nxt = pageList->next;
         if (mm_freePages(container(pageList, mm_Page, list)) == res_FAIL) return res_FAIL;
         pageList = nxt;
     }
@@ -183,7 +247,7 @@ int task_freeTask(task_TaskStruct *tsk) {
 void task_initIdle() {
     task_current->pid = task_pidCnt++;
     task_current->priority = 0;
-    task_current->state = 0;
+    task_current->state = task_state_Running;
     task_current->flag = 0;
 
     task_current->vRuntime = 0;
@@ -203,7 +267,7 @@ task_TaskStruct *task_newSubTask(void *entryAddr, u64 arg, u64 attr) {
 
     tsk->pid = task_pidCnt++;
     tsk->priority = 0;
-    tsk->state = 0;
+    tsk->state = task_state_Idle;
     tsk->vRuntime = task_current->vRuntime;
 
     tsk->thread = task_current->thread;
@@ -223,7 +287,7 @@ task_TaskStruct *task_newSubTask(void *entryAddr, u64 arg, u64 attr) {
 
     register int state = intr_state();
     intr_mask();
-    RBTree_ins(&task_mgr.tasks[tsk->cpuId], &tsk->rbNode);
+    RBTree_ins(&task_mgr.tasks[tsk->cpuId], &tsk->rbNd);
     if (state) intr_unmask();
 
     return tsk;
@@ -239,7 +303,7 @@ task_TaskStruct *task_newTask(void *entryAddr, u64 arg, u64 attr) {
     task_TaskStruct *tsk = &tskUnion->task;
     tsk->pid = task_pidCnt++;
     tsk->priority = 0;
-    tsk->state = 0;
+    tsk->state = task_state_Idle;
     tsk->vRuntime = task_current->vRuntime;
 
     tsk->thread = task_newThread();
@@ -264,7 +328,7 @@ task_TaskStruct *task_newTask(void *entryAddr, u64 arg, u64 attr) {
     
     register int state = intr_state();
     intr_mask();
-    RBTree_ins(&task_mgr.tasks[tsk->cpuId], &tsk->rbNode);
+    RBTree_ins(&task_mgr.tasks[tsk->cpuId], &tsk->rbNd);
     if (state) intr_unmask();
 
     return tsk;
@@ -280,29 +344,19 @@ void task_exit(u64 res) {
 
     intr_unmask();
     task_current->priority = task_Priority_Lowest;
-    while (1) task_sche_yield();
+    while (1) task_sche_sleep();
 }
 
-extern task_TaskStruct *task_freeMgrTask;
+task_TaskStruct *task_freeMgrTsk;
 
 u64 task_freeMgr(u64 arg) {
     u64 tot = 0;
     while (1) {
-        task_TaskStruct *tsk = NULL;
-        intr_mask();
-        {
-            RBNode *tskNode = RBTree_getLeft(&task_mgr.freeTasks);
-            if (tskNode) {
-                tsk = container(tskNode, task_TaskStruct, rbNode);
-                RBTree_del(&task_mgr.freeTasks, tskNode);
-            }
+        if (SafeList_isEmpty(&task_mgr.freeTsks)) {
+            task_sche_sleep();
         }
-        intr_unmask();
-        if (tsk == NULL) {
-            task_current->priority = task_Priority_Lowest;
-            task_sche_yield();
-            continue;
-        }
+        task_TaskStruct *tsk = container(SafeList_getHead(&task_mgr.freeTsks), task_TaskStruct, scheNd);
+        SafeList_del(&task_mgr.freeTsks, &tsk->scheNd);
         task_current->priority = task_Priority_Running;
         u64 pid = tsk->pid;
         if (task_freeTask(tsk) == res_FAIL) {

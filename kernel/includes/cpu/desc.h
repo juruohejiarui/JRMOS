@@ -38,9 +38,11 @@ typedef struct cpu_Desc {
     u16 sirqUsage, sirqFree;
 
     // task struct
-    RBTree *tskTree;
-    List *preemptLst;
-    SpinLock *preemptLstLck;
+    RBTree *tsks;
+    SpinLock *scheLck;
+    ListNode *sleepTsks;
+    ListNode *preemptTsks;
+    Atomic preemptCnt;
 
     hal_cpu_Desc hal;
 } __attribute__ ((packed)) cpu_Desc;

@@ -51,7 +51,7 @@ extern char mm_symbol_edata;
 extern char mm_symbol_end;
 
 struct mm_Page {
-	List list;
+	ListNode list;
 	u16 buddyId;
 	u16 ord;
 	u32 attr;

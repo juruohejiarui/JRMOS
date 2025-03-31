@@ -42,4 +42,6 @@ typedef struct hal_SpinLock hal_SpinLock;
 	); \
 } while (0)
 
+#define hal_SpinLock_isLocked(locker) ((locker)->lock != 0)
+
 #endif

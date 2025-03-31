@@ -14,7 +14,7 @@
 static SpinLock _SlabLck;
 
 typedef struct SlabBlk {
-    List list;
+    ListNode list;
     mm_Page *page;
     void *addr;
     u64 usingCnt, freeCnt;
@@ -26,7 +26,7 @@ typedef struct SlabBlk {
 typedef struct Slab {
     u64 size, szShift;
     u64 usingCnt, freeCnt;
-    List blkList;
+    ListNode blkList;
 } Slab;
 
 static Slab _slab[mm_slab_mxSizeShift - mm_slab_mnSizeShift + 1];
@@ -120,7 +120,7 @@ void mm_slab_debug(int detail) {
     for (int i = 0; i < mm_slab_mxSizeShift - mm_slab_mnSizeShift + 1; i++) {
         Slab *slab = &_slab[i];
         printk(YELLOW, BLACK, "[%2d] size=%lu using=%ld free=%ld\n", i, slab->size, slab->usingCnt, slab->freeCnt);
-        for (List *list = slab->blkList.next; list != &slab->blkList; list = list->next) {
+        for (ListNode *list = slab->blkList.next; list != &slab->blkList; list = list->next) {
             SlabBlk *blk = container(list, SlabBlk, list);
             printk(WHITE, BLACK, "\t(%p): using=%5d free=%5d colMap[0]=%#018lx addr=%#018lx\n",
                 blk, blk->usingCnt, blk->freeCnt, blk->colMap[0], blk->addr);
@@ -188,7 +188,7 @@ static void *_kmalloc(u64 size) {
     while (_slab[id].size < size) id++;
     SlabBlk *blk = NULL;
     if (_slab[id].freeCnt > 0) {
-        for (List *list = _slab[id].blkList.next; list != &_slab[id].blkList; list = list->next) {
+        for (ListNode *list = _slab[id].blkList.next; list != &_slab[id].blkList; list = list->next) {
             blk = container(list, SlabBlk, list);
             if (blk->freeCnt > 0) break;
         }
@@ -222,7 +222,7 @@ static int _kfree(void *addr) {
     int sizeId = 0, find = 0;
     SlabBlk *blk;
     for (sizeId = 0; sizeId < mm_slab_mxSizeShift - mm_slab_mnSizeShift + 1; sizeId++) {
-        for (List *list = _slab[sizeId].blkList.next; list != &_slab[sizeId].blkList; list = list->next) {
+        for (ListNode *list = _slab[sizeId].blkList.next; list != &_slab[sizeId].blkList; list = list->next) {
             blk = container(list, SlabBlk, list);
             if (blk->addr <= addr && addr < blk->addr + (blk->colCnt << _slab[sizeId].szShift)) {
                 find = 1;

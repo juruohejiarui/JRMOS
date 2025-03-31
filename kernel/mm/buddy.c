@@ -10,7 +10,7 @@
 
 static struct BuddyStruct {
     u64 *revBit[mm_buddy_mxOrd + 1];
-    List freeLst[mm_buddy_mxOrd + 1];
+    ListNode freeLst[mm_buddy_mxOrd + 1];
     u64 tot, totUsage;
 } _buddy;
 
@@ -77,7 +77,7 @@ void mm_buddy_debug(int detail) {
     printk(WHITE, BLACK, "\n");
     for (int i = 0; i <= mm_buddy_mxOrd; i++) {
         printk(YELLOW, BLACK, "[%2d] ", i);
-        for (List *list = _buddy.freeLst[i].next; list != &_buddy.freeLst[i]; list = list->next) {
+        for (ListNode *list = _buddy.freeLst[i].next; list != &_buddy.freeLst[i]; list = list->next) {
             mm_Page *page = container(list, mm_Page, list);
             printk(WHITE, BLACK, "%#018x,", mm_getPhyAddr(page));
         }

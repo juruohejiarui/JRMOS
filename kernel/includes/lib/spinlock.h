@@ -10,6 +10,7 @@ typedef hal_SpinLock SpinLock;
 #define SpinLock_init hal_SpinLock_init
 #define SpinLock_lock hal_SpinLock_lock
 #define SpinLock_unlock hal_SpinLock_unlock
+#define SpinLock_isLocked hal_SpinLock_isLocked 
 
 #else
 #error No SpinLock definition of this arch!

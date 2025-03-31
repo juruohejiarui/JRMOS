@@ -24,15 +24,14 @@ struct task_ThreadStruct {
 	Atomic allocMem;
 
 	SpinLock pageRecordLck;
-	List pgRecord;
+	ListNode pgRecord;
 	RBTree slabRecord;
 
 	SpinLock pgTblLck;
 
 	task_SignalHandler sigHandler[task_nrSignal];
 
-	List tskList;
-	SpinLock tskListLck;
+	SafeList tskList;
 
 	hal_task_ThreadStruct hal;
 } __attribute__ ((packed));
@@ -46,8 +45,12 @@ struct task_TaskStruct {
 
 	task_ThreadStruct *thread;
 
-	RBNode rbNode;
-	List list, preemptLst;
+	RBNode rbNd;
+
+	ListNode threadNd;
+	
+	ListNode scheNd, preemptNd;
+
 
 	Atomic signal;
  
@@ -63,9 +66,9 @@ typedef union task_Union {
 
 typedef struct task_MgrStruct {
 	RBTree tasks[cpu_mxNum];
-	List preemptLst[cpu_mxNum];
-	SpinLock preemptLstLck[cpu_mxNum];
-	RBTree freeTasks;
+	SpinLock scheLck[cpu_mxNum];
+	ListNode preemptTsks[cpu_mxNum], sleepTsks[cpu_mxNum];
+	SafeList freeTsks;
 } task_MgrStruct;
 
 #endif
