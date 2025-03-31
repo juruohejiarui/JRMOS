@@ -46,6 +46,8 @@ void task_exit(u64 res);
 
 u64 task_freeMgr(u64 arg);
 
+task_TaskStruct *task_freeMgrTsk;
+
 void task_signal_setHandler(u64 signal, void (*handler)(u64));
 
 void task_signal_set(task_TaskStruct *target, u64 signal);

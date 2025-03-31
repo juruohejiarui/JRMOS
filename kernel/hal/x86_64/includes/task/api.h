@@ -27,7 +27,6 @@ static __always_inline__ task_TaskStruct *hal_task_getCurrent() {
 
 #define hal_task_current hal_task_getCurrent()
 
-
 int hal_task_dispatchTask(task_TaskStruct *tsk);
 
 void hal_task_sche_yield();

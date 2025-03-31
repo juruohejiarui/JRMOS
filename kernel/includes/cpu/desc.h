@@ -5,8 +5,10 @@
 #include <interrupt/desc.h>
 #include <softirq/desc.h>
 #include <lib/spinlock.h>
+#include <lib/list.h>
 #include <lib/rbtree.h>
 #include <lib/atomic.h>
+#include <lib/spinlock.h>
 
 #define cpu_mxNum hal_cpu_mxNum
 
@@ -37,7 +39,8 @@ typedef struct cpu_Desc {
 
     // task struct
     RBTree *tskTree;
-    RBTree *preemptTskTree;
+    List *preemptLst;
+    SpinLock *preemptLstLck;
 
     hal_cpu_Desc hal;
 } __attribute__ ((packed)) cpu_Desc;

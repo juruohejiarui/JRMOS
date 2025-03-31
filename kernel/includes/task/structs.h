@@ -47,7 +47,7 @@ struct task_TaskStruct {
 	task_ThreadStruct *thread;
 
 	RBNode rbNode;
-	List list;
+	List list, preemptLst;
 
 	Atomic signal;
  
@@ -63,7 +63,8 @@ typedef union task_Union {
 
 typedef struct task_MgrStruct {
 	RBTree tasks[cpu_mxNum];
-	RBTree preemptTasks[cpu_mxNum];
+	List preemptLst[cpu_mxNum];
+	SpinLock preemptLstLck[cpu_mxNum];
 	RBTree freeTasks;
 } task_MgrStruct;
 

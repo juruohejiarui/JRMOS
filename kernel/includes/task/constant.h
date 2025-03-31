@@ -19,8 +19,12 @@
 #define task_state_NeedSchedule 0x1
 #define task_state_Idle         0x2
 
-#define task_flag_WaitFree     0x1ul
+#define task_flag_WaitFree      0x1ul
+#define task_flag_WaitPreempt   0x2ul
 
 #define task_nrSignal	64
+
+#define task_Priority_Running   0x0
+#define task_Priority_Lowest    0x5
 
 #endif
