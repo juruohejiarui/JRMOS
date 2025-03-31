@@ -58,7 +58,7 @@ hal_intr_endSchedule:
     movq %gs:cpu_Desc_sirqFlag, %rax
 	testq %rax, %rax
     jz hal_intr_endSirq
-    movq softirq_scan(%rip), %rax
+    leaq softirq_scan(%rip), %rax
     callq *%rax
 hal_intr_endSirq:
     jmp hal_intr_restoreAll

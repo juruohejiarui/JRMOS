@@ -112,13 +112,13 @@ mm_Page *mm_allocPages(u64 log2Size, u32 attr) {
     }
     _buddy.totUsage += (1ull<< (log2Size + mm_pageShift));
     SpinLock_unlock(&_buddyLck);
-    if (!intrState) intr_unmask();
+    if (intrState) intr_unmask();
     resPage->attr = attr | mm_Attr_HeadPage | mm_Attr_Allocated;
     return resPage;
     Fail:
     
     SpinLock_unlock(&_buddyLck);
-    if (!intrState) intr_unmask();
+    if (intrState) intr_unmask();
     printk(RED, BLACK, "mm: buddy: failed to allocate page group with size=2^%d,attr=%#010x\n", log2Size, attr);
     return NULL;
 }
@@ -146,7 +146,7 @@ int mm_freePages(mm_Page *pages) {
     }
     List_insBehind(&pages->list, &_buddy.freeLst[pages->ord]);
     SpinLock_unlock(&_buddyLck);
-    if (!intrState) intr_unmask();
+    if (intrState) intr_unmask();
 
     return res_SUCC;
 }

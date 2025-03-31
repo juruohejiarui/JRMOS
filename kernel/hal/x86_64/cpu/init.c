@@ -153,9 +153,7 @@ int hal_cpu_enableAP() {
 	hal_hw_apic_writeIcr(*(u64 *)&icr);
 
 	// enable interrupt to wait for 
-	hal_intr_unmask();
-	for (int i = 0; i < 100; i++) hal_hw_hlt();
-	hal_intr_mask();
+	for (int i = 0; i < 100000000; i++) ;
 	
 	mm_MemMap *entry;
 	u64 stAddr, bootSz = (u64)&hal_cpu_apBootEnd - (u64)&hal_cpu_apBootEntry;
@@ -190,11 +188,7 @@ int hal_cpu_enableAP() {
 
 		hal_hw_apic_writeIcr(*(u64 *)&icr);
 
-		hal_intr_unmask();
-		while (cpu->state != cpu_Desc_state_Active) {
-			hal_hw_hlt();
-		}
-		hal_intr_mask();
+		while (cpu->state != cpu_Desc_state_Active) ;
 	}
 
 	// copy it back

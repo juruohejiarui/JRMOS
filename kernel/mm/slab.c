@@ -255,7 +255,7 @@ void *mm_kmalloc(u64 size, u32 attr, void (*destructor)(void *)) {
     SpinLock_lock(&_SlabLck);
     void *addr = _kmalloc(size);
     SpinLock_unlock(&_SlabLck);
-    if (!intrState) intr_unmask();
+    if (intrState) intr_unmask();
     if (addr && (~attr & mm_Attr_Shared)) {
         int i;
         for (i = 0; i < mm_slab_mxSizeShift - mm_slab_mnSizeShift + 1; i++)
@@ -281,6 +281,6 @@ int mm_kfree(void *addr, u32 attr) {
     int res = _kfree(addr);
 
     SpinLock_unlock(&_SlabLck);
-    if (!intrState) intr_unmask();
+    if (intrState) intr_unmask();
     return res;
 }

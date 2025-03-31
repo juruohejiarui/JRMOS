@@ -40,4 +40,10 @@ typedef hal_Atomic Atomic;
 #else
 #error no definition of Atomic_btc() for this arch!
 #endif
+
+#ifdef HAL_LIB_ATOMIC_BTR
+#define Atomic_btr hal_Atomic_btr
+#else
+#error no definition of Atomic_btr() for this arch!
+#endif
 #endif

@@ -54,7 +54,7 @@ hal_mm_PageTbl *mm_map_allocTbl() {
     mm_Page *page = _tblGrpCache[--_nrTblGrp];
 
     SpinLock_unlock(&_cacheLck);
-    if (!intrState) intr_unmask();
+    if (intrState) intr_unmask();
 
     page->attr |= mm_Attr_Allocated | mm_Attr_MMU;
 

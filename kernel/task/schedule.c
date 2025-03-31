@@ -107,6 +107,7 @@ task_ThreadStruct *task_newThread() {
     }
     memset(thread, 0, sizeof(task_ThreadStruct));
     SpinLock_lock(&mm_map_krlTblLck);
+
     thread->krlTblModiJiff.value = mm_map_krlTblModiJiff.value;
     thread->allocMem.value = thread->allocVirtMem.value = 0;
     

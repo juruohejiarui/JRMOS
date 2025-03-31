@@ -47,6 +47,7 @@ void hal_init_init() {
 
 	if (screen_enableBuf() == res_FAIL) while (1) hal_hw_hlt();
 
+
 	if (intr_init() == res_FAIL) while (1) hal_hw_hlt();
 
 	if (hal_hw_uefi_loadTbl() == res_FAIL) while (1) hal_hw_hlt();
