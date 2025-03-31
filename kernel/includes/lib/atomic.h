@@ -20,12 +20,24 @@ typedef hal_Atomic Atomic;
 #ifdef HAL_LIB_ATOMIC_INC
 #define Atomic_inc hal_Atomic_inc
 #else
-#error no definition of Atomic_INC() for this arch!
+#error no definition of Atomic_inc() for this arch!
 #endif
 
 #ifdef HAL_LIB_ATOMIC_DEC
 #define Atomic_dec hal_Atomic_dec
 #else
 #error no definition of Atomic_dec() for this arch!
+#endif
+
+#ifdef HAL_LIB_ATOMIC_BTS
+#define Atomic_bts hal_Atomic_bts
+#else
+#error no definition of Atomic_bts() for this arch!
+#endif
+
+#ifdef HAL_LIB_ATOMIC_BTC
+#define Atomic_btc hal_Atomic_btc
+#else
+#error no definition of Atomic_btc() for this arch!
 #endif
 #endif

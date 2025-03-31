@@ -66,17 +66,17 @@ include ./.depend
 
 rely: ./Tools/rely
 	@./Tools/rely $(ARCH) CC C_FLAGS o .depend . ALLOBJS ALLTMPS Tools 
-	@echo [SCRIPT] build rely
+	@echo [SCRIPT ] build rely
 genrely: ./Tools/rely
 	@./Tools/rely $(ARCH) HOSTC GEN_C_FLAGS script .gendepend ./Tools/hal/gen ALLGENOBJS ALLGENSCRIPTS
-	@echo [SCRIPT] build generation rely
+	@echo [SCRIPT ] build generation rely
 
 ./Tools/gen: ./Tools/gen.cpp
 	@$(HOSTCPP) ./Tools/gen.cpp -o ./Tools/gen --std=$(CPP_STD)
 	@echo "[HOSTCPP] ./Tools/gen.cpp"
 
 gen: $(ALLGENSCRIPTS)
-	@echo "[GEN] generate"
+	@echo "[  GEN  ] generate"
 
 ./Tools/rely: ./Tools/rely.cpp
 	@$(HOSTCPP) ./Tools/rely.cpp -o ./Tools/rely --std=$(CPP_STD)
@@ -91,16 +91,16 @@ all: system_tmp ./Tools/hal/kallsyms.o
 
 system_tmp: $(ALLOBJS)
 	@$(LD) $(LD_FLAGS) $(LDFLAGS_ARCH) -o system_tmp $(ALLOBJS) -T $(ARCH_DIR)/kernel.lds 
-	@echo "[LD] system_tmp"
+	@echo "[  LD   ] system_tmp"
 
 ./Tools/hal/kallsyms: ./Tools/hal/kallsyms.c
 	@$(HOSTC) -o ./Tools/hal/kallsyms ./Tools/hal/kallsyms.c
-	@echo "[HOSTC] ./Tools/hal/kallsyms.c"
+	@echo "[ HOSTC ] ./Tools/hal/kallsyms.c"
 
 ./Tools/hal/kallsyms.o: ./Tools/hal/kallsyms system_tmp
 	@$(NM) -n system_tmp | ./Tools/hal/kallsyms > ./Tools/hal/kallsyms.S
 	@$(CC) -c ./Tools/hal/kallsyms.S -o ./Tools/hal/kallsyms.o -Wl,--no-warn-rwx-segments
-	@echo "[GEN] kallsyms.o"
+	@echo "[  GEN  ] kallsyms.o"
 
 clean:
 	rm -rf $(ALLOBJS) $(ALLTMPS) $(ALLGENOBJS) $(ALLGENSCRIPTS)

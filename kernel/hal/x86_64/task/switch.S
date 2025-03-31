@@ -68,8 +68,6 @@ ENTRY(hal_task_syscall_entryKrl)
 	leaq task_syscall_tbl(%rip), %rax
 	movq (%rax, %rdi, 8), %rax
 
-	pushq %rdi
-	pushq %rsi
 	pushq %rdx
 	pushq %rcx
 	pushq %r8
@@ -90,8 +88,6 @@ ENTRY(hal_task_syscall_entryKrl)
 	popq %r8
 	popq %rcx
 	popq %rdx
-	popq %rsi
-	popq %rdi
 
 ENTRY(hal_task_syscall_backUsr)
 	cli

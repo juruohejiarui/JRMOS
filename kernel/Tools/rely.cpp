@@ -46,13 +46,13 @@ void searchFile(const std::string &path) {
 				system(cmd.c_str());
 				system(std::format(
 					"echo \"\\t@\\$({3}) \\$({4}) -c {0} -o {1}\\n"
-					"\\t@echo \\\"[{3}] {0}\\\"\" >> {2}", filePath, objPath, relyPath, cplName, flagName).c_str());
+					"\\t@echo \\\"[{3:^7}] {0}\\\"\" >> {2}", filePath, objPath, relyPath, cplName, flagName).c_str());
 				if (outputSuf != "o") {
 					system(std::format(
 						"echo \"{0}: {1}\\n"
 						"\\t@\\$({2}) {1} -o {0}\\n"
 						"\\t@\\{0}\\n"
-						"\\t@echo \\\"[GEN] {1}\\\"\" >> {3}", outPath, objPath, cplName, relyPath).c_str()
+						"\\t@echo \\\"[  GEN  ] {1}\\\"\" >> {3}", outPath, objPath, cplName, relyPath).c_str()
 					);
 					tmpList.push_back(outPath);
 				}
@@ -67,7 +67,7 @@ void searchFile(const std::string &path) {
 				system(std::format(
 					"echo \"\\t@\\$({4}) -E \\$(C_INCLUDE_PATH) {0} > {1}\\n"
 					"\\t@\\$(ASM) \\$(ASM_FLAGS) -o {2} {1}\\n"
-					"\\t@echo \\\"[ASM] {0}\\\"\" >> {3}", filePath, tmpPath, objPath, relyPath, cplName).c_str());
+					"\\t@echo \\\"[  ASM  ] {0}\\\"\" >> {3}", filePath, tmpPath, objPath, relyPath, cplName).c_str());
 
 				objList.push_back(objPath);
 				tmpList.push_back(tmpPath);

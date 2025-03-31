@@ -16,7 +16,6 @@ typedef struct task_MemStruct task_MemStruct;
 typedef void (*task_SignalHandler)(u64 signal);
 
 struct task_ThreadStruct {
-
 	// kernel page table version of this thread.
 	Atomic krlTblModiJiff;
 
@@ -43,14 +42,14 @@ struct task_TaskStruct {
 	u64 flag;
 	u64 pid;
 	u64 state;
-	i64 vRuntime, resRuntime;
+	i64 vRuntime;
 
 	task_ThreadStruct *thread;
 
 	RBNode rbNode;
 	List list;
 
-	u64 signal;
+	Atomic signal;
  
 	hal_task_TaskStruct hal;
 } __attribute__ ((packed));
@@ -64,6 +63,7 @@ typedef union task_Union {
 
 typedef struct task_MgrStruct {
 	RBTree tasks[cpu_mxNum];
+	RBTree preemptTasks[cpu_mxNum];
 	RBTree freeTasks;
 } task_MgrStruct;
 

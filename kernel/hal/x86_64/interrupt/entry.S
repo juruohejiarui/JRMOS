@@ -1,4 +1,5 @@
 #include <hal/linkage.h>
+#include <hal/cpu/genasm.h>
 #include <hal/task/genasm.h>
 #include <hal/interrupt/genasm.h>
 
@@ -54,9 +55,12 @@ hal_intr_trySchedule:
     callq task_schedule
 hal_intr_endSchedule:
 	// get CPU_ID of current task
-    // leaq Intr_SoftIrq_state(%rip), %rbx
-	// testq (%rbx, %rax, 8), %rcx
-    // jnz _softirqHandler
+    movq %gs:cpu_Desc_sirqFlag, %rax
+	testq %rax, %rax
+    jz hal_intr_endSirq
+    movq softirq_scan(%rip), %rax
+    callq *%rax
+hal_intr_endSirq:
     jmp hal_intr_restoreAll
 
 ENTRY(hal_intr_divideError)

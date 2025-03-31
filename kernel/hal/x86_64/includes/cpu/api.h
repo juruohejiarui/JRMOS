@@ -17,9 +17,9 @@
 
 #define hal_cpu_setvar(name, val) ({ \
     __asm__ volatile ( \
-        "mov %0, %%gs:(%1)" \
+        "mov %1, %%gs:(%0)" \
         : \
-        : "r" (val), "r" ((u64)&(((cpu_Desc *)NULL)->name)) \
+        : "r" ((u64)&(((cpu_Desc *)NULL)->name)), "r" (val) \
     ); \
 })
 

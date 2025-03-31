@@ -11,6 +11,8 @@ typedef struct {
 #define HAL_LIB_ATOMIC_SUB
 #define HAL_LIB_ATOMIC_INC
 #define HAL_LIB_ATOMIC_DEC
+#define HAL_LIB_ATOMIC_BTS
+#define HAL_LIB_ATOMIC_BTC
 
 static __always_inline__ void hal_Atomic_add(hal_Atomic *atomic, i64 vl) {
 	__asm__ volatile ( " lock addq %1, %0	\n\t"
@@ -31,5 +33,16 @@ static __always_inline__ void hal_Atomic_dec(hal_Atomic *atomic) {
 	__asm__ volatile ( " lock decq %0	\n\t"
 		: "=m"(atomic->value) : "m"(atomic->value) : "memory");
 }
+
+static __always_inline__ void hal_Atomic_bts(hal_Atomic *atomic, u64 vl) {
+	__asm__ volatile ( " lock btsq %1, %0	\n\t"
+		:  : "m"(atomic->value), "r"(vl) : "memory");
+}
+
+static __always_inline__ void hal_Atomic_btc(hal_Atomic *atomic, u64 vl) {
+	__asm__ volatile ( " lock btcq %1, %0	\n\t"
+		: : "m"(atomic->value), "r"(vl) : "memory");
+}
+
 
 #endif

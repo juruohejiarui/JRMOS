@@ -10,12 +10,14 @@ int main() {
 	fwrite(buf, strlen(buf), 1, file);
 	sprintf(buf, 
 		"#define cpu_DescSize   %#lx\n"
+		"#define cpu_Desc_sirqFlag		%#lx\n"
 		"#define hal_cpu_Desc_x2apic    %#lx\n"
 		"#define hal_cpu_Desc_apic      %#lx\n"
         "#define hal_cpu_Desc_initStk   %#lx\n"
 		"#define hal_cpu_Desc_curKrlStk %#lx\n"
         "#define hal_cpu_Desc_idtPtr    %#lx\n\n",
 		sizeof(cpu_Desc),
+		offsetof(cpu_Desc, sirqFlag),
 		offsetof(cpu_Desc, hal) + offsetof(hal_cpu_Desc, x2apic),
 		offsetof(cpu_Desc, hal) + offsetof(hal_cpu_Desc, apic),
         offsetof(cpu_Desc, hal) + offsetof(hal_cpu_Desc, initStk),

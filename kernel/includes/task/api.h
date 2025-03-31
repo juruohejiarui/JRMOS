@@ -31,7 +31,12 @@ void task_sche_updState();
 
 void task_sche_init();
 
-void task_sche_release();
+void task_sche_yield();
+
+void task_sche_preempt(task_TaskStruct *task);
+
+void task_sche_disablePreempt();
+void task_sche_enablePreempt();
 
 void task_schedule();
 

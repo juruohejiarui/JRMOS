@@ -30,7 +30,7 @@ static __always_inline__ task_TaskStruct *hal_task_getCurrent() {
 
 int hal_task_dispatchTask(task_TaskStruct *tsk);
 
-void hal_task_sche_release();
+void hal_task_sche_yield();
 
 void hal_task_sche_switch(task_TaskStruct *to);
 

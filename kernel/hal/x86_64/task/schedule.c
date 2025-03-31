@@ -17,7 +17,7 @@ int hal_task_dispatchTask(task_TaskStruct *tsk) {
 	return res_SUCC;
 }
 
-void hal_task_sche_release() {
+void hal_task_sche_yield() {
 	hal_cpu_sendIntr_self(cpu_intr_Schedule);
 }
 

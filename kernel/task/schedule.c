@@ -13,7 +13,7 @@ int task_sche_state;
 u64 task_pidCnt;
 
 static u64 task_sche_cfsTbl[0x20] = {
-    0x1, 0x2, 0x4, 0x8, 0x10
+    0x2, 0x4, 0x8, 0x10, 0x20
 };
 
 void task_sche_enable() { task_sche_state = 1; }
@@ -32,8 +32,8 @@ RBTree_insert(task_sche_cfsTreeIns, task_sche_cfsTreeCmp)
 void task_sche_updCurState() {
     register u64 tmp = task_sche_cfsTbl[task_current->priority];
     task_current->vRuntime += tmp;
-    task_current->resRuntime -= tmp;
-    if (task_current->resRuntime <= 0)
+    if (cpu_getvar(tskTree)->left != NULL
+        && task_current->vRuntime > container(cpu_getvar(tskTree)->left, task_TaskStruct, rbNode)->vRuntime)
         task_current->state = task_state_NeedSchedule;
 }
 
@@ -50,39 +50,50 @@ void task_sche_updState() {
 void task_sche_init() {
     for (int i = 0; i < cpu_num; i++) {
         RBTree_init(&task_mgr.tasks[i], task_sche_cfsTreeIns, task_sche_cfsTreeCmp);
+        RBTree_init(&task_mgr.preemptTasks[i], task_sche_cfsTreeIns, task_sche_cfsTreeCmp);
         cpu_desc[i].tskTree = &task_mgr.tasks[i];
+        cpu_desc[i].preemptTskTree = &task_mgr.preemptTasks[i];
     }
     RBTree_init(&task_mgr.freeTasks, task_sche_cfsTreeIns, task_sche_cfsTreeCmp);
     task_sche_state = 0;
     task_pidCnt = 0;
 }
 
-void task_sche_release() {
-    task_current->resRuntime = 0;
-    task_current->vRuntime++;
+void task_sche_yield() {
+    task_current->vRuntime += task_sche_cfsTbl[task_current->priority] >> 1;
     task_current->state = task_state_NeedSchedule;
-    hal_task_sche_release();
+    hal_task_sche_yield();
 }
 
 int cnt = 0;
 void task_schedule() {
-    RBTree *tasks = cpu_getvar(tskTree);
+    RBTree *tasks = cpu_getvar(preemptTskTree);
     RBNode *nextTskNode = RBTree_getLeft(tasks);
     task_TaskStruct *nextTsk;
-    if (task_current->flag & task_flag_WaitFree) {
-        RBTree_ins(&task_mgr.freeTasks, &task_current->rbNode);
+    if (nextTskNode != NULL) {
+        printk(WHITE, BLACK, "...");
+        __asm__ volatile ("hlt");
         nextTsk = container(nextTskNode, task_TaskStruct, rbNode);
         RBTree_del(tasks, nextTskNode);
+        tasks = task_current->flag & task_flag_WaitFree ? &task_mgr.freeTasks : cpu_getvar(tskTree);
+        RBTree_ins(tasks, &task_current->rbNode);
     } else {
-        task_current->resRuntime = task_sche_cfsTbl[task_current->priority];
-        if (nextTskNode != NULL) {
+        tasks = cpu_getvar(tskTree);
+        nextTskNode = RBTree_getLeft(tasks);
+        if (task_current->flag & task_flag_WaitFree) {
+            RBTree_ins(&task_mgr.freeTasks, &task_current->rbNode);
             nextTsk = container(nextTskNode, task_TaskStruct, rbNode);
-            if (nextTsk->vRuntime < task_current->vRuntime) {
-                task_current->state = task_state_Idle;
-                RBTree_del(tasks, nextTskNode);
-                RBTree_ins(tasks, &task_current->rbNode);
+            RBTree_del(tasks, nextTskNode);
+        } else {
+            if (nextTskNode != NULL) {
+                nextTsk = container(nextTskNode, task_TaskStruct, rbNode);
+                if (nextTsk->vRuntime < task_current->vRuntime) {
+                    task_current->state = task_state_Idle;
+                    RBTree_del(tasks, nextTskNode);
+                    RBTree_ins(tasks, &task_current->rbNode);
+                } else nextTsk = task_current;
             } else nextTsk = task_current;
-        } else nextTsk = task_current;
+        }
     }
     nextTsk->state = task_state_Running;
     hal_task_sche_switch(nextTsk);
@@ -169,7 +180,6 @@ void task_initIdle() {
     task_current->state = 0;
     task_current->flag = 0;
 
-    task_current->resRuntime = 1;
     task_current->vRuntime = 0;
 
     memset(&task_current->signal, 0, sizeof(task_current->signal));
@@ -188,7 +198,6 @@ task_TaskStruct *task_newSubTask(void *entryAddr, u64 arg, u64 attr) {
     tsk->pid = task_pidCnt++;
     tsk->priority = 0;
     tsk->state = 0;
-    tsk->resRuntime = 1;
     tsk->vRuntime = task_current->vRuntime;
 
     tsk->thread = task_current->thread;
@@ -224,7 +233,6 @@ task_TaskStruct *task_newTask(void *entryAddr, u64 arg, u64 attr) {
     tsk->pid = task_pidCnt++;
     tsk->priority = 0;
     tsk->state = 0;
-    tsk->resRuntime = 1;
     tsk->vRuntime = task_current->vRuntime;
 
     tsk->thread = task_newThread();
@@ -263,13 +271,12 @@ void task_exit(u64 res) {
 	hal_task_current->flag |= task_flag_WaitFree;
 
     intr_unmask();
-    while (1) task_sche_release();
+    while (1) task_sche_yield();
 }
 
 u64 task_freeMgr(u64 arg) {
     u64 tot = 0;
     while (1) {
-        // printk(WHITE, BLACK, "task: freeMgr: arg=%#018lx\n", arg);
         task_TaskStruct *tsk = NULL;
         intr_mask();
         {
@@ -281,37 +288,14 @@ u64 task_freeMgr(u64 arg) {
         }
         intr_unmask();
         if (tsk == NULL) { 
-            task_sche_release();
+            task_sche_yield();
             continue;
         }
         u64 pid = tsk->pid;
         if (task_freeTask(tsk) == res_FAIL) {
             printk(RED, BLACK, "task: failed to free task #%ld.\n", pid);
         } else printk(GREEN, BLACK, "task: task #%ld is killed, tot=%ld\n", pid, ++tot);
-        task_sche_release();
+        task_sche_yield();
     }
     return 0;
-}
-
-void task_signal_setHandler(u64 signal, void (*handler)(u64)) {
-    task_current->thread->sigHandler[signal] = handler;
-}
-
-void task_signal_set(task_TaskStruct *target, u64 signal) {
-    task_current->signal |= (1ull << signal);
-}
-
-void task_signal_scan() {
-    for (int i = 0; i < 64; i++) if (task_current->signal & (1ul << i)) {
-        bit_set0(&task_current->signal, i);
-        void (*handler)(u64);
-        if (!(handler = task_current->thread->sigHandler[i])) {
-            printk(RED, BLACK, "task: signal: no handler for signal #%d\n", i);
-            task_exit(-1);
-        } else {
-            intr_unmask();
-            handler(i);
-            intr_mask();
-        }
-    }
 }
