@@ -13,7 +13,7 @@ void intr_initDesc(intr_Desc *desc, void (*handler)(u64), u64 param, char *name,
 static SpinLock intr_allocLck;
 
 int intr_init() {
-	SpinLock_lock(&intr_allocLck);
+	SpinLock_init(&intr_allocLck);
 	if (hal_intr_init() == res_FAIL) return res_FAIL;
 	return res_SUCC;
 }

@@ -43,12 +43,21 @@ void hal_init_init() {
 	if (res == res_FAIL) while (1) ;
 
 	res = mm_map_init();
-	if (res == res_FAIL) while (1) ;
+	if (res == res_FAIL) {
+		printk(RED, BLACK, "init: map init failed\n");
+		while (1) ;
+	}
 
-	if (screen_enableBuf() == res_FAIL) while (1) hal_hw_hlt();
+	if (screen_enableBuf() == res_FAIL) {
+		printk(RED, BLACK, "init: screen buf init failed\n");
+		while (1) hal_hw_hlt();
+	}
 
 
-	if (intr_init() == res_FAIL) while (1) hal_hw_hlt();
+	if (intr_init() == res_FAIL) {
+		printk(RED, BLACK, "init: intr init failed\n");
+		while (1) hal_hw_hlt();
+	}
 
 	if (hal_hw_uefi_loadTbl() == res_FAIL) while (1) hal_hw_hlt();
 

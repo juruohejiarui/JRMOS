@@ -52,8 +52,10 @@ int screen_enableBuf() {
     mm_Page *pages = mm_allocPages(max(0, log2BufSize - mm_pageShift), mm_Attr_Shared);
     if (pages == NULL) return res_FAIL;
     _bufAddr = mm_dmas_phys2Virt(mm_getPhyAddr(pages));
+    printk(WHITE, BLACK, "screen: buf addr=%#018lx\ncopying...", _bufAddr);
     // copy the screen to buf
     memcpy(position.fbAddr, _bufAddr, bufSize);
+    printk(GREEN, BLACK, "done\n");
 }
 
 #define isDigit(ch) ((ch) >= '0' && (ch) <= '9')

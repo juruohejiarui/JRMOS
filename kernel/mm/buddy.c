@@ -49,7 +49,7 @@ int mm_buddy_init() {
         _buddy.revBit[i] = mm_dmas_phys2Virt(mm_getPhyAddr(pages));
         memset(_buddy.revBit[i], 0, nrPage << mm_pageShift);
     }
-    _buddy.tot = 0;
+    _buddy.tot = _buddy.totUsage = 0;
     for (int i = 0; i <= mm_buddy_mxOrd; i++)
         List_init(&_buddy.freeLst[i]);
     for (int i = 0; i < mm_memStruct.nrZones; i++) {
