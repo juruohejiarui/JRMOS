@@ -241,7 +241,6 @@ void hal_intr_doGeneralProtection(u64 rsp, u64 errorCode) {
 	printk(RED,BLACK,"Segment Selector Index:%#018lx\n",errorCode & 0xfff8);
 	_printRegs(rsp);
 	SpinLock_unlock(&_trapLogLck);
-	
 	hal_intr_PtReg *regs = (void *)rsp;
 	regs->rip = (u64)task_exit;
 	regs->rdi = -1;
@@ -305,6 +304,8 @@ void hal_intr_doPageFault(u64 rsp, u64 errorCode) {
 		hal_intr_PtReg *regs = (void *)rsp;
 		regs->rip = (u64)task_exit;
 		regs->rdi = -1;
+
+		hal_hw_hlt();
 	}
 }
 

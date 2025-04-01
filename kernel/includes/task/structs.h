@@ -23,8 +23,7 @@ struct task_ThreadStruct {
 	Atomic allocVirtMem;
 	Atomic allocMem;
 
-	SpinLock pageRecordLck;
-	ListNode pgRecord;
+	SafeList pgRecord;
 	RBTree slabRecord;
 
 	SpinLock pgTblLck;

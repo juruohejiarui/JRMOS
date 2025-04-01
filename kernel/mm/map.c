@@ -11,7 +11,7 @@
 #include <task/api.h>
 
 #define nrTblCacheShift 10
-#define nrTblCache (1ull<< nrTblCacheShift)
+#define nrTblCache (1ull << nrTblCacheShift)
 
 #define pgNumPerTbl (upAlign(sizeof(hal_mm_PageTbl), mm_pageSize) >> mm_pageShift)
 
@@ -28,14 +28,13 @@ SpinLock mm_map_dbgLck;
 
 static int _initCache() {
     _nrTblGrp = 1;
-    _nrTbl = (1ull<< nrTblCacheShift);
+    _nrTbl = (1ull << nrTblCacheShift);
     return (_tblGrpCache[0] = mm_allocPages(nrTblCacheShift + _allocLg2, mm_Attr_Shared)) ? res_SUCC : res_FAIL;
     
 }
 
 int mm_map_init() {
 	mm_map_krlTblModiJiff.value = 0;
-    _nrTblGrp = 1;
     _allocLg2 = bit_ffs64(pgNumPerTbl) - 1;
     SpinLock_init(&_cacheLck);
     SpinLock_init(&mm_map_krlTblLck);
@@ -48,15 +47,17 @@ hal_mm_PageTbl *mm_map_allocTbl() {
     intr_mask();
     SpinLock_lock(&_cacheLck);
 
-    if (!_nrTblGrp) _initCache();
+    if (!_nrTbl) _initCache();
     while (_tblGrpCache[_nrTblGrp - 1]->ord > _allocLg2)
-        _tblGrpCache[_nrTblGrp++] = mm_divPageGrp(_tblGrpCache[_nrTblGrp - 1]);
+        _tblGrpCache[_nrTblGrp] = mm_divPageGrp(_tblGrpCache[_nrTblGrp - 1]),
+        _nrTblGrp++;
     mm_Page *page = _tblGrpCache[--_nrTblGrp];
+    _nrTbl--;
 
     SpinLock_unlock(&_cacheLck);
     if (intrState) intr_unmask();
 
-    page->attr |= mm_Attr_Allocated | mm_Attr_MMU;
+    page->attr |= mm_Attr_MMU;
 
     hal_mm_PageTbl *tbl = mm_dmas_phys2Virt(mm_getPhyAddr(page));
     memset(tbl, 0, sizeof(hal_mm_PageTbl));
@@ -65,18 +66,18 @@ hal_mm_PageTbl *mm_map_allocTbl() {
 
 int mm_map_freeTbl(hal_mm_PageTbl *tbl) {
     mm_Page *pg = mm_getDesc(mm_dmas_virt2Phys(tbl));
-    if ((~pg->attr & mm_Attr_Allocated) || ~pg->attr & mm_Attr_HeadPage || ~pg->attr & mm_Attr_MMU) {
+    if (~pg->attr &  mm_Attr_MMU | mm_Attr_HeadPage) {
         printk(RED, BLACK, "mm: failed to free page table %#018lx. Invalid table pointer.\n", tbl);
         return res_FAIL;
     }
     int intrState = intr_state();
-    intr_mask();
+    if (intrState) intr_mask();
     SpinLock_lock(&_cacheLck);
 
     // directly free the table if there is enough cache
     if (_nrTbl == nrTblCache) {
         SpinLock_unlock(&_cacheLck);
-        return 0;
+        if (intrState) intr_unmask();
         return mm_freePages(pg);
     }
     _tblGrpCache[_nrTblGrp++] = pg;
@@ -84,7 +85,7 @@ int mm_map_freeTbl(hal_mm_PageTbl *tbl) {
 
     // release the lock and interrupt
     SpinLock_unlock(&_cacheLck);
-    if (!intrState) intr_unmask();
+    if (intrState) intr_unmask();
 
     pg->attr &= ~mm_Attr_MMU;
     return res_SUCC;

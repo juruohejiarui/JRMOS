@@ -72,7 +72,7 @@ void task_sche_yield() {
 
 void task_sche_sleep() {
     task_current->flag |= task_flag_WaitSleep;
-    task_sche_yield();
+    while (task_current->flag & task_flag_WaitSleep) task_sche_yield();
 }
 
 void task_sche_wake(task_TaskStruct *task) {
@@ -80,7 +80,7 @@ void task_sche_wake(task_TaskStruct *task) {
     SpinLock_lockMask(&task_mgr.scheLck[task->cpuId]);
     if (task->state == task_state_Sleep) {
         task->state = task_state_Idle;
-        List_del(&task->scheNd);
+        SafeList_del(&task_mgr.sleepTsks, &task->scheNd);
         RBTree_ins(&task_mgr.tasks[task->cpuId], &task->rbNd);
     }
     SpinLock_unlockMask(&task_mgr.scheLck[task->cpuId]);
@@ -103,7 +103,7 @@ void task_sche_preempt(task_TaskStruct *task) {
         case task_state_Sleep:
             printk(WHITE, BLACK, "task #%d: preempt #%d from sleep\n", task_current->pid, task->pid);
 
-            List_del(&task->scheNd);
+            SafeList_del(&task_mgr.sleepTsks, &task->scheNd);
             List_insTail(&task_mgr.preemptTsks[task->cpuId], &task->scheNd);
             task->state = task_state_IdlePreempt;
             break;
@@ -132,14 +132,16 @@ static void task_sche_hangCur() {
     }
 }
 
-void task_schedule() {
-    SpinLock_lockMask(cpu_getvar(scheLck));
+void task_sche() {
+    SpinLock_lock(cpu_getvar(scheLck));
+
     task_TaskStruct *nxtTsk;
     // search for the next task
     if (!List_isEmpty(cpu_getvar(preemptTsks))) {
         nxtTsk = container(List_getHead(cpu_getvar(preemptTsks)), task_TaskStruct, scheNd);
         printk(WHITE, BLACK, "task #%d preempted by #%d\n", task_current->pid, nxtTsk->pid);
         List_del(&nxtTsk->scheNd);
+        goto needSche;
     } else {
         RBNode *nxtTskNd = RBTree_getLeft(cpu_getvar(tsks));
         if (!nxtTskNd) goto noNeedToSche;
@@ -147,14 +149,17 @@ void task_schedule() {
         if (nxtTsk->vRuntime > task_current->vRuntime) goto noNeedToSche;
         RBTree_del(cpu_getvar(tsks), &nxtTsk->rbNd);
         goto needSche;
-        noNeedToSche:
-        SpinLock_unlockMask(cpu_getvar(scheLck));
-        return ;
     }
+    noNeedToSche:
+    SpinLock_unlock(cpu_getvar(scheLck));
+    return ;
+
     needSche:
     task_sche_hangCur();
     nxtTsk->state = task_state_Running;
-    SpinLock_unlockMask(cpu_getvar(scheLck));
+    SpinLock_unlock(cpu_getvar(scheLck));
+    // if (task_current->cpuId == 0) 
+        // printk(WHITE, BLACK, "cpu #%d: #%d->#%d\n", task_current->cpuId, task_current->pid, nxtTsk->pid);
     hal_task_sche_switch(nxtTsk);
 }
 
@@ -170,8 +175,7 @@ task_ThreadStruct *task_newThread() {
     thread->krlTblModiJiff.value = mm_map_krlTblModiJiff.value;
     thread->allocMem.value = thread->allocVirtMem.value = 0;
     
-    SpinLock_init(&thread->pageRecordLck);
-    List_init(&thread->pgRecord);
+    SafeList_init(&thread->pgRecord);
 
     RBTree_init(&thread->slabRecord, mm_slabRecord_insert, mm_slabRecord_comparator);
 
@@ -204,7 +208,7 @@ int task_delSubTask(task_TaskStruct *subTsk) {
 }
 
 int task_freeThread(task_ThreadStruct *thread) {
-    for (ListNode *pageList = thread->pgRecord.next; pageList != &thread->pgRecord; ) {
+    for (ListNode *pageList = thread->pgRecord.head.next; pageList != &thread->pgRecord.head; ) {
         ListNode *nxt = pageList->next;
         if (mm_freePages(container(pageList, mm_Page, list)) == res_FAIL) return res_FAIL;
         pageList = nxt;
@@ -214,8 +218,9 @@ int task_freeThread(task_ThreadStruct *thread) {
         mm_kfree(record->ptr, mm_Attr_Shared);
     }
     if (hal_task_freeThread(thread) == res_FAIL) return res_FAIL;
-
+    printk(WHITE, BLACK, "hal free ->%d\n", intr_state());
     mm_kfree(thread, mm_Attr_Shared);
+    printk(WHITE, BLACK, "free thread ->%d\n", intr_state());
     return res_SUCC;
 }
 
@@ -224,6 +229,7 @@ int task_freeTask(task_TaskStruct *tsk) {
         printk(RED, BLACK, "task: failed to delete subtask #%ld from thread.\n", tsk->pid);
         return res_FAIL;
     }
+    // printk(WHITE, BLACK, "  ->%d\n", intr_state());
     if (hal_task_freeTask(tsk) == res_FAIL) return res_FAIL;
     return mm_kfree(tsk, mm_Attr_Shared);
 }
@@ -331,7 +337,7 @@ void task_exit(u64 res) {
     // task_sche_preempt(task_freeMgrTsk);
     task_current->priority = task_Priority_Lowest;
 
-    task_sche_sleep();
+    while (1) hal_hw_hlt();
 }
 
 task_TaskStruct *task_freeMgrTsk;
@@ -339,7 +345,9 @@ task_TaskStruct *task_freeMgrTsk;
 u64 task_freeMgr(u64 arg) {
     u64 tot = 0;
     while (1) {
-        while (SafeList_isEmpty(&task_mgr.freeTsks)) continue;
+        while (SafeList_isEmpty(&task_mgr.freeTsks)) {
+            task_sche_yield();
+        }
         task_current->priority = task_Priority_Running;
         task_TaskStruct *tsk = container(SafeList_getHead(&task_mgr.freeTsks), task_TaskStruct, scheNd);
         SafeList_del(&task_mgr.freeTsks, &tsk->scheNd);
@@ -347,6 +355,7 @@ u64 task_freeMgr(u64 arg) {
         if (task_freeTask(tsk) == res_FAIL) {
             printk(RED, BLACK, "task: failed to free task #%ld.\n", pid);
         } else printk(GREEN, BLACK, "task: task #%ld is killed, tot=%ld\n", pid, ++tot);
+
         task_current->priority = task_Priority_Lowest;
     }
     return 0;

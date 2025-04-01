@@ -7,6 +7,7 @@
 #include <lib/string.h>
 #include <screen/screen.h>
 #include <interrupt/api.h>
+#include <task/api.h>
 
 static struct BuddyStruct {
     u64 *revBit[mm_buddy_mxOrd + 1];
@@ -30,7 +31,7 @@ static __always_inline__ void _revBit(mm_Page *page) {
 }
 
 static __always_inline__ mm_Page *_getBuddy(mm_Page *page) {
-    return mm_buddy_isRight(page) ? page - (1ull<< page->ord) : page + (1ull<< page->ord);
+    return mm_buddy_isRight(page) ? page - (1ull << page->ord) : page + (1ull << page->ord);
 }
 
 int mm_buddy_init() {
@@ -88,7 +89,7 @@ void mm_buddy_debug(int detail) {
 mm_Page *mm_allocPages(u64 log2Size, u32 attr) {
     // printk(WHITE, BLACK, "mm: buddy: alloc 2^%ld page attr=%#010x\n", log2Size, attr);
     int intrState = intr_state();
-    intr_mask();
+    if (intrState) intr_mask();
     SpinLock_lock(&_buddyLck);
     mm_Page *resPage = NULL;
     if (log2Size > mm_buddy_mxOrd) goto Fail;
@@ -105,7 +106,6 @@ mm_Page *mm_allocPages(u64 log2Size, u32 attr) {
     _revBit(resPage);
     for (int i = resPage->ord; i > log2Size; i--) {
         mm_Page *rPage = mm_divPageGrp(resPage);
-        rPage->attr |= mm_Attr_HeadPage;
         rPage->ord = i - 1;
         _revBit(rPage);
         List_insBefore(&rPage->list, &_buddy.freeLst[i - 1]);
@@ -114,6 +114,7 @@ mm_Page *mm_allocPages(u64 log2Size, u32 attr) {
     SpinLock_unlock(&_buddyLck);
     if (intrState) intr_unmask();
     resPage->attr = attr | mm_Attr_HeadPage | mm_Attr_Allocated;
+    if (~attr & mm_Attr_Shared) SafeList_insTail(&task_current->thread->pgRecord, &resPage->list);
     return resPage;
     Fail:
     
@@ -124,13 +125,19 @@ mm_Page *mm_allocPages(u64 log2Size, u32 attr) {
 }
 
 int mm_freePages(mm_Page *pages) {
+    printk(WHITE, BLACK, "mm: buddy: try free %#018lx->%#018lx ", pages, mm_getPhyAddr(pages));
+    if (pages == NULL || mm_getPhyAddr(pages) == (u64)NULL) {
+        printk(RED, BLACK, "mm: buddy: invalid pages %#018lx->%#018lx\n", pages, mm_getPhyAddr(pages));
+    }
     if (~pages->attr & (mm_Attr_HeadPage | mm_Attr_Allocated)) return res_FAIL;
+
+    if (~pages->attr & mm_Attr_Shared) SafeList_del(&task_current->thread->pgRecord, &pages->list);
     
     int intrState = intr_state();
-    intr_mask();
+    if (intrState) intr_mask();
     SpinLock_lock(&_buddyLck);
-    _buddy.totUsage -= (1ull<< (pages->ord + mm_pageShift));
-    pages->attr &= ~mm_Attr_Allocated;
+    _buddy.totUsage -= (1ull << (pages->ord + mm_pageShift));
+    pages->attr ^= mm_Attr_Allocated;
     for (int i = pages->ord; i <= mm_buddy_mxOrd; i++) {
         _revBit(pages);
         if (_getBit(pages)) break;
@@ -138,7 +145,7 @@ int mm_freePages(mm_Page *pages) {
         List_del(&bud->list);
         if (mm_buddy_isRight(pages)) {
             pages->buddyId = pages->ord = 0;
-            pages->attr &= ~mm_Attr_HeadPage;
+            pages->attr ^= mm_Attr_HeadPage;
             pages = bud;
         }
         pages->buddyId = mm_buddy_parent(pages->buddyId);

@@ -79,11 +79,11 @@ ListNode *SafeList_getHead(SafeList *list);
 ListNode *SafeList_getTail(SafeList *list);
 
 static __always_inline__ void SafeList_insHead(SafeList *list, ListNode *node) {
-	SafeList_insBehind(list, node, list->head.next);
+	SafeList_insBehind(list, node, &list->head);
 }
 
 static __always_inline__ void SafeList_insTail(SafeList *list, ListNode *node) {
-	SafeList_insBefore(list, node, list->head.prev);
+	SafeList_insBefore(list, node, &list->head);
 }
 
 #endif

@@ -34,13 +34,17 @@ void task_sche_init();
 
 void task_sche_yield();
 
+void task_sche_sleep();
+
+void task_sche_wake(task_TaskStruct *task);
+
 void task_sche_preempt(task_TaskStruct *task);
 
-static __always_inline__ void task_sche_msk() { Atomic_dec(cpu_getvar(scheMsk)); }
+static __always_inline__ void task_sche_msk() { Atomic_inc(cpu_getvar(scheMsk)); }
 
-static __always_inline__ void task_sche_unmsk() { Atomic_inc(cpu_getvar(scheMsk)); }
+static __always_inline__ void task_sche_unmsk() { Atomic_dec(cpu_getvar(scheMsk)); }
 
-void task_schedule();
+void task_sche();
 
 void task_initIdle();
 

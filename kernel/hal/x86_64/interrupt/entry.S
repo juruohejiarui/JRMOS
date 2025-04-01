@@ -40,6 +40,10 @@ ENTRY(hal_intr_restoreAll)
 
 retFromException:
 ENTRY(hal_intr_retFromIntr)
+    movq %gs:cpu_Desc_scheMsk, %rax
+    movq (%rax), %rax
+    testq %rax, %rax
+    jnz hal_intr_endSchedule
     movq %rsp, %rax
 	andq $-(task_krlStkSize), %rax
     movq task_TaskStruct_signal(%rax), %rbx
@@ -49,13 +53,10 @@ ENTRY(hal_intr_retFromIntr)
     callq task_signal_scan
     popq %rax
 hal_intr_trySchedule:
-    movq %gs:cpu_Desc_scheMsk, %rbx
-    testq %rbx, %rbx
-    jnz hal_intr_endSchedule
 	movq task_TaskStruct_state(%rax), %rax
     cmpq $task_state_Running, %rax
     je hal_intr_endSchedule
-    callq task_schedule
+    callq task_sche
 hal_intr_endSchedule:
 	// get CPU_ID of current task
     movq %gs:cpu_Desc_sirqFlag, %rax
