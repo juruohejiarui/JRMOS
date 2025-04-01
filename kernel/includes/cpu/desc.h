@@ -41,7 +41,7 @@ typedef struct cpu_Desc {
     RBTree *tsks;
     SpinLock *scheLck;
     ListNode *preemptTsks;
-    Atomic preemptCnt;
+    Atomic *scheMsk;
 
     hal_cpu_Desc hal;
 } __attribute__ ((packed)) cpu_Desc;

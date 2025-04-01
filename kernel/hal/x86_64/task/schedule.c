@@ -22,7 +22,7 @@ void hal_task_sche_yield() {
 }
 
 void hal_task_sche_switchTss(task_TaskStruct *prev, task_TaskStruct *next) {
-	hal_intr_TSS *cpuTss = cpu_desc[next->cpuId].hal.tss, *tskTss = &next->hal.tss;
+	hal_intr_TSS *cpuTss = cpu_getvar(hal.tss), *tskTss = &next->hal.tss;
 	cpuTss->rsp0 = tskTss->rsp0;
 	cpuTss->rsp2 = tskTss->rsp2;
 	cpuTss->ist2 = tskTss->ist2;

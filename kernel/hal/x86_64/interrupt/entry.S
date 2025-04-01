@@ -49,6 +49,9 @@ ENTRY(hal_intr_retFromIntr)
     callq task_signal_scan
     popq %rax
 hal_intr_trySchedule:
+    movq %gs:cpu_Desc_scheMsk, %rbx
+    testq %rbx, %rbx
+    jnz hal_intr_endSchedule
 	movq task_TaskStruct_state(%rax), %rax
     cmpq $task_state_Running, %rax
     je hal_intr_endSchedule

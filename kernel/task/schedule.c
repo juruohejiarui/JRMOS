@@ -51,12 +51,14 @@ void task_sche_init() {
         RBTree_init(&task_mgr.tasks[i], task_sche_cfsTreeIns, task_sche_cfsTreeCmp);
         List_init(&task_mgr.preemptTsks[i]);
         SpinLock_init(&task_mgr.scheLck[i]);
+        task_mgr.scheMsk[i].value = 0;
 
         cpu_desc[i].tsks = &task_mgr.tasks[i];
         cpu_desc[i].preemptTsks = &task_mgr.preemptTsks[i];
         cpu_desc[i].scheLck = &task_mgr.scheLck[i];
+        cpu_desc[i].scheMsk = &task_mgr.scheMsk[i];
     }
-    List_init(&task_mgr.sleepTsks);
+    SafeList_init(&task_mgr.sleepTsks);
     SafeList_init(&task_mgr.freeTsks);
     task_sche_state = 0;
     task_pidCnt = 0;
@@ -75,23 +77,18 @@ void task_sche_sleep() {
 
 void task_sche_wake(task_TaskStruct *task) {
     // mask interrupt
-    register int intrState = intr_state();
-    if (intrState) intr_mask();
-    SpinLock_lock(&task_mgr.scheLck[task->cpuId]);
+    SpinLock_lockMask(&task_mgr.scheLck[task->cpuId]);
     if (task->state == task_state_Sleep) {
         task->state = task_state_Idle;
         List_del(&task->scheNd);
         RBTree_ins(&task_mgr.tasks[task->cpuId], &task->rbNd);
     }
-    SpinLock_unlock(&task_mgr.scheLck[task->cpuId]);
-    if (intrState) intr_unmask();
+    SpinLock_unlockMask(&task_mgr.scheLck[task->cpuId]);
 }
 
 void task_sche_preempt(task_TaskStruct *task) {
     // mask interrupt
-    register int intrState = intr_state();
-    if (intrState) intr_mask();
-    SpinLock_lock(&task_mgr.scheLck[task->cpuId]);
+    SpinLock_lockMask(&task_mgr.scheLck[task->cpuId]);
     switch (task->state) {
         case task_state_Idle:
             printk(WHITE, BLACK, "task #%d: preempt #%d from idle\n", task_current->pid, task->pid);
@@ -113,16 +110,7 @@ void task_sche_preempt(task_TaskStruct *task) {
         default:
             break;
     }
-    SpinLock_unlock(&task_mgr.scheLck[task->cpuId]);
-    if (intrState) intr_unmask();
-}
-
-void task_sche_enablePreempt() {
-    Atomic_dec(&cpu_desc[task_current->cpuId].preemptCnt);
-}
-
-void task_sche_disablePreempt() {
-    Atomic_inc(&cpu_desc[task_current->cpuId].preemptCnt);
+    SpinLock_unlockMask(&task_mgr.scheLck[task->cpuId]);
 }
 
 int cnt = 0;
@@ -133,7 +121,7 @@ static void task_sche_hangCur() {
     if (task_current->flag & task_flag_WaitSleep) {
         task_current->flag ^= task_flag_WaitSleep;
         task_current->state = task_state_Sleep;
-        List_insTail(&task_mgr.sleepTsks, &task_current->scheNd);
+        SafeList_insTail(&task_mgr.sleepTsks, &task_current->scheNd);
     } else if (task_current->flag & task_flag_WaitFree) {
         task_current->flag ^= task_flag_WaitFree;
         task_current->state = task_state_Free;
@@ -145,13 +133,10 @@ static void task_sche_hangCur() {
 }
 
 void task_schedule() {
-    if (SpinLock_isLocked(cpu_getvar(scheLck))) {
-        return ;
-    }
-    SpinLock_lock(cpu_getvar(scheLck));
+    SpinLock_lockMask(cpu_getvar(scheLck));
     task_TaskStruct *nxtTsk;
     // search for the next task
-    if (!cpu_getvar(preemptCnt.value) && !List_isEmpty(cpu_getvar(preemptTsks))) {
+    if (!List_isEmpty(cpu_getvar(preemptTsks))) {
         nxtTsk = container(List_getHead(cpu_getvar(preemptTsks)), task_TaskStruct, scheNd);
         printk(WHITE, BLACK, "task #%d preempted by #%d\n", task_current->pid, nxtTsk->pid);
         List_del(&nxtTsk->scheNd);
@@ -163,13 +148,13 @@ void task_schedule() {
         RBTree_del(cpu_getvar(tsks), &nxtTsk->rbNd);
         goto needSche;
         noNeedToSche:
-        SpinLock_unlock(cpu_getvar(scheLck));
+        SpinLock_unlockMask(cpu_getvar(scheLck));
         return ;
     }
     needSche:
     task_sche_hangCur();
     nxtTsk->state = task_state_Running;
-    SpinLock_unlock(cpu_getvar(scheLck));
+    SpinLock_unlockMask(cpu_getvar(scheLck));
     hal_task_sche_switch(nxtTsk);
 }
 
@@ -263,12 +248,9 @@ void task_initIdle() {
 
 // insert new task to cfs tree
 static void _insertNewTsk(task_TaskStruct *tsk) {
-    register int state = intr_state();
-    if (state) intr_mask();
-    SpinLock_lock(&task_mgr.scheLck[tsk->cpuId]);
+    SpinLock_lockMask(&task_mgr.scheLck[tsk->cpuId]);
     RBTree_ins(&task_mgr.tasks[tsk->cpuId], &tsk->rbNd);
-    SpinLock_unlock(&task_mgr.scheLck[tsk->cpuId]);
-    if (state) intr_unmask();
+    SpinLock_unlockMask(&task_mgr.scheLck[tsk->cpuId]);
 }
 
 task_TaskStruct *task_newSubTask(void *entryAddr, u64 arg, u64 attr) {
@@ -346,7 +328,7 @@ void task_exit(u64 res) {
 	hal_task_current->flag |= task_flag_WaitFree;
 
     intr_unmask();
-    task_sche_preempt(task_freeMgrTsk);
+    // task_sche_preempt(task_freeMgrTsk);
     task_current->priority = task_Priority_Lowest;
 
     task_sche_sleep();
@@ -357,8 +339,7 @@ task_TaskStruct *task_freeMgrTsk;
 u64 task_freeMgr(u64 arg) {
     u64 tot = 0;
     while (1) {
-        while (SafeList_isEmpty(&task_mgr.freeTsks))
-            task_sche_sleep();
+        while (SafeList_isEmpty(&task_mgr.freeTsks)) continue;
         task_current->priority = task_Priority_Running;
         task_TaskStruct *tsk = container(SafeList_getHead(&task_mgr.freeTsks), task_TaskStruct, scheNd);
         SafeList_del(&task_mgr.freeTsks, &tsk->scheNd);

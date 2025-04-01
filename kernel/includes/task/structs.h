@@ -66,9 +66,10 @@ typedef union task_Union {
 
 typedef struct task_MgrStruct {
 	RBTree tasks[cpu_mxNum];
+	ListNode preemptTsks[cpu_mxNum];
 	SpinLock scheLck[cpu_mxNum];
-	ListNode preemptTsks[cpu_mxNum], sleepTsks;
-	SafeList freeTsks;
+	Atomic scheMsk[cpu_mxNum];
+	SafeList freeTsks, sleepTsks;
 } task_MgrStruct;
 
 #endif

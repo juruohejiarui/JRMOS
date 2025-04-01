@@ -7,6 +7,11 @@
 #ifdef HAL_SPINLOCK_DEFINE
 typedef hal_SpinLock SpinLock;
 
+// lock and disable preempt
+void SpinLock_lockMask(SpinLock *lock);
+// unlock and enable preempt
+void SpinLock_unlockMask(SpinLock *lock);
+
 #define SpinLock_init hal_SpinLock_init
 #define SpinLock_lock hal_SpinLock_lock
 #define SpinLock_unlock hal_SpinLock_unlock

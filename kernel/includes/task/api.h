@@ -2,6 +2,7 @@
 #define __TASK_API_H__
 
 #include <hal/task/api.h>
+#include <cpu/api.h>
 
 #ifdef HAL_TASK_GETLEVEL
 #define task_getLevel hal_task_getLevel
@@ -35,8 +36,9 @@ void task_sche_yield();
 
 void task_sche_preempt(task_TaskStruct *task);
 
-void task_sche_disablePreempt();
-void task_sche_enablePreempt();
+static __always_inline__ void task_sche_msk() { Atomic_dec(cpu_getvar(scheMsk)); }
+
+static __always_inline__ void task_sche_unmsk() { Atomic_inc(cpu_getvar(scheMsk)); }
 
 void task_schedule();
 
