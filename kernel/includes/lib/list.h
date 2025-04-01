@@ -44,10 +44,10 @@ static __always_inline__ void List_del(ListNode *node) {
 	node->prev = node->next = node;
 }
 
-static __always_inline__ void List_insHead(ListNode *node, ListNode *list) {
+static __always_inline__ void List_insHead(ListNode *list, ListNode *node) {
 	List_insBehind(node, list);
 }
-static __always_inline__ void List_insTail(ListNode *node, ListNode *list) {
+static __always_inline__ void List_insTail(ListNode *list, ListNode *node) {
 	List_insBefore(node, list);
 }
 static __always_inline__ ListNode *List_getHead(ListNode *list) {

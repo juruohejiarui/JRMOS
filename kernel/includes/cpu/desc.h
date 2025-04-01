@@ -40,7 +40,6 @@ typedef struct cpu_Desc {
     // task struct
     RBTree *tsks;
     SpinLock *scheLck;
-    ListNode *sleepTsks;
     ListNode *preemptTsks;
     Atomic preemptCnt;
 

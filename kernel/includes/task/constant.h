@@ -20,6 +20,7 @@
 #define task_state_Idle			0x3
 #define task_state_Sleep        0x4
 #define task_state_Free         0x5
+#define task_state_IdlePreempt  0x6
 
 #define task_flag_WaitFree      0x1ul
 #define task_flag_WaitSleep		0x2ul

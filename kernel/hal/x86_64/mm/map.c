@@ -25,7 +25,7 @@ void hal_mm_map_dbg(u64 virt) {
 
     u64 idx = (virt & hal_mm_pgdIdxMask) >> hal_mm_pgdShift;
     tbl = (hal_mm_PageTbl *)mm_dmas_phys2Virt(tbl->entries[idx] & ~0xffful);
-    if (!tbl) {
+    if (!(tbl->entries[idx] & ~0xffful)) {
         printk(WHITE, BLACK, " \t[%3x] pud: NULL\n", idx);
         return;
     }
@@ -38,19 +38,19 @@ void hal_mm_map_dbg(u64 virt) {
         printk(WHITE, BLACK, " \t[%3x] 1G mapping: %#018lx\n", idx, tbl->entries[idx]);
         return;
     }
-    if (!tbl) {
+    if (!(tbl->entries[idx] & ~0xffful)) {
         printk(WHITE, BLACK, " \t[%3x] pmd tbl: NULL\n", idx);
         return;
     }
     printk(WHITE, BLACK, " \t[%3x] pmd tbl: %#018lx\n", idx, tbl);
     
     idx = (virt & hal_mm_pmdIdxMask) >> hal_mm_pmdShift;
-    if (tbl->entries[idx] & 0x80) {
+    if (!(tbl->entries[idx] & ~0xffful)) {
         printk(WHITE, BLACK, " \t[%3x] 2M mapping: %#018lx\n", idx, tbl->entries[idx]);
         return;
     }
     tbl = (hal_mm_PageTbl *)mm_dmas_phys2Virt(tbl->entries[idx] & ~0xffful);
-    if (!tbl) {
+    if (!(tbl->entries[idx] & ~0xffful)) {
         printk(WHITE, BLACK, " \t[%3x] pld tbl: NULL\n", idx);
         return;
     }

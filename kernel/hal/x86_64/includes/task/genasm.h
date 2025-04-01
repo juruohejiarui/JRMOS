@@ -2,13 +2,13 @@
 #define __HAL_TASK_ASM_H__
 
 #define task_TaskStruct_state  0x18
-#define task_TaskStruct_signal	0x78
-#define task_TaskStruct_hal    0x80
+#define task_TaskStruct_signal	0x68
+#define task_TaskStruct_hal    0x70
 #define task_TaskStruct_thread 0x28
-#define hal_task_TaskStruct_rip    0x80
-#define hal_task_TaskStruct_rsp    0x88
-#define hal_task_TaskStruct_usrRsp 0xa8
-#define hal_task_TaskStruct_rflags 0xa0
+#define hal_task_TaskStruct_rip    0x70
+#define hal_task_TaskStruct_rsp    0x78
+#define hal_task_TaskStruct_usrRsp 0x98
+#define hal_task_TaskStruct_rflags 0x90
 
 #define task_ThreadStruct_hal 0x278
 #define hal_task_ThreadStruct_pgd 0x278
