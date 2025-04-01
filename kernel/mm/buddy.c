@@ -92,7 +92,10 @@ mm_Page *mm_allocPages(u64 log2Size, u32 attr) {
     if (intrState) intr_mask();
     SpinLock_lock(&_buddyLck);
     mm_Page *resPage = NULL;
-    if (log2Size > mm_buddy_mxOrd) goto Fail;
+    if (log2Size > mm_buddy_mxOrd) {
+        printk(RED, BLACK, "mm: buddy: required size is too large log2Size=%d\n", log2Size);
+        goto Fail;
+    }
 
     for (int ord = log2Size; ord <= mm_buddy_mxOrd; ord++) {
         if (List_isEmpty(&_buddy.freeLst[ord])) continue;
@@ -100,7 +103,10 @@ mm_Page *mm_allocPages(u64 log2Size, u32 attr) {
         resPage->ord = ord;
         break;
     }
-    if (resPage == NULL) goto Fail;
+    if (resPage == NULL) {
+        printk(RED, BLACK, "mm: buddy: no free page group.\n");
+        goto Fail;
+    }
 
     List_del(&resPage->list);
     _revBit(resPage);
@@ -128,8 +134,12 @@ int mm_freePages(mm_Page *pages) {
     printk(WHITE, BLACK, "mm: buddy: try free %#018lx->%#018lx ", pages, mm_getPhyAddr(pages));
     if (pages == NULL || mm_getPhyAddr(pages) == (u64)NULL) {
         printk(RED, BLACK, "mm: buddy: invalid pages %#018lx->%#018lx\n", pages, mm_getPhyAddr(pages));
+        return res_FAIL;
     }
-    if (~pages->attr & (mm_Attr_HeadPage | mm_Attr_Allocated)) return res_FAIL;
+    if (~pages->attr & (mm_Attr_HeadPage | mm_Attr_Allocated)) {
+        printk(RED, BLACK, "mm: buddy: invalid pages %#018lx: not head page or allocated page\n", pages);
+        return res_FAIL;
+    }
 
     if (~pages->attr & mm_Attr_Shared) SafeList_del(&task_current->thread->pgRecord, &pages->list);
     
@@ -137,7 +147,7 @@ int mm_freePages(mm_Page *pages) {
     if (intrState) intr_mask();
     SpinLock_lock(&_buddyLck);
     _buddy.totUsage -= (1ull << (pages->ord + mm_pageShift));
-    pages->attr ^= mm_Attr_Allocated;
+    pages->attr = mm_Attr_HeadPage;
     for (int i = pages->ord; i <= mm_buddy_mxOrd; i++) {
         _revBit(pages);
         if (_getBit(pages)) break;
