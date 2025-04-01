@@ -136,6 +136,9 @@ int hal_cpu_init() {
 		return res_FAIL;
 	}
 	printk(WHITE, BLACK, "cpu: bspIdx:%d\n", cpu_bspIdx);
+
+	// set gsbase
+	hal_hw_writeMsr(hal_msr_IA32_GS_BASE, (u64)&cpu_desc[cpu_bspIdx]);
 	return res_SUCC;
 }
 

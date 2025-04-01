@@ -75,18 +75,16 @@ void hal_init_init() {
 
 	task_initIdle();
 
-	printk(WHITE, BLACK, "intrState:%d\n", intr_state());
-	printk(WHITE, BLACK, "gsBase:%#018lx\n", hal_hw_readMsr(hal_msr_IA32_GS_BASE));
-	while (1) hal_hw_hlt();
+	// printk(WHITE, BLACK, "intrState:%d\n", intr_state());
+	// printk(WHITE, BLACK, "gsBase:%#018lx\n", hal_hw_readMsr(hal_msr_IA32_GS_BASE));
+	// while (1) hal_hw_hlt();
 
 
 	if (task_syscall_init() == res_FAIL) while (1) hal_hw_hlt();
 
 	task_sche_enable();
 
-	
-
-	// intr_unmask();
+	intr_unmask();
 
 	task_freeMgrTsk = task_newSubTask(task_freeMgr, 0, task_attr_Builtin);
 
@@ -103,19 +101,17 @@ void hal_init_init() {
 }
 
 void hal_init_initAP() {
+	hal_hw_writeMsr(hal_msr_IA32_GS_BASE, (u64)&cpu_desc[task_current->cpuId]);
 	if (hal_intr_initAP() == res_FAIL) while (1) hal_hw_hlt();
 
 	task_initIdle();
 
 	if (task_syscall_init() == res_FAIL) while (1) hal_hw_hlt();
 
-	// intr_unmask();
+	intr_unmask();
 
 	hal_cpu_setvar(state, cpu_Desc_state_Active);
 
-	printk(WHITE, BLACK, "intrState:%d\n", intr_state());
-	printk(WHITE, BLACK, "gsBase:%#018lx\n", hal_hw_readMsr(hal_msr_IA32_GS_BASE));
-	while (1) hal_hw_hlt();
 
 
 	printk(WHITE, BLACK, "init: cpu #%d initialized\n", task_current->cpuId);
