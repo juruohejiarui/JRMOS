@@ -132,10 +132,6 @@ mm_Page *mm_allocPages(u64 log2Size, u32 attr) {
 
 int mm_freePages(mm_Page *pages) {
     printk(WHITE, BLACK, "mm: buddy: try free %#018lx->%#018lx ", pages, mm_getPhyAddr(pages));
-    if (pages == NULL || mm_getPhyAddr(pages) == (u64)NULL) {
-        printk(RED, BLACK, "mm: buddy: invalid pages %#018lx->%#018lx\n", pages, mm_getPhyAddr(pages));
-        return res_FAIL;
-    }
     if (~pages->attr & (mm_Attr_HeadPage | mm_Attr_Allocated)) {
         printk(RED, BLACK, "mm: buddy: invalid pages %#018lx: not head page or allocated page\n", pages);
         return res_FAIL;
