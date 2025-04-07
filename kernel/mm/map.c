@@ -10,14 +10,14 @@
 #include <interrupt/api.h>
 #include <task/api.h>
 
-#define nrTblCacheShift 10
+#define nrTblCacheShift 7
 #define nrTblCache (1ull << nrTblCacheShift)
 
 #define pgNumPerTbl (upAlign(sizeof(hal_mm_PageTbl), mm_pageSize) >> mm_pageShift)
 
 Atomic mm_map_krlTblModiJiff;
 
-static mm_Page *_tblGrpCache[nrTblCache];
+static mm_Page *_tblGrpCache[nrTblCache << 1];
 static u64 _allocLg2;
 
 static u64 _nrTblGrp, _nrTbl;
@@ -44,7 +44,7 @@ int mm_map_init() {
 
 hal_mm_PageTbl *mm_map_allocTbl() {
     int intrState = intr_state();
-    intr_mask();
+    if (intrState) intr_mask();
     SpinLock_lock(&_cacheLck);
 
     if (!_nrTbl) _initCache();
@@ -64,10 +64,34 @@ hal_mm_PageTbl *mm_map_allocTbl() {
     return tbl;
 }
 
+void mm_map_dbg(int detail) {
+    int intrState = intr_state();
+    if (intrState) intr_mask();
+    SpinLock_lock(&_cacheLck);
+
+
+    printk(WHITE, BLACK, "mm:map:nrTbl:%d nrTblGrp:%d ", _nrTbl, _nrTblGrp);
+    if (!detail) {
+        SpinLock_unlock(&_cacheLck);
+        if (intrState) intr_unmask();
+        return ;
+    }
+    printk(WHITE, BLACK, "\n");
+    for (int i = 0; i < _nrTblGrp; i++)
+        printk(WHITE, BLACK, "%#011lx %2d%c",
+            (u64)_tblGrpCache[i] & 0xffffffffful, _tblGrpCache[i]->ord,
+            (i % 12 == 11 ? '\n' : ' '));
+    if (_nrTblGrp % 12 != 0) printk(WHITE, BLACK, "\n");
+
+    SpinLock_unlock(&_cacheLck);
+    if (intrState) intr_unmask();
+}
+
 int mm_map_freeTbl(hal_mm_PageTbl *tbl) {
     mm_Page *pg = mm_getDesc(mm_dmas_virt2Phys(tbl));
     if (~pg->attr & (mm_Attr_MMU | mm_Attr_HeadPage)) {
         printk(RED, BLACK, "mm: failed to free page table %#018lx. Invalid table pointer.\n", tbl);
+        while (1) ;
         return res_FAIL;
     }
     int intrState = intr_state();
@@ -75,19 +99,19 @@ int mm_map_freeTbl(hal_mm_PageTbl *tbl) {
     SpinLock_lock(&_cacheLck);
 
     // directly free the table if there is enough cache
-    if (_nrTbl == nrTblCache) {
+    if (_nrTbl >= nrTblCache) {
         SpinLock_unlock(&_cacheLck);
         if (intrState) intr_unmask();
         return mm_freePages(pg);
     }
     _tblGrpCache[_nrTblGrp++] = pg;
     _nrTbl++;
+    pg->attr ^= mm_Attr_MMU;
 
     // release the lock and interrupt
     SpinLock_unlock(&_cacheLck);
     if (intrState) intr_unmask();
 
-    pg->attr &= ~mm_Attr_MMU;
     return res_SUCC;
 }
 
@@ -108,9 +132,9 @@ int mm_map_syncKrl() {
     return res_SUCC;
 }
 
-void mm_map_dbg(u64 virt) {
+void mm_map_dbgMap(u64 virt) {
     SpinLock_lock(&mm_map_dbgLck);
-    hal_mm_map_dbg(virt);
+    hal_mm_map_dbgMap(virt);
     SpinLock_unlock(&mm_map_dbgLck);
 }
 

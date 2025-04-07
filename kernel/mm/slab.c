@@ -105,7 +105,7 @@ int mm_slab_init() {
     return res_SUCC;
 }
 
-void mm_slab_debug(int detail) {
+void mm_slab_dbg(int detail) {
     if (!detail) {
         u64 tot = 0, totUsage = 0;
         for (int i = 0; i < mm_slab_mxSizeShift - mm_slab_mnSizeShift + 1; i++) {

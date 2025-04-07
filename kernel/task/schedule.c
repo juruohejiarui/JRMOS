@@ -11,7 +11,7 @@ static task_MgrStruct task_mgr;
 
 // this variable will be used by hal/interrupt/entry.S
 int task_sche_state;
-u64 task_pidCnt;
+Atomic task_pidCnt;
 
 static u64 task_sche_cfsTbl[0x20] = {
     0x1, 0x2, 0x4, 0x8, 0x10, 0x20
@@ -61,7 +61,7 @@ void task_sche_init() {
     SafeList_init(&task_mgr.sleepTsks);
     SafeList_init(&task_mgr.freeTsks);
     task_sche_state = 0;
-    task_pidCnt = 0;
+    task_pidCnt.value = 0;
 }
 
 void task_sche_yield() {
@@ -88,6 +88,7 @@ void task_sche_wake(task_TaskStruct *task) {
 
 void task_sche_preempt(task_TaskStruct *task) {
     // mask interrupt
+    if (task->state == task_state_Running || task->state == task_state_IdlePreempt) return ;
     SpinLock_lockMask(&task_mgr.scheLck[task->cpuId]);
     switch (task->state) {
         case task_state_Idle:
@@ -218,9 +219,7 @@ int task_freeThread(task_ThreadStruct *thread) {
         mm_kfree(record->ptr, mm_Attr_Shared);
     }
     if (hal_task_freeThread(thread) == res_FAIL) return res_FAIL;
-    printk(WHITE, BLACK, "hal free ->%d\n", intr_state());
     mm_kfree(thread, mm_Attr_Shared);
-    printk(WHITE, BLACK, "free thread ->%d\n", intr_state());
     return res_SUCC;
 }
 
@@ -235,7 +234,8 @@ int task_freeTask(task_TaskStruct *tsk) {
 }
 
 void task_initIdle() {
-    task_current->pid = task_pidCnt++;
+    task_current->pid = task_pidCnt.value;
+    Atomic_inc(&task_pidCnt);
     task_current->priority = 0;
     task_current->state = task_state_Running;
     task_current->flag = 0;
@@ -264,7 +264,8 @@ task_TaskStruct *task_newSubTask(void *entryAddr, u64 arg, u64 attr) {
     memset(tskUnion, 0, sizeof(task_Union));
     task_TaskStruct *tsk = &tskUnion->task;
 
-    tsk->pid = task_pidCnt++;
+    tsk->pid = task_pidCnt.value;
+    Atomic_inc(&task_pidCnt);
     tsk->state = task_state_Idle;
     tsk->vRuntime = task_current->vRuntime;
 
@@ -296,7 +297,9 @@ task_TaskStruct *task_newTask(void *entryAddr, u64 arg, u64 attr) {
         return NULL;
     }
     task_TaskStruct *tsk = &tskUnion->task;
-    tsk->pid = task_pidCnt++;
+
+    tsk->pid = task_pidCnt.value;
+    Atomic_inc(&task_pidCnt);
     tsk->state = task_state_Idle;
     tsk->vRuntime = task_current->vRuntime;
 
@@ -334,10 +337,12 @@ void task_exit(u64 res) {
 	hal_task_current->flag |= task_flag_WaitFree;
 
     intr_unmask();
-    // task_sche_preempt(task_freeMgrTsk);
+    
     task_current->priority = task_Priority_Lowest;
-
-    while (1) hal_hw_hlt();
+    // task_sche_sleep();
+    while (1) {
+        task_sche_yield();
+    }
 }
 
 task_TaskStruct *task_freeMgrTsk;
@@ -345,9 +350,7 @@ task_TaskStruct *task_freeMgrTsk;
 u64 task_freeMgr(u64 arg) {
     u64 tot = 0;
     while (1) {
-        while (SafeList_isEmpty(&task_mgr.freeTsks)) {
-            task_sche_yield();
-        }
+        while (SafeList_isEmpty(&task_mgr.freeTsks)) task_sche_yield();
         task_current->priority = task_Priority_Running;
         task_TaskStruct *tsk = container(SafeList_getHead(&task_mgr.freeTsks), task_TaskStruct, scheNd);
         SafeList_del(&task_mgr.freeTsks, &tsk->scheNd);

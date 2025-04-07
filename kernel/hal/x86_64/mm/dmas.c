@@ -15,11 +15,11 @@ int hal_mm_dmas_init() {
     u64 *tbl = (u64 *)upAlign(mm_memStruct.edStruct, hal_mm_pldSize);
     mm_memStruct.edStruct = (u64)tbl + sizeof(u64) * (mxAddr >> hal_mm_pudShift);
     for (u64 i = 0; i < (mxAddr >> hal_mm_pudShift); i++) {
-        tbl[i] = (i << hal_mm_pudShift) | 0x87;
+        tbl[i] = (i << hal_mm_pudShift) | 0x83;
     }
-    u64 *pud = (u64 *)(hal_hw_getCR(3) + task_krlAddrSt);
+    u64 *pgd = (u64 *)(hal_hw_getCR(3) + task_krlAddrSt);
     for (u64 i = 0; i < (mxAddr >> hal_mm_pgdShift); i++) {
-        pud[i + ((mm_dmas_addrSt & hal_mm_pgdIdxMask) >> hal_mm_pgdShift)]
+        pgd[i + ((mm_dmas_addrSt & hal_mm_pgdIdxMask) >> hal_mm_pgdShift)]
             = ((u64)&tbl[i * hal_mm_nrPageTblEntries] - task_krlAddrSt) | 0x3;
     }
     hal_mm_flushTlb();

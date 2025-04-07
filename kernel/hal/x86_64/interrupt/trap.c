@@ -73,6 +73,7 @@ static void _printRegs(u64 rsp) {
 	printk(WHITE, BLACK, "msr: IA32_KERNEL_GS_BASE:%#018lx, IA32_GS_BASE:%#018lx\n",
 		hal_hw_readMsr(hal_msr_IA32_KERNEL_GS_BASE), hal_hw_readMsr(hal_msr_IA32_GS_BASE));
 	printk(WHITE, BLACK, "cr3: %#018lx\n", hal_hw_getCR(3));
+	mm_buddy_dbg(1);
 	_backtrace((hal_intr_PtReg *)rsp);
 }
 
@@ -244,6 +245,7 @@ void hal_intr_doGeneralProtection(u64 rsp, u64 errorCode) {
 	hal_intr_PtReg *regs = (void *)rsp;
 	regs->rip = (u64)task_exit;
 	regs->rdi = -1;
+	while (1) hal_hw_hlt();
 }
 
 static int _isStkGrow(u64 vAddr, u64 rsp) {
@@ -305,7 +307,7 @@ void hal_intr_doPageFault(u64 rsp, u64 errorCode) {
 		regs->rip = (u64)task_exit;
 		regs->rdi = -1;
 
-		hal_hw_hlt();
+		while (1) hal_hw_hlt();
 	}
 }
 

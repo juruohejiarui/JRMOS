@@ -10,8 +10,8 @@ extern Atomic mm_map_krlTblModiJiff;
 extern SpinLock mm_map_krlTblLck;
 extern SpinLock mm_map_dbgLck;
 
-#ifdef HAL_MM_MAP_DBG
-void mm_map_dbg(u64 virt);
+#ifdef HAL_MM_MAP_DBGMAP
+void mm_map_dbgMap(u64 virt);
 #else
 #error no definition of mm_dbg for this arch!
 #endif
@@ -35,6 +35,8 @@ u64 mm_getMap(u64 virt);
 #endif
 
 int mm_map_init();
+
+void mm_map_dbg(int detail);
 
 hal_mm_PageTbl *mm_map_allocTbl();
 

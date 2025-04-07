@@ -317,7 +317,7 @@ void clearScreen() {
 
 void printk(unsigned int fcol, unsigned int bcol, const char *fmt, ...) {
     char buf[512] = {0};
-    int len = 0, i;
+    int len = 0;
     va_list args;
     va_start(args, fmt);
     len = _sprintf(buf, fmt, args);

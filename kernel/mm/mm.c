@@ -3,6 +3,7 @@
 #include <mm/buddy.h>
 #include <hal/mm/mm.h>
 #include <screen/screen.h>
+#include <lib/string.h>
 #include <lib/algorithm.h>
 
 u32 mm_nrMemMapEntries;
@@ -27,19 +28,17 @@ int mm_init() {
         } else zone->availSt = zone->phyAddrSt;
         
         // get the kernel zone index
-        if (entry->addr <= (u64)mm_kernelAddr - task_krlAddrSt && (u64)&mm_symbol_end - task_krlAddrSt < entry->addr + entry->size)
+        if (entry->addr <= (u64)mm_kernelAddr - task_krlAddrSt && (u64)&mm_symbol_end - task_krlAddrSt <= entry->addr + entry->size)
             mm_memStruct.krlZoneId = mm_memStruct.nrZones;
         
         mm_memStruct.nrZones++;
     }
     mm_memStruct.edStruct = (u64)&mm_symbol_end;
-
     mm_dmas_init();
 
     mm_memStruct.zones[mm_memStruct.krlZoneId].availSt = upAlign(mm_memStruct.edStruct - task_krlAddrSt, mm_pageSize);
     // from now on, printk can be used
     printk(WHITE, BLACK, "mm: edStruct: %#018lx mm_symbol_end: %#018lx kernel zone id:%d\nmm:", mm_memStruct.edStruct, &mm_symbol_end, mm_memStruct.krlZoneId);
-
     u64 pgDescArrSize;
     {
         u64 mxAddr = 0;
@@ -64,6 +63,9 @@ int mm_init() {
         }
         mm_memStruct.pages = mm_dmas_phys2Virt(tgrZone->availSt);
         tgrZone->availSt += pgDescArrSize;
+
+        // initialize the pages
+        memset(mm_memStruct.pages, 0, pgDescArrSize);
         printk(WHITE, BLACK, "mm: page array: %#018lx~%#018lx\n", mm_memStruct.pages, tgrZone->availSt);
     }
     // modify the zone information, align the address space to 4K, write the pointer of page arrary, initialize usage information
@@ -97,7 +99,8 @@ int mm_init() {
 
 mm_Page *mm_divPageGrp(mm_Page *grpHdr) {
     if (!grpHdr->ord) return NULL;
-    mm_Page *rPart = grpHdr + (1ull << (--grpHdr->ord));
+    --grpHdr->ord;
+    mm_Page *rPart = (mm_Page *)((void *)grpHdr + (1ull << grpHdr->ord) * sizeof(mm_Page));
     rPart->ord = grpHdr->ord;
     rPart->attr = grpHdr->attr;
     rPart->buddyId = mm_buddy_rson(grpHdr->buddyId);
@@ -120,7 +123,7 @@ mm_Page *mm_init_allocPage(u64 num, u32 attr) {
 }
 
 void mm_dbg() {
-    mm_buddy_debug(0);
-    mm_slab_debug(0);
+    mm_buddy_dbg(0);
+    mm_slab_dbg(0);
     printk(WHITE, BLACK, "\r");
 }

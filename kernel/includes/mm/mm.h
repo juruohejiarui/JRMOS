@@ -7,6 +7,8 @@ int mm_init();
 
 void mm_dbg();
 
+// divide the page group and return the right part of the original group
+// the group should not be in any list when calling this function
 mm_Page *mm_divPageGrp(mm_Page *grpHdr);
 // get the page descriptor for a specific physical address
 static __always_inline__ mm_Page *mm_getDesc(u64 phyAddr) { return &mm_memStruct.pages[phyAddr >> mm_pageShift]; }
@@ -15,7 +17,7 @@ static __always_inline__ u64 mm_getPhyAddr(mm_Page *desc) { return (((u64)desc -
 mm_Page *mm_init_allocPage(u64 num, u32 attr);
 
 int mm_slab_init();
-void mm_slab_debug();
+void mm_slab_dbg();
 
 static __always_inline__ int mm_slabRecord_comparator(RBNode *a, RBNode *b) {
     mm_SlabRecord *ta = container(a, mm_SlabRecord, rbNode),

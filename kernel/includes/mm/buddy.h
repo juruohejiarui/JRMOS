@@ -8,11 +8,11 @@
 #define mm_buddy_isRight(page)      ((page)->buddyId & 1)
 #define mm_buddy_parent(buddyId)    ((buddyId) >> 1)
 #define mm_buddy_lson(buddyId)      ((buddyId) << 1)
-#define mm_buddy_rson(buddyId)      ((buddyId) << 1 | 1)
+#define mm_buddy_rson(buddyId)      (((buddyId) << 1) | 1)
 
 int mm_buddy_init();
 
-void mm_buddy_debug(int showDetail);
+void mm_buddy_dbg(int showDetail);
 
 mm_Page *mm_allocPages(u64 log2Size, u32 attr);
 
