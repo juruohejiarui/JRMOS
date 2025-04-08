@@ -17,7 +17,7 @@ u8 hal_init_stk[task_krlStkSize] __attribute__((__section__ (".data.hal_init_stk
 
 u64 hal_init_testUsr(u64 param) {
 	for (int i = 0; i < param * 1000; i++) {
-		// task_syscall0(task_syscall_release);
+		// task_syscall0(task_syscall_yield);
 		// if (i % 100 == 0) printu(RED, BLACK, "U%2d ", param);
 	}
 	task_syscall1(task_syscall_exit, 0);
