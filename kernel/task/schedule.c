@@ -351,15 +351,16 @@ task_TaskStruct *task_freeMgrTsk;
 u64 task_freeMgr(u64 arg) {
     u64 tot = 0;
     while (1) {
-        if (SafeList_isEmpty(&task_mgr.freeTsks)) task_sche_sleep();
+        task_sche_sleep();
         task_current->priority = task_Priority_Running;
-        task_TaskStruct *tsk = container(SafeList_getHead(&task_mgr.freeTsks), task_TaskStruct, scheNd);
-        SafeList_del(&task_mgr.freeTsks, &tsk->scheNd);
-        u64 pid = tsk->pid;
-        if (task_freeTask(tsk) == res_FAIL) {
-            printk(RED, BLACK, "task: failed to free task #%ld.\n", pid);
-        } else printk(GREEN, BLACK, "task: task #%ld is killed, tot=%ld\n", pid, ++tot);
-
+        while (!SafeList_isEmpty(&task_mgr.freeTsks)) {
+            task_TaskStruct *tsk = container(SafeList_getHead(&task_mgr.freeTsks), task_TaskStruct, scheNd);
+            SafeList_del(&task_mgr.freeTsks, &tsk->scheNd);
+            u64 pid = tsk->pid;
+            if (task_freeTask(tsk) == res_FAIL) {
+                printk(RED, BLACK, "task: failed to free task #%ld.\n", pid);
+            } else printk(GREEN, BLACK, "task: task #%ld is killed, tot=%ld\n", pid, ++tot);
+        }
         task_current->priority = task_Priority_Lowest;
     }
     return 0;
