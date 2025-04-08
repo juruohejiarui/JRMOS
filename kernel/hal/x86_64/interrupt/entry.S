@@ -55,8 +55,8 @@ hal_intr_trySchedule:
     movq %rsp, %rax
     andq $-(task_krlStkSize), %rax
 	movq task_TaskStruct_state(%rax), %rax
-    cmpq $task_state_Running, %rax
-    je hal_intr_endSchedule
+    testq $1, %rax    // if %rax == task_state_Running
+    jz hal_intr_endSchedule
     leaq task_sche(%rip), %rax
     callq *%rax
 hal_intr_endSchedule:

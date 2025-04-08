@@ -33,7 +33,7 @@ RBTree_insert(task_sche_cfsTreeIns, task_sche_cfsTreeCmp)
 void task_sche_updCurState() {
     register u64 tmp = task_sche_cfsTbl[task_current->priority];
     task_current->vRuntime += tmp;
-    task_current->state = task_state_NeedSchedule;
+    task_current->state |= 1;
 }
 
 static __always_inline__ void task_sche_updOtherState() {
@@ -66,8 +66,7 @@ void task_sche_init() {
 
 void task_sche_yield() {
     task_current->vRuntime += max(1, task_sche_cfsTbl[task_current->priority] >> 1);
-    if (task_current->state == task_state_Running)
-        task_current->state = task_state_NeedSchedule;
+    task_current->state |= task_state_NeedSchedule;
     hal_task_sche_yield();
 }
 
@@ -124,14 +123,16 @@ void task_sche_preempt(task_TaskStruct *task) {
 int cnt = 0;
 
 // state transition for current task when switch to other task
-static void task_sche_hangCur() {
+static __always_inline__ void task_sche_hangCur() {
     // printk(WHITE, BLACK, "hang %#018lx flag=%#018lx\n", task_current, task_current->flag);
     switch (task_current->state) {
         case task_state_NeedFree :
+            // printk(WHITE, BLACK, "move #%d to free list\n", task_current->pid);
             task_current->state = task_state_Free;
             SafeList_insTail(&task_mgr.freeTsks, &task_current->scheNd);
             break;
         case task_state_NeedSleep :
+            // printk(WHITE, BLACK, "move #%d to sleep list\n", task_current->pid);
             task_current->state = task_state_Sleep;
             SafeList_insTail(&task_mgr.sleepTsks, &task_current->scheNd);
             break;
@@ -144,7 +145,6 @@ static void task_sche_hangCur() {
 
 void task_sche() {
     SpinLock_lock(cpu_getvar(scheLck));
-
     task_TaskStruct *nxtTsk;
     // search for the next task
     if (!List_isEmpty(cpu_getvar(preemptTsks))) {
@@ -339,12 +339,11 @@ task_TaskStruct *task_newTask(void *entryAddr, u64 arg, u64 attr) {
 
 void task_exit(u64 res) {
     /// @todo free simd struct
-
     hal_task_exit(res);
     
     task_current->priority = task_Priority_Lowest;
     task_current->state = task_state_NeedFree;
-    while (1) task_sche_yield();
+    while (1) task_sche_wake(task_freeMgrTsk), task_sche_yield();
 }
 
 task_TaskStruct *task_freeMgrTsk;
@@ -352,7 +351,7 @@ task_TaskStruct *task_freeMgrTsk;
 u64 task_freeMgr(u64 arg) {
     u64 tot = 0;
     while (1) {
-        while (SafeList_isEmpty(&task_mgr.freeTsks)) task_sche_yield();
+        if (SafeList_isEmpty(&task_mgr.freeTsks)) task_sche_sleep();
         task_current->priority = task_Priority_Running;
         task_TaskStruct *tsk = container(SafeList_getHead(&task_mgr.freeTsks), task_TaskStruct, scheNd);
         SafeList_del(&task_mgr.freeTsks, &tsk->scheNd);

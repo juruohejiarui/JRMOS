@@ -16,6 +16,7 @@ void task_signal_scan() {
         void (*handler)(u64);
         if (!(handler = task_current->thread->sigHandler[i])) {
             printk(RED, BLACK, "task: signal: no handler for signal #%d\n", i);
+            intr_unmask();
             task_exit(-1);
         } else {
             intr_unmask();
