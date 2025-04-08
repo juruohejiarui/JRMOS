@@ -18,6 +18,6 @@
 
 #define task_state_Running			0
 #define task_state_NeedSchedule	0x1
-#define task_state_Idle			0x3
+#define task_state_Idle			0x5
 
 #endif

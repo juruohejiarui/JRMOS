@@ -10,7 +10,7 @@
 #include <interrupt/api.h>
 #include <task/api.h>
 
-#define nrTblCacheShift 7
+#define nrTblCacheShift 10
 #define nrTblCache (1ull << nrTblCacheShift)
 
 #define pgNumPerTbl (upAlign(sizeof(hal_mm_PageTbl), mm_pageSize) >> mm_pageShift)

@@ -14,7 +14,7 @@ int task_sche_state;
 Atomic task_pidCnt;
 
 static u64 task_sche_cfsTbl[0x20] = {
-    0x1, 0x2, 0x4, 0x8, 0x10, 0x20
+    0x1, 0x2, 0x4, 0x8, 0x10, 0x20, 0x40
 };
 
 void task_sche_enable() { task_sche_state = 1; }
@@ -66,19 +66,21 @@ void task_sche_init() {
 
 void task_sche_yield() {
     task_current->vRuntime += max(1, task_sche_cfsTbl[task_current->priority] >> 1);
-    task_current->state = task_state_NeedSchedule;
+    if (task_current->state == task_state_Running)
+        task_current->state = task_state_NeedSchedule;
     hal_task_sche_yield();
 }
 
 void task_sche_sleep() {
-    task_current->flag |= task_flag_WaitSleep;
-    while (task_current->flag & task_flag_WaitSleep) task_sche_yield();
+    task_current->state = task_state_NeedSleep;
+    while (task_current->state == task_state_NeedSleep) task_sche_yield();
 }
 
 void task_sche_wake(task_TaskStruct *task) {
     // mask interrupt
     SpinLock_lockMask(&task_mgr.scheLck[task->cpuId]);
-    if (task->state == task_state_Sleep) {
+    if (task->state == task_state_NeedSleep) task->state = task_state_Running;
+    else if (task->state == task_state_Sleep) {
         task->state = task_state_Idle;
         SafeList_del(&task_mgr.sleepTsks, &task->scheNd);
         RBTree_ins(&task_mgr.tasks[task->cpuId], &task->rbNd);
@@ -88,17 +90,22 @@ void task_sche_wake(task_TaskStruct *task) {
 
 void task_sche_preempt(task_TaskStruct *task) {
     // mask interrupt
-    if (task->state == task_state_Running || task->state == task_state_IdlePreempt) return ;
+    {
+        register u32 state = task->state;
+        if (state == task_state_Running || state == task_state_NeedPreempt) return ;
+    }
+    
     SpinLock_lockMask(&task_mgr.scheLck[task->cpuId]);
     switch (task->state) {
         case task_state_Idle:
             printk(WHITE, BLACK, "task #%d: preempt #%d from idle\n", task_current->pid, task->pid);
             RBTree_del(&task_mgr.tasks[task->cpuId], &task->rbNd);
             List_insTail(&task_mgr.preemptTsks[task->cpuId], &task->scheNd);
-            task->state = task_state_IdlePreempt;
+            task->state = task_state_NeedPreempt;
             break;
         case task_state_NeedSchedule:
-            printk(WHITE, BLACK, "task #%d: preempt #%d from need schedule\n", task_current->pid, task->pid);
+        case task_state_NeedSleep:
+            printk(WHITE, BLACK, "task #%d: preempt #%d from need schedule/need sleep\n", task_current->pid, task->pid);
             task->state = task_state_Running;
             break;
         case task_state_Sleep:
@@ -106,7 +113,7 @@ void task_sche_preempt(task_TaskStruct *task) {
 
             SafeList_del(&task_mgr.sleepTsks, &task->scheNd);
             List_insTail(&task_mgr.preemptTsks[task->cpuId], &task->scheNd);
-            task->state = task_state_IdlePreempt;
+            task->state = task_state_NeedPreempt;
             break;
         default:
             break;
@@ -119,17 +126,19 @@ int cnt = 0;
 // state transition for current task when switch to other task
 static void task_sche_hangCur() {
     // printk(WHITE, BLACK, "hang %#018lx flag=%#018lx\n", task_current, task_current->flag);
-    if (task_current->flag & task_flag_WaitSleep) {
-        task_current->flag ^= task_flag_WaitSleep;
-        task_current->state = task_state_Sleep;
-        SafeList_insTail(&task_mgr.sleepTsks, &task_current->scheNd);
-    } else if (task_current->flag & task_flag_WaitFree) {
-        task_current->flag ^= task_flag_WaitFree;
-        task_current->state = task_state_Free;
-        SafeList_insTail(&task_mgr.freeTsks, &task_current->scheNd);
-    } else {
-        task_current->state = task_state_Idle;
-        RBTree_ins(cpu_getvar(tsks), &task_current->rbNd);
+    switch (task_current->state) {
+        case task_state_NeedFree :
+            task_current->state = task_state_Free;
+            SafeList_insTail(&task_mgr.freeTsks, &task_current->scheNd);
+            break;
+        case task_state_NeedSleep :
+            task_current->state = task_state_Sleep;
+            SafeList_insTail(&task_mgr.sleepTsks, &task_current->scheNd);
+            break;
+        default:
+            task_current->state = task_state_Idle;
+            RBTree_ins(cpu_getvar(tsks), &task_current->rbNd);
+            break;
     }
 }
 
@@ -329,20 +338,13 @@ task_TaskStruct *task_newTask(void *entryAddr, u64 arg, u64 attr) {
 }
 
 void task_exit(u64 res) {
-    intr_mask();
     /// @todo free simd struct
 
     hal_task_exit(res);
-
-	hal_task_current->flag |= task_flag_WaitFree;
-
-    intr_unmask();
     
     task_current->priority = task_Priority_Lowest;
-    // task_sche_sleep();
-    while (1) {
-        task_sche_yield();
-    }
+    task_current->state = task_state_NeedFree;
+    while (1) task_sche_yield();
 }
 
 task_TaskStruct *task_freeMgrTsk;

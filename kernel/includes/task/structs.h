@@ -39,7 +39,7 @@ struct task_TaskStruct {
 	u32 cpuId, priority;
 	u64 flag;
 	u64 pid;
-	u64 state;
+	volatile u64 state;
 	i64 vRuntime;
 
 	task_ThreadStruct *thread;

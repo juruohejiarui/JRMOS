@@ -138,7 +138,7 @@ int mm_freePages(mm_Page *pages) {
     }
 
     if (~pages->attr & mm_Attr_Shared) {
-        printk(WHITE, BLACK, "delete private page %#018lx\n", pages);
+        // printk(WHITE, BLACK, "delete private page %#018lx\n", pages);
         SafeList_del(&task_current->thread->pgRecord, &pages->list);
     }
     
