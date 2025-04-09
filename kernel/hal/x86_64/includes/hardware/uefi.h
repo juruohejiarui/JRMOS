@@ -99,6 +99,18 @@ typedef struct hal_hw_uefi_XsdtDesc {
 	u64 entry[0];
 } __attribute__ ((packed)) hal_hw_uefi_XsdtDesc;
 
+typedef struct hal_hw_uefi_McfgDesc {
+	hal_hw_uefi_AcpiHeader hdr;
+	u64 reserved;
+	struct hal_hw_uefi_McfgDescEntry {
+		u64 address;
+		u16 segment;
+		u8 stBus;
+		u8 edBus;
+		u32 reserved;
+	} __attribute__ ((packed)) entry[0];
+} __attribute__((packed)) hal_hw_uefi_McfgDesc;
+
 typedef struct hal_hw_uefi_E820Desc {
 	u64 addr;
 	u64 len;
