@@ -3,7 +3,6 @@
 #include <hal/hardware/pci.h>
 #include <screen/screen.h>
 #include "devname.h"
-#include "pci.h"
 
 SafeList hw_pci_devLst;
 
@@ -53,10 +52,32 @@ int hw_pci_allocMsi(hw_pci_MsiCap *cap, intr_Desc *desc, u64 intrNum) {
 		printk(RED, BLACK, "hw: pci: alloc msi interrupt failed\n");
 		return res_FAIL;
 	}
-	if (hal_hw_setMsiIntr(cap, desc, intrNum) == res_FAIL) {
-		printk(RED, BLACK, "hw: pci: set msi interrupt failed\n");
-		intr_free(desc, intrNum);
+	// if (hal_hw_pci_setMsiIntr(cap, desc, intrNum) == res_FAIL) {
+	// 	printk(RED, BLACK, "hw: pci: set msi interrupt failed\n");
+	// 	intr_free(desc, intrNum);
+	// 	return res_FAIL;
+	// }
+	return res_SUCC;
+}
+
+int hw_pci_allocMsix(hw_pci_MsixCap *cap, hw_pci_Cfg *cfg, intr_Desc *desc, u64 intrNum) {
+	if (hw_pci_MsixCap_vecNum(cap) < intrNum) {
+		printk(RED, BLACK, "hw: pci: alloc too much interrupt for msix, vecNum=%d, require %d interrupt\n", hw_pci_MsixCap_vecNum(cap), intrNum);
 		return res_FAIL;
 	}
-	return res_FAIL;
+	for (int i = 0; i < intrNum; i++) {
+		if (intr_alloc(&desc[i], 1) == res_FAIL) {
+			printk(RED, BLACK, "hw: pci: alloc msix interrupt failed\n");
+			for (int j = 0; j < i; j++) {
+				intr_free(&desc[j], 1);
+			}
+			return res_FAIL;
+		}
+	}
+	// if (hal_hw_pci_setMsixIntr(cap, cfg, desc, intrNum) == res_FAIL) {
+	// 	printk(RED, BLACK, "hw: pci: set msix interrupt failed\n");
+	// 	for (int i = 0; i < intrNum; i++) {
+	// 		intr_free(&desc[i], 1);
+	// 	}
+	return res_SUCC;
 }
