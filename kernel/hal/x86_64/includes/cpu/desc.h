@@ -21,7 +21,7 @@ typedef struct hal_cpu_Desc {
     u8 reserved[4];
     u16 idtTblSz;
     hal_intr_IdtItem *idtTbl;
-    intr_Desc *intrInfo[0x40];
+    intr_Desc *intrDesc[0x40];
     
     u64 curKrlStk;
 } __attribute__ ((packed)) hal_cpu_Desc;

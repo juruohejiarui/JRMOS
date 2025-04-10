@@ -103,7 +103,7 @@ typedef struct hal_hw_uefi_McfgDesc {
 	hal_hw_uefi_AcpiHeader hdr;
 	u64 reserved;
 	struct hal_hw_uefi_McfgDescEntry {
-		u64 address;
+		u64 addr;
 		u16 segment;
 		u8 stBus;
 		u8 edBus;

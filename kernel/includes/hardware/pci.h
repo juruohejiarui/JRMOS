@@ -3,8 +3,10 @@
 
 #include <lib/dtypes.h>
 #include <lib/list.h>
+#include <mm/dmas.h>
+#include <interrupt/api.h>
 
-typedef struct pci_Cfg {
+typedef struct hw_pci_Cfg {
     u16 vendorId, deviceId;
     u16 command, status;
     u8 revisionId, progIf, subclass, class;
@@ -51,14 +53,85 @@ typedef struct pci_Cfg {
             u32 cardLegacyBaseAddr;
         } __attribute__ ((packed)) type2;
     };
-} __attribute__ ((packed)) pci_Cfg;
+} __attribute__ ((packed)) hw_pci_Cfg;
 
-typedef struct pci_Dev {
+typedef struct hw_pci_Dev {
     u8 busId, devId, funcId;
-    pci_Cfg *cfg;
+    hw_pci_Cfg *cfg;
     ListNode list;
-} pci_Dev;
+} hw_pci_Dev;
+
+typedef struct hw_pci_CapHdr {
+    u8 capId;
+    u8 nxtPtr;
+} __attribute__ ((packed)) hw_pci_CapHdr;
+
+typedef struct hw_pci_MsiCap {
+    hw_pci_CapHdr hdr;
+    u16 msgCtrl;
+    #define hw_pci_MsiCap_vecNum(cap) ((1ul) << (((cap)->msgCtrl >> 1) & 0x7))
+    u64 msgAddr;
+    u16 msgData;
+    u16 reserved;
+    u32 msk;
+    u32 pending;
+} __attribute__ ((packed)) hw_pci_MsiCap;
+
+typedef struct hw_pci_MsixCap {
+    hw_pci_CapHdr hdr;
+    u16 msgCtrl;
+    #define hw_pci_MsixCap_vecNum(cap) (((cap)->msgCtrl & ((1u << 11) - 1)) + 1)
+    u32 dw1;
+    #define hw_pci_MsixCap_bir(cap) ((cap)->dw1 & 0x7);
+    #define hw_pci_MsixCap_tblOff(cap) ((cap)->dw1 & ~0x7u)
+    u32 dw2;
+    #define hw_pci_MsixCap_pendingBir(cap) ((cap)->dw2 & 0x7)
+    #define hw_pci_MsixCap_pendingTblOff(cap) ((cap)->dw2 & ~0x7u)
+} __attribute__ ((packed)) hw_pci_MsixCap;
+
+typedef struct hw_pci_MsixTbl {
+    u64 msgAddr;
+    u32 msgData;
+    u32 vecCtrl;
+} __attribute__ ((packed)) hw_pci_MsixTbl;
+
+extern SafeList hw_pci_devLst;
+
+extern intr_Ctrl hw_pci_intrCtrl;
+
+static __always_inline__ hw_pci_Cfg *hw_pci_getCfg(u64 baseAddr, u8 bus, u8 dev, u8 func) {
+    return (hw_pci_Cfg *)mm_dmas_phys2Virt(baseAddr | ((u64)bus << 20) | ((u64)dev << 15) | ((u64)func << 12));
+}
+
+void hw_pci_chkBus(u64 baseAddr, u16 bus);
 
 int hw_pci_init();
+
+void hw_pci_initIntr(intr_Desc *desc, void (*handler)(u64), u64 param, char *name);
+
+int hw_pci_allocMsi(hw_pci_MsiCap *cap, intr_Desc *desc, u64 intrNum);
+
+int hw_pci_allocMsix(hw_pci_MsixCap *cap, hw_pci_Cfg *cfg, intr_Desc *desc, u64 intrNum);
+
+int hw_pci_enableMsi(hw_pci_MsiCap *cap, intr_Desc *desc, u64 intrIdx);
+
+int hw_pci_enableMsix(hw_pci_MsixCap *cap, hw_pci_Cfg *cfg, intr_Desc *desc, u64 intrIdx);
+
+int hw_pci_disableMsi(hw_pci_MsiCap *cap, intr_Desc *desc, u64 intrIdx);
+
+int hw_pci_disableMsix(hw_pci_MsixCap *cap, hw_pci_Cfg *cfg, intr_Desc *desc, u64 intrIdx);
+
+int hw_pci_enableMsiAll(hw_pci_MsiCap *cap, intr_Desc *desc);
+
+int hw_pci_enableMsixAll(hw_pci_MsixCap *cap, hw_pci_Cfg *cfg, intr_Desc *desc);
+
+int hw_pci_disableMsiAll(hw_pci_MsiCap *cap, intr_Desc *desc);
+
+int hw_pci_disableMsixAll(hw_pci_MsixCap *cap, hw_pci_Cfg *cfg, intr_Desc *desc);
+
+
+int hw_pci_freeMsi(hw_pci_MsiCap *cap, intr_Desc *desc);
+
+int hw_pci_freeMsix(hw_pci_MsixCap *cap, hw_pci_Cfg *cfg, intr_Desc *desc);
 
 #endif
