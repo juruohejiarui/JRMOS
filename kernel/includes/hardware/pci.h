@@ -59,7 +59,7 @@ typedef struct hw_pci_Cfg {
 typedef struct hw_pci_Dev {
     u8 busId, devId, funcId;
     hw_pci_Cfg *cfg;
-    ListNode list;
+    ListNode lst;
 } hw_pci_Dev;
 
 typedef struct hw_pci_CapHdr {
@@ -107,6 +107,8 @@ static __always_inline__ hw_pci_Cfg *hw_pci_getCfg(u64 baseAddr, u8 bus, u8 dev,
 void hw_pci_chkBus(u64 baseAddr, u16 bus);
 
 int hw_pci_init();
+
+void hw_pci_lstDev();
 
 void hw_pci_initIntr(intr_Desc *desc, void (*handler)(u64), u64 param, char *name);
 

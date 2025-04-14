@@ -3,6 +3,6 @@
 
 #include <lib/dtypes.h>
 
-void Init_init();
+void init_init();
 
 #endif

@@ -12,7 +12,7 @@
 #include <task/api.h>
 #include <task/syscall.h>
 #include <softirq/api.h>
-#include <hardware/pci.h>
+#include <init/init.h>
 
 u8 hal_init_stk[task_krlStkSize] __attribute__((__section__ (".data.hal_init_stk") )) = {};
 
@@ -89,7 +89,7 @@ void hal_init_init() {
 
 	task_freeMgrTsk = task_newSubTask(task_freeMgr, 0, task_attr_Builtin);
 
-	if (hw_pci_init() == res_FAIL) while (1) hal_hw_hlt();
+	init_init();
 
 	// for (int i = 0; i < cpu_num * 200; i++) task_newTask(hal_init_test, i, task_attr_Builtin); 
 

@@ -2,6 +2,7 @@
 #include <hardware/pci.h>
 #include <hal/hardware/pci.h>
 #include <screen/screen.h>
+#include <mm/mm.h>
 #include <lib/bit.h>
 #include "devname.h"
 
@@ -15,7 +16,21 @@ static void _chkFunc(u64 baseAddr, u16 bus, u16 dev, u16 func) {
 	if (cfg->class == 0x06 && cfg->subclass == 0x4) return ;
 
 	// printk device information
-	printk(WHITE, BLACK, "pci:%02x:%02x:%02x: cls=%04x subcls=%04x progIf=%04x %s\n", bus, dev, func, cfg->class, cfg->subclass, cfg->progIf, hw_pci_devName[cfg->class][cfg->subclass]);
+	hw_pci_Dev *devStruct = mm_kmalloc(sizeof(hw_pci_Dev), mm_Attr_Shared, NULL);
+	if (devStruct == NULL) {
+		printk(RED, BLACK, "pci: failed to allocate device structure.\n");
+		return ;
+	}
+	devStruct->busId = bus, devStruct->devId = dev, devStruct->funcId = func;
+	devStruct->cfg = cfg;
+	SafeList_insTail(&hw_pci_devLst, &devStruct->lst);
+}
+
+void hw_pci_lstDev() {
+	for (ListNode *pciDevNd = SafeList_getHead(&hw_pci_devLst); pciDevNd != &hw_pci_devLst.head; pciDevNd = pciDevNd->next) {
+		hw_pci_Dev *dev = container(pciDevNd, hw_pci_Dev, lst);
+		printk(WHITE, BLACK, "pci:%02x:%02x:%02x: cls=%04x subcls=%04x progIf=%04x %s\n", dev->busId, dev->devId, dev->funcId, dev->cfg->class, dev->cfg->subclass, dev->cfg->progIf, hw_pci_devName[dev->cfg->class][dev->cfg->subclass]);
+	}
 }
 
 static void _chkDev(u64 baseAddr, u16 bus, u16 dev) {
@@ -34,5 +49,7 @@ int hw_pci_init() {
 
 	// initialize msi management
 	if (hal_hw_pci_initIntr() == res_FAIL) return res_FAIL;
+
+	hw_pci_lstDev();
     return res_SUCC;
 }
