@@ -3,6 +3,7 @@
 
 #include <lib/dtypes.h>
 #include <lib/list.h>
+#include <lib/bit.h>
 #include <mm/dmas.h>
 #include <interrupt/api.h>
 
@@ -82,7 +83,7 @@ typedef struct hw_pci_MsixCap {
     u16 msgCtrl;
     #define hw_pci_MsixCap_vecNum(cap) (((cap)->msgCtrl & ((1u << 11) - 1)) + 1)
     u32 dw1;
-    #define hw_pci_MsixCap_bir(cap) ((cap)->dw1 & 0x7);
+    #define hw_pci_MsixCap_bir(cap) ((cap)->dw1 & 0x7)
     #define hw_pci_MsixCap_tblOff(cap) ((cap)->dw1 & ~0x7u)
     u32 dw2;
     #define hw_pci_MsixCap_pendingBir(cap) ((cap)->dw2 & 0x7)
@@ -109,6 +110,10 @@ int hw_pci_init();
 
 void hw_pci_initIntr(intr_Desc *desc, void (*handler)(u64), u64 param, char *name);
 
+static __always_inline__ hw_pci_MsixTbl *hw_pci_getMsixTbl(hw_pci_MsixCap *cap, hw_pci_Cfg *cfg) {
+    return mm_dmas_phys2Virt((*(u64 *)&cfg->type0.bar[hw_pci_MsixCap_bir(cap)] & ~0xf) + hw_pci_MsixCap_tblOff(cap));
+}
+
 int hw_pci_allocMsi(hw_pci_MsiCap *cap, intr_Desc *desc, u64 intrNum);
 
 int hw_pci_allocMsix(hw_pci_MsixCap *cap, hw_pci_Cfg *cfg, intr_Desc *desc, u64 intrNum);
@@ -121,17 +126,16 @@ int hw_pci_disableMsi(hw_pci_MsiCap *cap, intr_Desc *desc, u64 intrIdx);
 
 int hw_pci_disableMsix(hw_pci_MsixCap *cap, hw_pci_Cfg *cfg, intr_Desc *desc, u64 intrIdx);
 
-int hw_pci_enableMsiAll(hw_pci_MsiCap *cap, intr_Desc *desc);
+int hw_pci_enableMsiAll(hw_pci_MsiCap *cap, intr_Desc *desc, u64 intrNum);
 
-int hw_pci_enableMsixAll(hw_pci_MsixCap *cap, hw_pci_Cfg *cfg, intr_Desc *desc);
+int hw_pci_enableMsixAll(hw_pci_MsixCap *cap, hw_pci_Cfg *cfg, intr_Desc *desc, u64 intrNum);
 
-int hw_pci_disableMsiAll(hw_pci_MsiCap *cap, intr_Desc *desc);
+int hw_pci_disableMsiAll(hw_pci_MsiCap *cap, intr_Desc *desc, u64 intrNum);
 
-int hw_pci_disableMsixAll(hw_pci_MsixCap *cap, hw_pci_Cfg *cfg, intr_Desc *desc);
+int hw_pci_disableMsixAll(hw_pci_MsixCap *cap, hw_pci_Cfg *cfg, intr_Desc *desc, u64 intrNum);
 
+int hw_pci_freeMsi(hw_pci_MsiCap *cap, intr_Desc *desc, u64 intrNum);
 
-int hw_pci_freeMsi(hw_pci_MsiCap *cap, intr_Desc *desc);
-
-int hw_pci_freeMsix(hw_pci_MsixCap *cap, hw_pci_Cfg *cfg, intr_Desc *desc);
+int hw_pci_freeMsix(hw_pci_MsixCap *cap, hw_pci_Cfg *cfg, intr_Desc *desc, u64 intrNum);
 
 #endif

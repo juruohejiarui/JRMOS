@@ -42,6 +42,22 @@ static __always_inline__ void hal_bit_set0(u64 *addr, u64 index) {
 		: "memory");
 }
 
+static __always_inline__ void hal_bit_set0_32(u32 *addr, u64 index) {
+	__asm__ volatile (
+		"btr %1, %0		\n\t"
+		: "+m"(*addr)
+		: "r"(index)
+		: "memory");
+}
+
+static __always_inline__ void hal_bit_set0_16(u16 *addr, u64 index) { 
+	__asm__ volatile (
+		"btr %1, %0		\n\t"
+		: "+m"(*addr)
+		: "r"(index)
+		: "memory");
+}
+
 #define HAL_BIT_SET1
 static __always_inline__ void hal_bit_set1(u64 *addr, u64 index) { 
 	__asm__ volatile (
@@ -51,10 +67,44 @@ static __always_inline__ void hal_bit_set1(u64 *addr, u64 index) {
 		: "memory");
 }
 
+static __always_inline__ void hal_bit_set1_32(u32 *addr, u64 index) { 
+	__asm__ volatile (
+		"bts %1, %0		\n\t"
+		: "+m"(*addr)
+		: "r"(index)
+		: "memory");
+}
+
+static __always_inline__ void hal_bit_set1_16(u16 *addr, u64 index) { 
+	__asm__ volatile (
+		"bts %1, %0		\n\t"
+		: "+m"(*addr)
+		: "r"(index)
+		: "memory");
+}
+
 #define HAL_BIT_REV
 static __always_inline__ void hal_bit_rev(u64 *addr, u64 index) {
     __asm__ volatile (
         "btcq %1, %0    \n\t"
+        : "+m"(*addr)
+        : "r"(index)
+        : "memory"
+    );
+}
+
+static __always_inline__ void hal_bit_rev_32(u32 *addr, u64 index) {
+    __asm__ volatile (
+        "btc %1, %0    \n\t"
+        : "+m"(*addr)
+        : "r"(index)
+        : "memory"
+    );
+}
+
+static __always_inline__ void hal_bit_rev_16(u16 *addr, u64 index) {
+    __asm__ volatile (
+        "btc %1, %0    \n\t"
         : "+m"(*addr)
         : "r"(index)
         : "memory"
