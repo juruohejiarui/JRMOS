@@ -3,11 +3,21 @@
 
 #include <hal/hardware/reg.h>
 #include <hardware/pci.h>
+#include <hardware/usb/devdesc.h>
 #include <interrupt/desc.h>
+#include <task/api.h>
 
 typedef struct hw_usb_xhci_TRB {
     u32 dt1, dt2, status, ctrl;
-} __attribute__ ((packed)) hw_xhci_TRB;
+} __attribute__ ((packed)) hw_usb_xhci_TRB;
+
+typedef struct hw_usb_xhci_Request {
+    u64 flags;
+    u64 inputSz;
+    hw_usb_xhci_TRB res;
+    hw_usb_xhci_TRB *input;
+    struct hw_usb_xhci_Request **target;
+} __attribute__ ((packed)) hw_usb_xhci_Request;
 
 // evaluate next TRB
 #define hw_usb_xhci_TRB_ctrl_ent    (1u << 1)
@@ -172,7 +182,52 @@ typedef union hw_usb_xhci_InCtx {
     hw_usb_xhci_InCtx64 *ctx64;
 } __attribute__ ((packed)) hw_usb_xhci_InCtx;
 
-typedef struct hw_usb_xhci_Mgr {
+typedef struct hw_usb_xhci_Ring {
+    SpinLock lck;
+    hw_usb_xhci_TRB *ring, *cur;
+    u32 curIdx, size;
+    u32 cycBit;
+    hw_usb_xhci_Request *req;
+
+    ListNode lst;
+} __attribute__ ((packed)) hw_usb_xhci_Ring;
+
+typedef struct hw_usb_xhci_EveRing {
+    hw_usb_xhci_TRB **rings;
+    u16 curRingIdx, ringNum; 
+    u32 curIdx, ringSz;
+    u32 cycBit;
+} __attribute__ ((packed)) hw_usb_xhci_EveRing;
+
+#define hw_usb_xhci_Ring_mxSz (Page_4KSize * 16 / sizeof(hw_usb_xhci_TRB))
+
+typedef struct hw_usb_xhci_Device {
+    struct hw_usb_xhci_Host *host;
+    int slotId;
+    int state;
+    
+    task_TaskStruct *mgrTsk;
+
+    hw_usb_xhci_DevCtx *ctx;
+    hw_usb_xhci_InCtx *inCtx;
+
+    SafeList ringLst;
+
+    hw_usb_devdesc_Device *devDesc;
+    hw_usb_devdesc_Cfg *cfgDesc;
+
+    ListNode lst;
+} hw_usb_xhci_Device;
+
+typedef struct hw_usb_xhci_Port {
+    u8 flags;
+    u8 pirOffset;
+    u8 offset;
+    u8 portId;
+    hw_usb_xhci_Device *dev;
+} hw_usb_xhci_Port;
+
+typedef struct hw_usb_xhci_Host {
     hw_pci_Dev *pci;
 
     union {
@@ -202,6 +257,21 @@ typedef struct hw_usb_xhci_Mgr {
     ListNode lst;
     // device that attached to this controller
     SafeList devLst;
-} hw_usb_xhci_Mgr;
+
+    u64 capRegAddr;
+    u64 opRegAddr;
+    u64 rtRegAddr;
+    u64 dbRegAddr;
+
+    hw_usb_xhci_Port *ports;
+    hw_usb_xhci_Ring *cmdRing;
+    hw_usb_xhci_EveRing **eveRings;
+
+    hw_usb_xhci_DevCtx **devCtx;
+
+    task_TaskStruct *mgrTsk;
+
+    
+} hw_usb_xhci_Host;
 
 #endif
