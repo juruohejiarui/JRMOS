@@ -53,4 +53,60 @@ static __always_inline__ void hal_hw_writeMsr(u64 msrAddr, u64 data) {
 #define hal_msr_IA32_FS_BASE		0xC0000100
 #define hal_msr_IA32_GS_BASE		0xC0000101
 #define hal_msr_IA32_KERNEL_GS_BASE 0xC0000102
+
+static __always_inline__ u64 hal_read64(u64 addr) {
+	u64 val;
+	__asm__ volatile (
+		"movq (%1), %0	\n\t"
+		: "=b"(val)
+		: "a"(addr)
+		: "memory"
+	);
+	return val;
+}
+
+static __always_inline__ u32 hal_read32(u64 addr) {
+	u32 val;
+	__asm__ volatile (
+		"movl (%1), %0	\n\t"
+		: "=b"(val)
+		: "a"(addr)
+		: "memory"
+	);
+	return val;
+}
+
+static __always_inline__ u16 hal_read16(u64 addr) { return (hal_read32(addr & ~0x3ul) >> ((addr & 0x3) << 3)) & 0xffff; }
+
+static __always_inline__ u8 hal_read8(u64 addr) { return (hal_read32(addr & ~0x3ul) >> ((addr & 0x3) << 3)) & 0xff; }
+
+static __always_inline__ void hal_write64(u64 addr, u64 val) {
+	__asm__ volatile (
+		"movq %%rax, (%%rbx)	\n\t"
+		"mfence					\n\t"
+		: 
+		: "a"(val), "b"(addr)
+		: "memory"
+	);
+}
+
+static __always_inline__ void hal_write32(u64 addr, u32 val) {
+	__asm__ volatile (
+		"movl %%rax, (%%rbx)	\n\t"
+		"mfence					\n\t"
+		: 
+		: "a"(val), "b"(addr)
+		: "memory"
+	);
+}
+
+static __always_inline__ void hal_write16(u64 addr, u16 val) {
+	u32 prev = hal_read32(addr & ~0x3ul), mask = 0xffff << ((addr & 0x3) << 3);
+	hal_write32(addr & ~0x3ul, (prev & ~mask) | ((u32)val << ((addr & 0x3) << 3)));
+}
+
+static __always_inline__ void hal_write8(u64 addr, u8 val) {
+	u32 prev = hal_read32(addr & ~0x3ul), mask = 0xffff << ((addr & 0x3) << 3);
+	hal_write32(addr & ~0x3ul, (prev & ~mask) | ((u32)val << ((addr & 0x3) << 3)));
+}
 #endif

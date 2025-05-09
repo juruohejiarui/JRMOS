@@ -7,6 +7,7 @@
 #include <interrupt/desc.h>
 #include <task/api.h>
 
+
 typedef struct hw_usb_xhci_TRB {
     u32 dt1, dt2, status, ctrl;
 } __attribute__ ((packed)) hw_usb_xhci_TRB;
@@ -273,5 +274,47 @@ typedef struct hw_usb_xhci_Host {
 
     
 } hw_usb_xhci_Host;
+
+#define hw_usb_xhci_Host_capReg_capLen      0x0
+#define hw_usb_xhci_Host_capReg_hciVer      0x2
+#define hw_usb_xhci_Host_capReg_hcsParam1   0x4
+#define hw_usb_xhci_Host_capReg_hcsParam2   0x8
+#define hw_usb_xhci_Host_capReg_hcsParam3   0xc
+#define hw_usb_xhci_Host_capReg_hccParam1   0x10
+#define hw_usb_xhci_Host_capReg_hccParam2   0x1c
+#define hw_usb_xhci_Host_capReg_dbOff	    0x14
+#define hw_usb_xhci_Host_capReg_rtsOff	    0x18
+
+#define hw_usb_xhci_Host_opReg_cmd		0x0
+#define hw_usb_xhci_Host_opReg_status	0x4
+#define hw_usb_xhci_Host_opReg_pgSize	0x8
+// device notification control
+#define hw_usb_xhci_Host_opReg_dnCtrl	0x14
+// command ring control
+#define hw_usb_xhci_Host_opReg_crCtrl	0x18
+// device context base address array pointer
+#define hw_usb_xhci_Host_opReg_dcbaa	0x30
+#define hw_usb_xhci_Host_opReg_cfg		0x38
+
+#define XHCI_Ext_Id_Legacy		0x1
+#define XHCI_Ext_Id_Protocol	0x2
+
+#define hw_usb_xhci_Host_portReg_baseOffset	    0x400
+#define hw_usb_xhci_Host_portReg_offset	        0x10
+// port status and control
+#define hw_usb_xhci_Host_portReg_sc		        0x00
+#define hw_usb_xhci_Host_portReg_sc_AllEve		(0xe000000u)
+#define hw_usb_xhci_Host_portReg_sc_AllChg		(0xfe0000u)
+#define hw_usb_xhci_Host_portReg_sc_Power		(1u << 9)
+// port power management staatus and control
+#define hw_usb_xhci_Host_portReg_pwsc	        0x04
+// port link info
+#define hw_usb_xhci_Host_portReg_lk		        0x08
+
+#define hw_usb_xhci_intrReg_IMan	    0x00
+#define hw_usb_xhci_intrReg_IMod	    0x04
+#define hw_usb_xhci_intrReg_TblSize	    0x08
+#define hw_usb_xhci_intrReg_TblAddr	    0x10
+#define hw_usb_xhci_intrReg_DeqPtr		0x18
 
 #endif

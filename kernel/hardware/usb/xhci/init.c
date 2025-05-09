@@ -5,7 +5,7 @@
 SafeList hw_usb_xhci_devLst;
 
 // search xhci device in pci list
-int hw_usb_xhci_searchInPci() {
+static int _searchInPci() {
 	SafeList_init(&hw_usb_xhci_devLst);
 	for (ListNode *pciDevNd = SafeList_getHead(&hw_pci_devLst); pciDevNd != &hw_pci_devLst.head; pciDevNd = pciDevNd->next) {
 		hw_pci_Dev *dev = container(pciDevNd, hw_pci_Dev, lst);
@@ -31,6 +31,15 @@ int hw_usb_xhci_searchInPci() {
 	return res_SUCC;
 }
 
-int hw_usb_xhci_init(hw_usb_xhci_Host *mgr) {
+static int _initHost(hw_usb_xhci_Host *mgr) {
 	
 }
+
+int hw_usb_xhci_init() {
+	if (_searchInPci() == res_FAIL) return res_FAIL;
+	for (ListNode *xhciDevNd = SafeList_getHead(&hw_usb_xhci_devLst); xhciDevNd != &hw_usb_xhci_devLst.head; xhciDevNd = xhciDevNd->next) {
+		if (_initHost(container(xhciDevNd, hw_usb_xhci_Host, lst)) == res_FAIL) return res_FAIL;
+	}
+	return res_SUCC;
+}
+

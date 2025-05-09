@@ -8,8 +8,8 @@ void init_init() {
 		printk(RED, BLACK, "init: failed to initialize pci.\n");
 		while (1) ;
 	}
-	if (hw_usb_xhci_searchInPci() == res_FAIL) {
-		printk(RED, BLACK, "init: failed to search xhci in pci.\n");
+	if (hw_usb_xhci_init() == res_FAIL) {
+		printk(RED, BLACK, "init: failed to initialize xhci\n");
 		while (1) ;
 	}
 }
