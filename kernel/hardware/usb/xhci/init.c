@@ -19,6 +19,9 @@ static int _searchInPci() {
 			mgr->intrNum = 0;
 			mgr->flag = 0;
 			SafeList_insTail(&hw_usb_xhci_devLst, &mgr->lst);
+			
+			SafeList_init(&mgr->devLst);
+			SafeList_init(&mgr->ringLst);
 		}
 	}
 

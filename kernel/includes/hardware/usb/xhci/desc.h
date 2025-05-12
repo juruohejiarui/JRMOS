@@ -16,8 +16,8 @@ typedef struct hw_usb_xhci_Request {
     u64 flags;
     u64 inputSz;
     hw_usb_xhci_TRB res;
-    hw_usb_xhci_TRB *input;
-    struct hw_usb_xhci_Request **target;
+    ListNode lst;
+    hw_usb_xhci_TRB input[];
 } __attribute__ ((packed)) hw_usb_xhci_Request;
 
 // evaluate next TRB
@@ -185,12 +185,12 @@ typedef union hw_usb_xhci_InCtx {
 
 typedef struct hw_usb_xhci_Ring {
     SpinLock lck;
-    hw_usb_xhci_TRB *ring, *cur;
+    hw_usb_xhci_TRB *cur;
     u32 curIdx, size;
-    u32 cycBit;
-    hw_usb_xhci_Request *req;
-
+    u32 cycBit, load;
+    ListNode reqLst;
     ListNode lst;
+    hw_usb_xhci_TRB *trbs;
 } __attribute__ ((packed)) hw_usb_xhci_Ring;
 
 typedef struct hw_usb_xhci_EveRing {
@@ -258,6 +258,7 @@ typedef struct hw_usb_xhci_Host {
     ListNode lst;
     // device that attached to this controller
     SafeList devLst;
+    SafeList ringLst;
 
     u64 capRegAddr;
     u64 opRegAddr;
