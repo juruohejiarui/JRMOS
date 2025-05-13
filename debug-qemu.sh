@@ -48,6 +48,8 @@ debug(){
 			-device usb-kbd \
 			-device usb-mouse \
 			-m 512M \
+			-D b.log \
+			-d trace:usb_xhci_run,guest_errors \
 			-smp 4"
 
 

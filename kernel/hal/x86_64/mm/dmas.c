@@ -5,6 +5,7 @@
 #include <hal/mm/map.h>
 #include <hal/mm/dmas.h>
 #include <hal/hardware/uefi.h>
+#include <screen/screen.h>
 
 int hal_mm_dmas_init() {
     u64 mxAddr = 0;
@@ -27,5 +28,6 @@ int hal_mm_dmas_init() {
 }
 
 int hal_mm_dmas_map(u64 phys) {
-    return hal_mm_map1G((u64)mm_dmas_phys2Virt(phys), phys, mm_Attr_Exist);
+    phys &= ~(mm_dmas_mapSize - 1);
+    return hal_mm_map1G((u64)mm_dmas_phys2Virt(phys), phys, mm_Attr_Exist | mm_Attr_Writable);
 }

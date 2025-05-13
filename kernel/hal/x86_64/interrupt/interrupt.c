@@ -63,6 +63,10 @@ void (*hal_intr_entryList[24])(void) = {
 
 intr_Desc hal_intr_desc[24];
 
+void hal_intr_setInCpuDesc(intr_Desc *desc, u32 intrNum) {
+    for (int i = 0; i < intrNum; i++) cpu_desc[desc[i].cpuId].hal.intrDesc[desc[i].vecId - 0x40] = &desc[i];
+}
+
 int hal_intr_init() {
 	if (hal_hw_apic_init() == res_FAIL) return res_FAIL;
 

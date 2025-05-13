@@ -15,6 +15,7 @@ typedef struct hw_pci_Cfg {
     union {
         struct {
             u32 bar[6];
+            u32 cardbusCISPtr;
             u16 subsysVendorId, subsysId;
             u32 expRomBaseAddr;
             u8 capPtr;
@@ -67,6 +68,9 @@ typedef struct hw_pci_CapHdr {
     u8 nxtPtr;
 } __attribute__ ((packed)) hw_pci_CapHdr;
 
+#define hw_pci_CapHdr_capId_MSI     0x05
+#define hw_pci_CapHdr_capId_MSIX    0x11
+
 typedef struct hw_pci_MsiCap {
     hw_pci_CapHdr hdr;
     u16 msgCtrl;
@@ -104,6 +108,8 @@ static __always_inline__ hw_pci_Cfg *hw_pci_getCfg(u64 baseAddr, u8 bus, u8 dev,
     return (hw_pci_Cfg *)mm_dmas_phys2Virt(baseAddr | ((u64)bus << 20) | ((u64)dev << 15) | ((u64)func << 12));
 }
 
+hw_pci_CapHdr *hw_pci_getNxtCap(hw_pci_Cfg *cfg, hw_pci_CapHdr *cur);
+
 void hw_pci_chkBus(u64 baseAddr, u16 bus);
 
 int hw_pci_init();
@@ -115,6 +121,12 @@ void hw_pci_initIntr(intr_Desc *desc, void (*handler)(u64), u64 param, char *nam
 static __always_inline__ hw_pci_MsixTbl *hw_pci_getMsixTbl(hw_pci_MsixCap *cap, hw_pci_Cfg *cfg) {
     return mm_dmas_phys2Virt((*(u64 *)&cfg->type0.bar[hw_pci_MsixCap_bir(cap)] & ~0xf) + hw_pci_MsixCap_tblOff(cap));
 }
+
+int hw_pci_setMsix(hw_pci_MsixCap *cap, hw_pci_Cfg *cfg, intr_Desc *desc, u64 intrNum);
+
+int hw_pci_setMsi(hw_pci_MsiCap *cap, intr_Desc *desc, u64 intrNum);
+
+void hw_pci_disableIntx(hw_pci_Cfg *cfg);
 
 int hw_pci_allocMsi(hw_pci_MsiCap *cap, intr_Desc *desc, u64 intrNum);
 

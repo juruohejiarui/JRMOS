@@ -49,12 +49,17 @@ void hal_task_sche_updOtherState() {
     hal_cpu_sendIntr_allExcluSelf(hal_cpu_intr_Schedule);
 }
 
-void hal_task_newThread(hal_task_ThreadStruct *thread) {
-	// fork the page table from kernel table
-	hal_mm_PageTbl *pgd = mm_map_allocTbl();
+void hal_task_newThread(hal_task_ThreadStruct *thread, u64 attr) {
+	if (~attr & task_attr_Usr) {
+		thread->pgd = mm_krlTblPhysAddr;
+	} else {
+		// fork the page table from kernel table
+		hal_mm_PageTbl *pgd = mm_map_allocTbl();
 
-	memcpy(mm_dmas_phys2Virt(mm_krlTblPhysAddr), pgd, sizeof(hal_mm_PageTbl));
-	thread->pgd = mm_dmas_virt2Phys(pgd);
+		memcpy(mm_dmas_phys2Virt(mm_krlTblPhysAddr), pgd, sizeof(hal_mm_PageTbl));
+		thread->pgd = mm_dmas_virt2Phys(pgd);
+	}
+	
 }
 
 void hal_task_initIdle() {

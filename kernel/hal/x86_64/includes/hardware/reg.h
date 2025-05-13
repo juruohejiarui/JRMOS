@@ -92,7 +92,7 @@ static __always_inline__ void hal_write64(u64 addr, u64 val) {
 
 static __always_inline__ void hal_write32(u64 addr, u32 val) {
 	__asm__ volatile (
-		"movl %%rax, (%%rbx)	\n\t"
+		"movl %%eax, (%%rbx)	\n\t"
 		"mfence					\n\t"
 		: 
 		: "a"(val), "b"(addr)
@@ -106,7 +106,7 @@ static __always_inline__ void hal_write16(u64 addr, u16 val) {
 }
 
 static __always_inline__ void hal_write8(u64 addr, u8 val) {
-	u32 prev = hal_read32(addr & ~0x3ul), mask = 0xffff << ((addr & 0x3) << 3);
+	u32 prev = hal_read32(addr & ~0x3ul), mask = 0xff << ((addr & 0x3) << 3);
 	hal_write32(addr & ~0x3ul, (prev & ~mask) | ((u32)val << ((addr & 0x3) << 3)));
 }
 #endif

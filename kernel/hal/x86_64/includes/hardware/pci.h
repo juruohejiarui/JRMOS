@@ -4,7 +4,7 @@
 #include <lib/dtypes.h>
 #include <hardware/pci.h>
 
-int hal_hw_pci_enum();
+int hal_hw_pci_init();
 
 int hal_hw_pci_initIntr();
 

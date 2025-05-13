@@ -124,6 +124,8 @@ static __always_inline__ void hal_intr_setSysIntrGate(hal_intr_IdtItem *idtTbl, 
 
 #undef hal_intr_setGate
 
+void hal_intr_setInCpuDesc(intr_Desc *desc, u32 intrNum);
+
 // vectors from 0x20 to 0x37 are reserved for apic or 8259A
 extern void (*hal_intr_entryList[24])(void);
 extern intr_Desc hal_intr_desc[24];

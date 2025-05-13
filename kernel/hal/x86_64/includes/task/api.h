@@ -37,7 +37,7 @@ void hal_task_sche_switchTss(task_TaskStruct *prev, task_TaskStruct *next);
 
 void hal_task_sche_updOtherState();
 
-void hal_task_newThread(hal_task_ThreadStruct *thread);
+void hal_task_newThread(hal_task_ThreadStruct *thread, u64 attr);
 
 void hal_task_initIdle();
 

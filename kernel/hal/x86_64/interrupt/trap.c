@@ -73,6 +73,7 @@ static void _printRegs(u64 rsp) {
 	printk(WHITE, BLACK, "msr: IA32_KERNEL_GS_BASE:%#018lx, IA32_GS_BASE:%#018lx\n",
 		hal_hw_readMsr(hal_msr_IA32_KERNEL_GS_BASE), hal_hw_readMsr(hal_msr_IA32_GS_BASE));
 	printk(WHITE, BLACK, "cr3: %#018lx\n", hal_hw_getCR(3));
+	mm_map_dbg(1);
 	mm_buddy_dbg(1);
 	_backtrace((hal_intr_PtReg *)rsp);
 }
@@ -283,7 +284,6 @@ void hal_intr_doPageFault(u64 rsp, u64 errorCode) {
 	} else {
 		SpinLock_lock(&_trapLogLck);
 		printk(RED,BLACK,"do_page_fault(14),ERROR_CODE:%#018lx,RSP:%#018lx,RIP:%#018lx,CR2:%#018lx\n",errorCode , rsp , *p , cr2);
-		mm_map_dbg(cr2);
 		if (errorCode & 0x01)
 			printk(RED,BLACK,"The page fault was caused by a non-present page.\n");
 		if (errorCode & 0x02)
@@ -300,6 +300,8 @@ void hal_intr_doPageFault(u64 rsp, u64 errorCode) {
 			printk(RED,BLACK,"The page fault was caused by reading a reserved bit.\n");
 		if (errorCode & 0x80)
 			printk(RED,BLACK,"The page fault was caused by an instruction fetch.\n");
+
+		mm_map_dbgMap(cr2 & ~0xffful);
 		_printRegs(rsp);
 		SpinLock_unlock(&_trapLogLck);
 

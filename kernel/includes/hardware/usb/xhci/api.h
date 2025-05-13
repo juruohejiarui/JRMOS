@@ -33,7 +33,7 @@ static __always_inline__ void hw_usb_xhci_TRB_setCtrlBit(hw_usb_xhci_TRB *trb, u
 static __always_inline__ u32 hw_usb_xhci_TRB_getCtrlBit(hw_usb_xhci_TRB *trb) {
 	return hal_read32((u64)&trb->ctrl) & hw_usb_xhci_TRB_ctrl_allBit;
 }
-static __always_inline__ u32 hw_usb_xhci_TRB_setTRT(hw_usb_xhci_TRB *trb, u32 val) {
+static __always_inline__ void hw_usb_xhci_TRB_setTRT(hw_usb_xhci_TRB *trb, u32 val) {
 	hal_write32((u64)&trb->ctrl, (val << 16) | (hal_read32((u64)&trb->ctrl) & 0xfffcffffu));
 }
 static __always_inline__ void hw_usb_xhci_TRB_setDir(hw_usb_xhci_TRB *trb, u32 val) {
@@ -105,21 +105,23 @@ static __always_inline__ u32 hw_usb_xhci_PortReg_read(hw_usb_xhci_Host *host, u3
 	return hal_read32(host->opRegAddr + 0x400 + (portIdx - 1) * 0x10 + offset);
 }
 
-static __always_inline__ u32 hw_usb_xhci_IntrReg_write64(hw_usb_xhci_Host *host, u32 intrId, u32 offset, u64 val) {
+static __always_inline__ void hw_usb_xhci_IntrReg_write64(hw_usb_xhci_Host *host, u32 intrId, u32 offset, u64 val) {
 	hal_write64(host->rtRegAddr + 0x20 + intrId * 0x20 + offset, val);
 }
-static __always_inline__ u32 hw_usb_xhci_IntrReg_write32(hw_usb_xhci_Host *host, u32 intrId, u32 offset, u32 val) {
+static __always_inline__ void hw_usb_xhci_IntrReg_write32(hw_usb_xhci_Host *host, u32 intrId, u32 offset, u32 val) {
 	hal_write32(host->rtRegAddr + 0x20 + intrId * 0x20 + offset, val);
 }
-static __always_inline__ u32 hw_usb_xhci_IntrReg_read64(hw_usb_xhci_Host *host, u32 intrId, u32 offset) {
+static __always_inline__ u64 hw_usb_xhci_IntrReg_read64(hw_usb_xhci_Host *host, u32 intrId, u32 offset) {
 	return hal_read64(host->rtRegAddr + 0x20 + intrId * 0x20 + offset);
 }
 static __always_inline__ u32 hw_usb_xhci_IntrReg_read32(hw_usb_xhci_Host *host, u32 intrId, u32 offset) {
 	return hal_read32(host->rtRegAddr + 0x20 + intrId * 0x20 + offset);
 }
 
-static __always_inline__ u32 hw_usb_xhci_DbReg_write(hw_usb_xhci_Host *host, u32 slotId, u32 epId, u32 tskId) {
-	hal_write32(host->dbRegAddr + slotId * 0x4, epId | (tskId << 16));
+static __always_inline__ u32 hw_usb_xhci_DbReq_make(u32 epId, u32 tskId) { return epId | (tskId << 16); }
+
+static __always_inline__ void hw_usb_xhci_DbReg_write(hw_usb_xhci_Host *host, u32 slotId, u32 value) {
+	hal_write32(host->dbRegAddr + slotId * 0x4, value);
 }
 
 #define hw_usb_xhci_CapReg_hcsParam(host, id) \
@@ -141,9 +143,31 @@ static __always_inline__ u32 hw_usb_xhci_mxScrSz(hw_usb_xhci_Host *host) {
 	return ((vl >> 16) & (((1ul << 5) - 1) << 5)) | ((vl >> 27) & ((1ul << 5) - 1));
 }
 
+void *hw_usb_xhci_nxtExtCap(hw_usb_xhci_Host *host, void *cur);
+static __always_inline__ u32 hw_usb_xhci_xhci_getExtCapId(void *cur) { return hal_read8((u64)cur);}
+
 hw_usb_xhci_Ring *hw_usb_xhci_allocRing(hw_usb_xhci_Host *host, u32 size);
 
+
 int hw_usb_xhci_freeRing(hw_usb_xhci_Host *host, hw_usb_xhci_Ring *ring);
+
+void hw_usb_xhci_InsReq(hw_usb_xhci_Host *host, hw_usb_xhci_Ring *ring, hw_usb_xhci_Request *req);
+
+void hw_usb_xhci_request(hw_usb_xhci_Host *host, hw_usb_xhci_Ring *ring, hw_usb_xhci_Request *req, u32 slot, u32 doorbell);
+
+hw_usb_xhci_Request *hw_usb_xhci_response(hw_usb_xhci_Ring *ring, hw_usb_xhci_TRB *result);
+
+hw_usb_xhci_Request *hw_usb_xhci_makeRequest(u32 size, u32 flags);
+
+int hw_usb_xhci_freeRequest(hw_usb_xhci_Request *req);
+
+hw_usb_xhci_EveRing *hw_usb_xhci_allocEveRing(hw_usb_xhci_Host *host, u16 ringNum, u32 ringSz);
+
+int hw_usb_xhci_reset(hw_usb_xhci_Host *host);
+
+int hw_usb_xhci_waitReady(hw_usb_xhci_Host *host);
+
+void hw_usb_xhci_msiHandler(u64 param);
 
 int hw_usb_xhci_init();
 

@@ -173,7 +173,7 @@ void task_sche() {
     hal_task_sche_switch(nxtTsk);
 }
 
-task_ThreadStruct *task_newThread() {
+task_ThreadStruct *task_newThread(u64 attr) {
     task_ThreadStruct *thread = mm_kmalloc(sizeof(task_ThreadStruct), mm_Attr_Shared, NULL);
     if (thread == NULL) {
         printk(RED, BLACK, "task: failed to allocate thread structure.\n");
@@ -195,7 +195,7 @@ task_ThreadStruct *task_newThread() {
 
     SafeList_init(&thread->tskList);
 
-    hal_task_newThread(&thread->hal);
+    hal_task_newThread(&thread->hal, attr);
 
     SpinLock_unlock(&mm_map_krlTblLck);
 
@@ -253,7 +253,7 @@ void task_initIdle() {
 
     memset(&task_current->signal, 0, sizeof(task_current->signal));
 
-    task_current->thread = task_newThread();
+    task_current->thread = task_newThread(task_attr_Builtin);
     task_insSubTask(task_current, task_current->thread);
 
     List_init(&task_current->scheNd);
@@ -314,7 +314,7 @@ task_TaskStruct *task_newTask(void *entryAddr, u64 arg, u64 attr) {
 
     List_init(&task_current->scheNd);
 
-    tsk->thread = task_newThread();
+    tsk->thread = task_newThread(attr);
 
     if (tsk->thread == NULL) {
         mm_kfree(tskUnion, mm_Attr_Shared);

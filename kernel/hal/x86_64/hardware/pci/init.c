@@ -11,7 +11,7 @@
 static hal_hw_uefi_McfgDesc *_mfcgDesc;
 
 
-int hal_hw_pci_enum() {
+int hal_hw_pci_init() {
 	_mfcgDesc = NULL;
 	u32 entryCnt = (hal_hw_uefi_xsdtTbl->hdr.length - sizeof(hal_hw_uefi_xsdtTbl)) / sizeof(u64);
 	for (int i = 0; i < entryCnt; i++) {
@@ -30,6 +30,8 @@ int hal_hw_pci_enum() {
 	for (int i = 0; i < _devCnt; i++) {
 		for (u16 bus = _mfcgDesc->entry[i].stBus; bus <= _mfcgDesc->entry[i].edBus; bus++) hw_pci_chkBus(_mfcgDesc->entry[i].addr, bus);
 	}
+
+	
 	return res_SUCC;
 }
 

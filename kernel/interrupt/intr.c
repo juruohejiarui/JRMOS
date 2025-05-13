@@ -1,4 +1,5 @@
 #include <interrupt/api.h>
+#include <screen/screen.h>
 #include <hal/interrupt/api.h>
 #include <cpu/desc.h>
 #include <lib/bit.h>
@@ -32,11 +33,11 @@ int intr_alloc(intr_Desc *desc, int intrNum) {
     for (int i = 0x0; i < 0x100 - intrNum; i++) {
         int flag = -1;
         for (int j = intrNum - 1; j >= 0; j--)
-            if (cpu_desc[bstCpu].intrMsk[(i + j) / 64] & (1ull<< ((i + j) % 64))) {
+            if (cpu_desc[bstCpu].intrMsk[(i + j) / 64] & (1ull << ((i + j) % 64))) {
                 flag = j;
                 break;
             }
-        if (flag != -1) i += flag;
+        if (flag != -1) { i += flag; continue; }
         desc->cpuId = bstCpu;
         desc->vecId = i;
         goto succ;
@@ -52,6 +53,8 @@ int intr_alloc(intr_Desc *desc, int intrNum) {
         bit_set1(&cpu_desc[bstCpu].intrMsk[desc[i].vecId / 64], desc[i].vecId % 64);
     }
 	SpinLock_unlock(&intr_allocLck);
+
+    hal_intr_setInCpuDesc(desc, intrNum);
 	return res_SUCC;
 }
 

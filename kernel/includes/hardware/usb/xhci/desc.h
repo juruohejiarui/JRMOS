@@ -13,8 +13,9 @@ typedef struct hw_usb_xhci_TRB {
 } __attribute__ ((packed)) hw_usb_xhci_TRB;
 
 typedef struct hw_usb_xhci_Request {
-    u64 flags;
-    u64 inputSz;
+    u32 flags, inputSz;
+    #define hw_usb_xhci_Request_flags_Finished  (1u << 0)
+    #define hw_usb_xhci_Request_flags_Command   (1u << 1)
     hw_usb_xhci_TRB res;
     ListNode lst;
     hw_usb_xhci_TRB input[];
@@ -132,7 +133,7 @@ typedef struct hw_usb_xhci_EpCtx64 {
         } __attribute__ ((packed));
     };
     u32 dw4;
-    u32 reserved[13];
+    u32 reserved[11];
 } __attribute__ ((packed)) hw_usb_xhci_EpCtx64;
 
 #define hw_usb_xhci_EpCtx_epType_IsochOut   1
@@ -185,7 +186,6 @@ typedef union hw_usb_xhci_InCtx {
 
 typedef struct hw_usb_xhci_Ring {
     SpinLock lck;
-    hw_usb_xhci_TRB *cur;
     u32 curIdx, size;
     u32 cycBit, load;
     ListNode reqLst;
@@ -252,8 +252,8 @@ typedef struct hw_usb_xhci_Host {
 
     u64 flag;
 
-    #define hw_usb_xhci_Mgr_flag_Msix   (1ul << 0)
-    #define hw_usb_xhci_Mgr_flag_Ctx64  (1ul << 1)
+    #define hw_usb_xhci_Host_flag_Msix   (1ul << 0)
+    #define hw_usb_xhci_Host_flag_Ctx64  (1ul << 1)
 
     ListNode lst;
     // device that attached to this controller
