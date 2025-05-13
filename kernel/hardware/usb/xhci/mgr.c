@@ -19,6 +19,9 @@ void hw_usb_xhci_msiHandler(u64 param) {
 				hw_usb_xhci_Request *req = hw_usb_xhci_response(host->cmdRing, event);
 				printk(YELLOW, BLACK, "response to command request %#018lx with code:%d\n", req, hw_usb_xhci_TRB_getCmplCode(event));
 				break;
+			case hw_usb_xhci_TRB_Type_PortStChg :
+				printk(YELLOW, BLACK, "response to port status change.\n");
+				break;
 		}
 	}
 	hw_usb_xhci_IntrReg_write64(host, intrId, hw_usb_xhci_intrReg_DeqPtr, mm_dmas_virt2Phys(event) | (1ul << 3));

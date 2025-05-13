@@ -21,8 +21,7 @@ int hw_pci_setMsi(hw_pci_MsiCap *cap, intr_Desc *desc, u64 intrNum) {
 void hw_pci_disableIntx(hw_pci_Cfg *cfg) {
     bit_set1_16(&cfg->command, 10);
 }
-int hw_pci_allocMsi(hw_pci_MsiCap *cap, intr_Desc *desc, u64 intrNum)
-{
+int hw_pci_allocMsi(hw_pci_MsiCap *cap, intr_Desc *desc, u64 intrNum) {
 	if (hw_pci_MsiCap_vecNum(cap) < intrNum) {
 		printk(RED, BLACK, "hw: pci: alloc too much interrupt for msi, vecNum=%d, require %d interrupt\n", hw_pci_MsiCap_vecNum(cap), intrNum);
 		return res_FAIL;

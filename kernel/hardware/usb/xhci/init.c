@@ -44,10 +44,10 @@ static __always_inline__ void _disablePartnerCtrl(hw_usb_xhci_Host *host) {
 }
 
 static __always_inline__ int _getRegAddr(hw_usb_xhci_Host *host) {
-	u64 phyAddr = (*(u64 *)&host->pci->cfg->type0.bar[0]) & ~0xful;
+	u64 phyAddr = ((host->pci->cfg->type0.bar[0] | (((u64)host->pci->cfg->type0.bar[1]) << 32))) & ~0xful;
 	host->capRegAddr = (u64)mm_dmas_phys2Virt(phyAddr);
 
-	printk(WHITE, BLACK, "hw: xhci: host %#018lx: capRegAddr:%#018lx\n", host, host->capRegAddr);
+	printk(WHITE, BLACK, "hw: xhci: host %#018lx: capRegAddr:%#018lx\n", host, phyAddr);
 	
 	// map this address in dmas
 	if (mm_dmas_map(phyAddr) == res_FAIL) {
@@ -204,8 +204,10 @@ static int _initHost(hw_usb_xhci_Host *host) {
 		int vecNum = hw_pci_MsiCap_vecNum(host->msiCap);
 		host->intrNum = vecNum = min(vecNum, host->intrNum);
 
+		printk(WHITE, BLACK, "hw: xhci: host %#018lx msi: vecNum:%d mgsCtrl:%#010x\n", host, vecNum, msi->msgCtrl);
+
 		for (int i = 0; i < vecNum; i++) intr_initDesc(host->intr + i, hw_usb_xhci_msiHandler, (u64)host | i, "xhci msi", &hw_pci_intrCtrl);
-		if (hw_pci_setMsi(host->msiCap, host->intr, host->intrNum) == res_FAIL) {
+		if (hw_pci_allocMsi(host->msiCap, host->intr, host->intrNum) == res_FAIL) {
 			printk(RED, BLACK, "hw: xhci: host %#018lx failed to set msi interrupt\n", host);
 			return res_FAIL;
 		}
