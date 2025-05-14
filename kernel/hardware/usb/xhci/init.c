@@ -294,7 +294,7 @@ static int _initHost(hw_usb_xhci_Host *host) {
 		printk(RED, BLACK, "hw: xhci: host %#018lx failed to allocate port device array\n", host);
 		return res_FAIL;
 	}
-	memset(host->dev, 0, sizeof(hw_usb_xhci_Device *) * (hw_usb_xhci_mxPort(host) + 1));
+	memset(host->portDev, 0, sizeof(hw_usb_xhci_Device *) * (hw_usb_xhci_mxPort(host) + 1));
 
 	// release this host from BIOS
 	for (void *extCap = hw_usb_xhci_nxtExtCap(host, NULL); extCap; extCap = hw_usb_xhci_nxtExtCap(host, extCap)) {
