@@ -282,19 +282,19 @@ static int _initHost(hw_usb_xhci_Host *host) {
 	}
 
 	// allocate device task array
-	host->dev = mm_kmalloc(sizeof(hw_usb_xhci_Device *) * hw_usb_xhci_mxSlot(host), mm_Attr_Shared, NULL);
+	host->dev = mm_kmalloc(sizeof(hw_usb_xhci_Device *) * (hw_usb_xhci_mxSlot(host) + 1), mm_Attr_Shared, NULL);
 	if (host->dev == NULL) {
 		printk(RED, BLACK, "hw: xhci: host %#018lx failed to allocate device array\n", host);
 		return res_FAIL;
 	}
-	memset(host->dev, 0, sizeof(hw_usb_xhci_Device *) * hw_usb_xhci_mxSlot(host));
+	memset(host->dev, 0, sizeof(hw_usb_xhci_Device *) * (hw_usb_xhci_mxSlot(host) + 1));
 	
-	host->portDev = mm_kmalloc(sizeof(hw_usb_xhci_Device *) * hw_usb_xhci_mxPort(host), mm_Attr_Shared, NULL);
+	host->portDev = mm_kmalloc(sizeof(hw_usb_xhci_Device *) * (hw_usb_xhci_mxPort(host) + 1), mm_Attr_Shared, NULL);
 	if (host->portDev == NULL) {
 		printk(RED, BLACK, "hw: xhci: host %#018lx failed to allocate port device array\n", host);
 		return res_FAIL;
 	}
-	memset(host->dev, 0, sizeof(hw_usb_xhci_Device *) * hw_usb_xhci_mxPort(host));
+	memset(host->dev, 0, sizeof(hw_usb_xhci_Device *) * (hw_usb_xhci_mxPort(host) + 1));
 
 	// release this host from BIOS
 	for (void *extCap = hw_usb_xhci_nxtExtCap(host, NULL); extCap; extCap = hw_usb_xhci_nxtExtCap(host, extCap)) {

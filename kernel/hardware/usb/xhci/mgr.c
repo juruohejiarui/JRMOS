@@ -41,20 +41,24 @@ static __always_inline__ void hw_usb_xhci_portConnect(hw_usb_xhci_Host *host, u3
 
 static __always_inline__ void hw_usb_xhci_portDisconnect(hw_usb_xhci_Host *host, u32 portIdx) {
 	hw_usb_xhci_Device *dev = host->portDev[portIdx];
+	if (dev == NULL) return ;
 	task_sche_wake(dev->mgrTsk);
 	task_signal_send(dev->mgrTsk, task_Signal_Int);
 }
 
 void hw_usb_xhci_portChange(hw_usb_xhci_Host *host, u32 portIdx) {
-	printk(WHITE, BLACK, "hw: xhci: host %#018lx port %d change\n", host, portIdx);
 	hw_usb_xhci_PortReg_write(host, portIdx, hw_usb_xhci_Host_portReg_sc, hw_usb_xhci_Host_portReg_sc_Power | hw_usb_xhci_Host_portReg_sc_AllChg | hw_usb_xhci_Host_portReg_sc_AllEve);
 	u32 portSc = hw_usb_xhci_PortReg_read(host, portIdx, hw_usb_xhci_Host_portReg_sc);
 	if (portSc & 1) {
+		printk(WHITE, BLACK, "hw: xhci: host %#018lx port %d connect\n", host, portIdx);
 		// this port is enabled
 		if ((portSc & (1u << 1)) && ((portSc >> 5) & 0xf) == 0) {
 			hw_usb_xhci_portConnect(host, portIdx);
 		} else hw_usb_xhci_PortReg_write(host, portIdx, hw_usb_xhci_Host_portReg_sc, (1u << 4) | hw_usb_xhci_Host_portReg_sc_Power | hw_usb_xhci_Host_portReg_sc_AllEve);
-	} else hw_usb_xhci_portDisconnect(host, portIdx);
+	} else {
+		printk(WHITE, BLACK, "hw: xhci: host %#018lx port %d disconnect\n", host, portIdx);
+		hw_usb_xhci_portDisconnect(host, portIdx);
+	}
 }
 
 void hw_usb_xhci_uninstallDev(hw_usb_xhci_Device *dev) {
