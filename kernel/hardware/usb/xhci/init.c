@@ -87,7 +87,7 @@ static int _initHost(hw_usb_xhci_Host *host) {
 	for (hw_pci_CapHdr *hdr = hw_pci_getNxtCap(host->pci->cfg, NULL); hdr; hdr = hw_pci_getNxtCap(host->pci->cfg, hdr)) {
 		switch (hdr->capId) {
 			case hw_pci_CapHdr_capId_MSI:
-				msi = container(hdr, hw_pci_MsiCap, hdr);
+				msi = container(container(hdr, hw_pci_MsiCap32, hdr), hw_pci_MsiCap, cap32);
 				break;
 			case hw_pci_CapHdr_capId_MSIX:
 				msix = container(hdr, hw_pci_MsixCap, hdr);
@@ -192,7 +192,7 @@ static int _initHost(hw_usb_xhci_Host *host) {
 		printk(WHITE, BLACK, "hw: xhci: host %#018lx msixtbl:%#018lx vecNum:%d msgCtrl:%#010x\n", host, tbl, vecNum + 1, msix->msgCtrl);
 
 		for (int i = 0; i < host->intrNum; i++) {
-			intr_initDesc(host->intr + i, hw_usb_xhci_msiHandler, (u64)host | i, "xhci msi", &hw_pci_intrCtrl);
+			hw_pci_initIntr(host->intr + i, hw_usb_xhci_msiHandler, (u64)host | i, "xhci msi");
 		}
 		if (hw_pci_allocMsix(host->msixCap, host->pci->cfg, host->intr, host->intrNum) == res_FAIL) {
 			printk(RED, BLACK, "hw: xhci: host %#018lx failed to allocate msix interrupt\n", host);
@@ -205,9 +205,11 @@ static int _initHost(hw_usb_xhci_Host *host) {
 		int vecNum = hw_pci_MsiCap_vecNum(host->msiCap);
 		host->intrNum = vecNum = min(vecNum, host->intrNum);
 
-		printk(WHITE, BLACK, "hw: xhci: host %#018lx msi: vecNum:%d mgsCtrl:%#010x\n", host, vecNum, msi->msgCtrl);
+		printk(WHITE, BLACK, "hw: xhci: host %#018lx msi: %s vecNum:%d mgsCtrl:%#010x\n", 
+				host, hw_pci_MsiCap_is64(msi) ? "64B" : "32B", vecNum, *hw_pci_MsiCap_msgCtrl(msi));
 
-		for (int i = 0; i < vecNum; i++) intr_initDesc(host->intr + i, hw_usb_xhci_msiHandler, (u64)host | i, "xhci msi", &hw_pci_intrCtrl);
+		for (int i = 0; i < vecNum; i++)
+			hw_pci_initIntr(host->intr + i, hw_usb_xhci_msiHandler, (u64)host | i, "xhci msi");
 		if (hw_pci_allocMsi(host->msiCap, host->intr, host->intrNum) == res_FAIL) {
 			printk(RED, BLACK, "hw: xhci: host %#018lx failed to set msi interrupt\n", host);
 			return res_FAIL;

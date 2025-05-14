@@ -38,6 +38,7 @@ void (*hal_hw_pci_intrLst[0x40])(void) = {
 
 void hal_hw_pci_intr_dispatcher(u64 rsp, u64 num) {
 	intr_Desc *intr = cpu_getvar(hal.intrDesc[num - 0x40]);
+	printk(WHITE, BLACK, "hw: pci: intr #%d on cpu #%d desc:%#018lx handler:%#018lx\n", num, task_current->cpuId, intr, intr->handler);
 	if (intr == NULL || intr->handler == NULL) {
 		printk(RED, BLACK, "hw: pci: no handler for intr #%d on cpu #%d\n", num, task_current->cpuId);
 		while (1) hal_hw_hlt();
@@ -46,7 +47,13 @@ void hal_hw_pci_intr_dispatcher(u64 rsp, u64 num) {
 	if (intr->ctrl != NULL && intr->ctrl->ack != NULL) intr->ctrl->ack(intr);
 }
 
-static __always_inline__ void hal_hw_pci_setMsgAddr(u64 *msgAddr, u32 cpuId, u32 redirect, u32 destMode) {
+static __always_inline__ void hal_hw_pci_Msi_setMsgAddr(hw_pci_MsiCap *cap, u32 cpuId, u32 redirect, u32 destMode) {
+	register u32 val = 0xfee00000u | (cpu_desc[cpuId].hal.apic << 12) | (redirect << 3) | (destMode << 2);
+	if (hw_pci_MsiCap_is64(cap)) cap->cap64.msgAddr = val;
+	else cap->cap32.msgAddr = val;
+}
+
+static __always_inline__ void hal_hw_pci_Msix_setMsgAddr(u64 *msgAddr, u32 cpuId, u32 redirect, u32 destMode) {
 	*msgAddr = 0xfee00000u | (cpu_desc[cpuId].hal.apic << 12) | (redirect << 3) | (destMode << 2);
 }
 
@@ -65,8 +72,8 @@ static void hal_hw_pci_getIntrGate(intr_Desc *desc, u64 intrNum) {
 }
 
 int hal_hw_pci_setMsi(hw_pci_MsiCap *cap, intr_Desc *desc, u64 intrNum) {
-	hal_hw_pci_setMsgAddr(&cap->msgAddr, desc->cpuId, 0, hal_hw_apic_DestMode_Physical);
-    hal_hw_pci_setMsgData16(&cap->msgData, desc->vecId, hal_hw_apic_DeliveryMode_Fixed, hal_hw_apic_Level_Deassert, hal_hw_apic_TriggerMode_Edge);
+	hal_hw_pci_Msi_setMsgAddr(cap, desc->cpuId, 0, hal_hw_apic_DestMode_Physical);
+    hal_hw_pci_setMsgData16(hw_pci_MsiCap_msgData(cap), desc->vecId, hal_hw_apic_DeliveryMode_Fixed, hal_hw_apic_Level_Deassert, hal_hw_apic_TriggerMode_Edge);
 
     hal_hw_pci_getIntrGate(desc, intrNum);
     return res_SUCC;
@@ -76,7 +83,7 @@ int hal_hw_pci_setMsix(hw_pci_MsixCap *cap, hw_pci_Cfg *cfg, intr_Desc *desc, u6
     hw_pci_MsixTbl *tbl = hw_pci_getMsixTbl(cap, cfg);
     mm_dmas_map(mm_dmas_virt2Phys(tbl));
     for (int i = 0; i < intrNum; i++) {
-        hal_hw_pci_setMsgAddr(&tbl[i].msgAddr, desc[i].cpuId, 0, hal_hw_apic_DestMode_Physical);
+        hal_hw_pci_Msix_setMsgAddr(&tbl[i].msgAddr, desc[i].cpuId, 0, hal_hw_apic_DestMode_Physical);
         hal_hw_pci_setMsgData32(&tbl[i].msgData, desc[i].vecId, hal_hw_apic_DeliveryMode_Fixed, hal_hw_apic_Level_Deassert, hal_hw_apic_TriggerMode_Edge);
 	}
 	hal_hw_pci_getIntrGate(desc, intrNum);

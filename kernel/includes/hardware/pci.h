@@ -71,16 +71,48 @@ typedef struct hw_pci_CapHdr {
 #define hw_pci_CapHdr_capId_MSI     0x05
 #define hw_pci_CapHdr_capId_MSIX    0x11
 
-typedef struct hw_pci_MsiCap {
+typedef struct hw_pci_MsiCap64 {
     hw_pci_CapHdr hdr;
     u16 msgCtrl;
-    #define hw_pci_MsiCap_vecNum(cap) ((1ul) << (((cap)->msgCtrl >> 1) & 0x7))
     u64 msgAddr;
     u16 msgData;
     u16 reserved;
     u32 msk;
     u32 pending;
+} __attribute__ ((packed)) hw_pci_MsiCap64;
+
+typedef struct hw_pci_MsiCap32 {
+    hw_pci_CapHdr hdr;
+    u16 msgCtrl;
+    u32 msgAddr;
+    u16 msgData;
+    u32 msk;
+    u32 pending;
+} __attribute__ ((packed)) hw_pci_MsiCap32;
+
+typedef union hw_pci_MsiCap {
+    hw_pci_MsiCap64 cap64;
+    hw_pci_MsiCap32 cap32;
 } __attribute__ ((packed)) hw_pci_MsiCap;
+
+#define hw_pci_MsiCap_vecNum(cap) ((1ul) << (((cap)->cap32.msgCtrl >> 1) & 0x7))
+#define hw_pci_MsiCap_is64(cap) (((cap)->cap32.msgCtrl >> 7) & 0x1)
+
+static __always_inline__ void hw_pci_MsiCap_setVecNum(hw_pci_MsiCap *cap, u64 vecNum) {
+    // set log2(vecNum) to msgCtrl
+    cap->cap32.msgCtrl = (cap->cap32.msgCtrl & ~(0x7u << 4)) | ((bit_ffs32(vecNum) - 1) << 4);
+}
+
+static __always_inline__ u16 *hw_pci_MsiCap_msgCtrl(hw_pci_MsiCap *cap) {
+    return hw_pci_MsiCap_is64(cap) ? &cap->cap64.msgCtrl : &cap->cap32.msgCtrl;
+}
+static __always_inline__ u16 *hw_pci_MsiCap_msgData(hw_pci_MsiCap *cap) {
+    return hw_pci_MsiCap_is64(cap) ? &cap->cap64.msgData : &cap->cap32.msgData;
+}
+
+static __always_inline__ u32 *hw_pci_MsiCap_msk(hw_pci_MsiCap *cap) {
+    return hw_pci_MsiCap_is64(cap) ? &cap->cap64.msk : &cap->cap32.msk;
+}
 
 typedef struct hw_pci_MsixCap {
     hw_pci_CapHdr hdr;

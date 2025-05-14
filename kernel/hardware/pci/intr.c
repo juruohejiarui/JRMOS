@@ -15,6 +15,7 @@ int hw_pci_setMsix(hw_pci_MsixCap *cap, hw_pci_Cfg *cfg, intr_Desc *desc, u64 in
 }
 
 int hw_pci_setMsi(hw_pci_MsiCap *cap, intr_Desc *desc, u64 intrNum) {
+    hw_pci_MsiCap_setVecNum(cap, intrNum);
     return hal_hw_pci_setMsi(cap, desc, intrNum);
 }
 
@@ -67,7 +68,7 @@ int hw_pci_enableMsi(hw_pci_MsiCap *cap, intr_Desc *desc, u64 intrIdx) {
         if (desc->ctrl->enable(desc) == res_FAIL) return res_FAIL;
     }
     /// @todo add lock
-    bit_set0_32(&cap->msk, intrIdx);
+    bit_set0_32(hw_pci_MsiCap_msk(cap), intrIdx);
     return res_SUCC;
 }
 
@@ -85,7 +86,7 @@ int hw_pci_disableMsi(hw_pci_MsiCap *cap, intr_Desc *desc, u64 intrIdx) {
     if (desc->ctrl == NULL && desc->ctrl->enable != NULL) {
         if (desc->ctrl->disable(desc) == res_FAIL) return res_FAIL;
     }
-    bit_set1_32(&cap->msk, intrIdx);
+    bit_set1_32(hw_pci_MsiCap_msk(cap), intrIdx);
     return res_SUCC;
 }
 
@@ -101,8 +102,8 @@ int hw_pci_disableMsix(hw_pci_MsixCap *cap, hw_pci_Cfg *cfg, intr_Desc *desc, u6
 
 int hw_pci_enableMsiAll(hw_pci_MsiCap *cap, intr_Desc *desc, u64 intrNum) {
     for (int i = 0; i < intrNum; i++) 
-        if ((cap->msk & (1u << intrNum)) && hw_pci_enableMsi(cap, &desc[i], i) == res_FAIL) return res_FAIL;
-    bit_set1_16(&cap->msgCtrl, 0);
+        if ((*hw_pci_MsiCap_msk(cap) & (1u << intrNum)) && hw_pci_enableMsi(cap, &desc[i], i) == res_FAIL) return res_FAIL;
+    bit_set1_16(hw_pci_MsiCap_msgCtrl(cap), 0);
     return res_SUCC;
 }
 
@@ -115,9 +116,9 @@ int hw_pci_enableMsixAll(hw_pci_MsixCap *cap, hw_pci_Cfg *cfg, intr_Desc *desc, 
 }
 
 int hw_pci_disableMsiAll(hw_pci_MsiCap *cap, intr_Desc *desc, u64 intrNum) {
-    bit_set0_16(&cap->msgCtrl, 0);
+    bit_set0_16(hw_pci_MsiCap_msgCtrl(cap), 0);
     for (int i = 0; i < intrNum; i++) 
-        if (!(cap->msk & (1u << intrNum)) && hw_pci_disableMsi(cap, &desc[i], i) == res_FAIL) return res_FAIL;
+        if (!(*hw_pci_MsiCap_msk(cap) & (1u << intrNum)) && hw_pci_disableMsi(cap, &desc[i], i) == res_FAIL) return res_FAIL;
     return res_SUCC;
 }
 

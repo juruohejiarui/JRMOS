@@ -10,7 +10,6 @@
 
 static hal_hw_uefi_McfgDesc *_mfcgDesc;
 
-
 int hal_hw_pci_init() {
 	_mfcgDesc = NULL;
 	u32 entryCnt = (hal_hw_uefi_xsdtTbl->hdr.length - sizeof(hal_hw_uefi_xsdtTbl)) / sizeof(u64);
