@@ -98,6 +98,7 @@ static int _initHost(hw_usb_xhci_Host *host) {
 		printk(RED, BLACK, "hw: xhci: controller %#018lx has no msi/msix descriptor\n", host);
 		return res_FAIL;
 	}
+	printk(WHITE, BLACK, "hw: xhci: controller %#018lx msi:%#018lx msix:%#018lx\n", host, msi, msix);
 
 	if (msix) host->flag |= hw_usb_xhci_Host_flag_Msix;
 
@@ -349,11 +350,12 @@ static int _initHost(hw_usb_xhci_Host *host) {
 	// set empty command to test
 	{
 		hw_usb_xhci_Request *req = hw_usb_xhci_makeRequest(1, hw_usb_xhci_Request_flags_Command);
-		hw_usb_xhci_TRB_setType(&req->input[0], hw_usb_xhci_TRB_Type_NoOpCmd);
-		for (int i = 0; i < hw_usb_xhci_Ring_mxSz * 3 + 10; i++) {
-			printk(WHITE, BLACK, "[%d ]", i);
+		hw_usb_xhci_TRB_setType(&req->input[0], hw_usb_xhci_TRB_Type_NoOpCmd);	
+		for (int i = 0; i < hw_usb_xhci_Ring_mxSz * 2 + 10; i++) {
+			printk(WHITE, BLACK, "[%d]", i);
 			hw_usb_xhci_request(host, host->cmdRing, req, 0, 0);
 		}
+		hw_usb_xhci_freeRequest(req);
 	}
 
 	return res_SUCC;

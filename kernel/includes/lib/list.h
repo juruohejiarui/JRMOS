@@ -41,7 +41,6 @@ static __always_inline__ int List_isEmpty(ListNode *node) {
 static __always_inline__ void List_del(ListNode *node) {
 	node->next->prev = node->prev;
 	node->prev->next = node->next;
-	node->prev = node->next = node;
 }
 
 static __always_inline__ void List_insHead(ListNode *list, ListNode *node) {

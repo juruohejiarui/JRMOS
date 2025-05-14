@@ -22,6 +22,7 @@ hw_usb_xhci_Ring *hw_usb_xhci_allocRing(hw_usb_xhci_Host *host, u32 size) {
         mm_kfree(ring, mm_Attr_Shared);
         return NULL;
     }
+    memset(ring->trbs, 0, size * sizeof(hw_usb_xhci_TRB));
 
     ring->curIdx = 0;
     ring->size = size;
@@ -64,6 +65,7 @@ int hw_usb_xhci_freeRing(hw_usb_xhci_Host *host, hw_usb_xhci_Ring *ring) {
 }
 
 static int _tryInsReq(hw_usb_xhci_Host *host, hw_usb_xhci_Ring *ring, hw_usb_xhci_Request *req) {
+    req->flags &= ~hw_usb_xhci_Request_flags_Finished;
     SpinLock_lockMask(&ring->lck);
     // check if the ring is full
     if (ring->load + req->inputSz > ring->size) {
@@ -71,12 +73,12 @@ static int _tryInsReq(hw_usb_xhci_Host *host, hw_usb_xhci_Ring *ring, hw_usb_xhc
         printk(RED, BLACK, "hw: xhci: ring %#018lx is full.\n", ring);
         return res_FAIL;
     }
-
     ring->load += req->inputSz;
     List_insTail(&ring->reqLst, &req->lst);
     // insert TRBs into the ring
-    for (u32 i = 0; i < req->inputSz; i++) {
-        if (ring->curIdx + 1== ring->size) {
+    for (int i = 0; i < req->inputSz; i++) {
+        // meet link TRB
+        if (ring->curIdx + 1 == ring->size) {
             hw_usb_xhci_TRB_setCycBit(&ring->trbs[ring->curIdx], ring->cycBit);
             ring->curIdx = 0;
             ring->cycBit ^= 1;
@@ -87,14 +89,12 @@ static int _tryInsReq(hw_usb_xhci_Host *host, hw_usb_xhci_Ring *ring, hw_usb_xhc
         hw_usb_xhci_TRB_setCycBit(&ring->trbs[ring->curIdx], ring->cycBit);
         ring->curIdx++;
     }
-
     SpinLock_unlockMask(&ring->lck);
     return res_SUCC;
 }
 
 void hw_usb_xhci_InsReq(hw_usb_xhci_Host *host, hw_usb_xhci_Ring *ring, hw_usb_xhci_Request *req) {
     while (_tryInsReq(host, ring, req) != res_SUCC) {
-        
         task_sche_yield();
     }
 }
@@ -104,9 +104,12 @@ void hw_usb_xhci_request(hw_usb_xhci_Host *host, hw_usb_xhci_Ring *ring, hw_usb_
     hw_usb_xhci_InsReq(host, ring, req);
     hw_usb_xhci_DbReg_write(host, slot, doorbell);
     task_current->priority = task_Priority_Lowest;
+
     while (~req->flags & hw_usb_xhci_Request_flags_Finished) {
         task_sche_yield();
+        hw_usb_xhci_DbReg_write(host, slot, doorbell);
     }
+
     task_current->priority = task_Priority_Running;
 }
 
@@ -137,7 +140,6 @@ hw_usb_xhci_Request *hw_usb_xhci_response(hw_usb_xhci_Ring *ring, hw_usb_xhci_TR
     if (List_isEmpty(&ring->reqLst)) {
         SpinLock_unlockMask(&ring->lck);
         printk(RED, BLACK, "hw: xhci: ring %#018lx has no request waiting for responese", ring);
-        
         return NULL;
     }
 

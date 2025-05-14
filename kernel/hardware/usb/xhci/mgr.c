@@ -1,13 +1,14 @@
 #include <hardware/usb/xhci/api.h>
 #include <screen/screen.h>
 
-void hw_usb_xhci_msiHandler(u64 param) {
+intr_handlerDeclare(hw_usb_xhci_msiHandler) {
 	hw_usb_xhci_Host *host = (void *)(param & ~0xfful);
 	u32 intrId = param & 0xff;
 	hw_usb_xhci_EveRing *eveRing = host->eveRings[intrId];
 	
 	// get event trb froma event ring
 	hw_usb_xhci_TRB *event;
+	hw_usb_xhci_OpReg_write32(host, hw_usb_xhci_Host_opReg_status, (1u << 3));
 	while (hw_usb_xhci_TRB_getCycBit(event = &eveRing->rings[eveRing->curRingIdx][eveRing->curIdx]) == eveRing->cycBit) {
 		if ((++eveRing->curIdx) == eveRing->ringSz) {
 			if ((++eveRing->curRingIdx) == eveRing->ringNum)
