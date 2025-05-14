@@ -6,6 +6,7 @@
 #include <lib/bit.h>
 #include <mm/dmas.h>
 #include <interrupt/api.h>
+#include <hal/hardware/reg.h>
 
 typedef struct hw_pci_Cfg {
     u16 vendorId, deviceId;
@@ -114,7 +115,13 @@ static __always_inline__ u32 *hw_pci_MsiCap_msk(hw_pci_MsiCap *cap) {
     return hw_pci_MsiCap_is64(cap) ? &cap->cap64.msk : &cap->cap32.msk;
 }
 
-static __always_inline__ u64 hw_pci_Cfg_getBar(u32 *bar) { return (((*bar >> 1) & 0x3 == 0x1) ? (u64)*bar : *(u64 *)bar) & ~0xful; }
+static __always_inline__ u64 hw_pci_Cfg_getBar(u32 *bar) { 
+    register u64 val = hal_read32((u64)bar);
+    if ((val >> 1) & 0x3)
+        return (((u64)hal_read32((u64)bar + 4) << 32) | val) & ~0xful;
+    else return (u64)val & ~0xful;
+}
+
 
 typedef struct hw_pci_MsixCap {
     hw_pci_CapHdr hdr;

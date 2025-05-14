@@ -45,9 +45,10 @@ static __always_inline__ void _disablePartnerCtrl(hw_usb_xhci_Host *host) {
 
 static __always_inline__ int _getRegAddr(hw_usb_xhci_Host *host) {
 	u64 phyAddr = hw_pci_Cfg_getBar(&host->pci->cfg->type0.bar[0]);
+
 	host->capRegAddr = (u64)mm_dmas_phys2Virt(phyAddr);
 
-	printk(WHITE, BLACK, "hw: xhci: host %#018lx: capRegAddr:%#018lx\n", host, phyAddr);
+	printk(WHITE, BLACK, "hw: xhci: host %#018lx: %08x %08x capRegAddr:%#018lx\n", host, host->pci->cfg->type0.bar[0], host->pci->cfg->type0.bar[1], host->capRegAddr);
 	
 	// map this address in dmas
 	if (mm_dmas_map(phyAddr) == res_FAIL) {

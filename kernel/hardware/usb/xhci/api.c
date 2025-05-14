@@ -24,7 +24,7 @@ hw_usb_xhci_Ring *hw_usb_xhci_allocRing(hw_usb_xhci_Host *host, u32 size) {
     }
     memset(ring->trbs, 0, size * sizeof(hw_usb_xhci_TRB));
 
-    ring->curIdx = 0;
+    ring->curIdx = ring->load = 0;
     ring->size = size;
 
     ring->reqs = mm_kmalloc(size * sizeof(hw_usb_xhci_Request *), mm_Attr_Shared, NULL);
