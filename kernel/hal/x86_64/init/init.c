@@ -27,7 +27,7 @@ u64 hal_init_testUsr(u64 param) {
 u64 hal_init_test(u64 param) {
 	for (int i = 0; i < param * 100; i++) {
 		// if (i % 100 == 0) printk(WHITE, BLACK, "K%2d ", param);
-		if (i == 11 * param) task_signal_set(task_current, 1);
+		if (i == 11 * param) task_signal_send(task_current, 1);
 		task_sche_yield();
 	}
 	return 0;

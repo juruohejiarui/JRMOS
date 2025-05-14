@@ -29,6 +29,7 @@ struct task_ThreadStruct {
 	SpinLock pgTblLck;
 
 	task_SignalHandler sigHandler[task_nrSignal];
+	u64 sigParam[task_nrSignal];
 
 	SafeList tskList;
 

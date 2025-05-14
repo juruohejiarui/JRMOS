@@ -166,8 +166,18 @@ int hw_usb_xhci_reset(hw_usb_xhci_Host *host);
 
 int hw_usb_xhci_waitReady(hw_usb_xhci_Host *host);
 
+hw_usb_xhci_Device *hw_usb_xhci_newDev(hw_usb_xhci_Host *host, hw_usb_xhci_Device *parent, u32 portIdx);
+
+int hw_usb_xhci_freeDev(hw_usb_xhci_Device *dev);
+
 intr_handlerDeclare(hw_usb_xhci_msiHandler);
 
+void hw_usb_xhci_portChange(hw_usb_xhci_Host *host, u32 portIdx);
+
+void hw_usb_xhci_devMgrTsk(hw_usb_xhci_Device *dev);
+
 int hw_usb_xhci_init();
+
+int hw_usb_xhci_devInit(hw_usb_xhci_Device *dev);
 
 #endif

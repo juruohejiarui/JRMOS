@@ -215,3 +215,32 @@ int hw_usb_xhci_waitReady(hw_usb_xhci_Host *host) {
     if (hw_usb_xhci_OpReg_read32(host, hw_usb_xhci_Host_opReg_status) & (1u << 11)) return res_FAIL;
     return res_SUCC;
 }
+
+hw_usb_xhci_Device *hw_usb_xhci_newDev(hw_usb_xhci_Host *host, hw_usb_xhci_Device *parent, u32 portIdx) {
+    hw_usb_xhci_Device *dev = mm_kmalloc(sizeof(hw_usb_xhci_Device), mm_Attr_Shared, NULL);
+    if (!dev) {
+        printk(RED, BLACK, "hw: xhci: alloc device failed\n");
+        return NULL;
+    }
+    memset(dev, 0, sizeof(hw_usb_xhci_Device));
+    dev->flag = parent ? hw_usb_xhci_Device_flag_Direct : 0;
+    dev->portId = portIdx;
+
+    dev->parent = parent;
+    dev->host = host;
+
+    // make new task for the device
+    dev->mgrTsk = task_newTask(hw_usb_xhci_devMgrTsk, (u64)dev, task_attr_Builtin);
+
+    SafeList_insTail(&host->devLst, &dev->lst);
+    return dev;
+}
+
+int hw_usb_xhci_freeDev(hw_usb_xhci_Device *dev) {
+    if (!dev) return res_FAIL;
+    if (mm_kfree(dev, mm_Attr_Shared) == res_FAIL) {
+        printk(RED, BLACK, "hw: xhci: free device failed\n");
+        return res_FAIL;
+    }
+    return res_SUCC;
+}

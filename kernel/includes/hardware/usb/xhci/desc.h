@@ -203,15 +203,20 @@ typedef struct hw_usb_xhci_EveRing {
 
 typedef struct hw_usb_xhci_Device {
     struct hw_usb_xhci_Host *host;
-    int slotId;
-    int state;
+    struct hw_usb_xhci_Device *parent;
+    u32 slotId, portId;
+    u32 flag;
+
+    #define hw_usb_xhci_Device_flag_Enbl    (1ul << 0)
+    // whether the device is directly connected to the host
+    #define hw_usb_xhci_Device_flag_Direct  (1ul << 1)
     
     task_TaskStruct *mgrTsk;
 
     hw_usb_xhci_DevCtx *ctx;
     hw_usb_xhci_InCtx *inCtx;
 
-    SafeList ringLst;
+    hw_usb_xhci_Ring *epRing[31];
 
     hw_usb_devdesc_Device *devDesc;
     hw_usb_devdesc_Cfg *cfgDesc;
@@ -270,7 +275,8 @@ typedef struct hw_usb_xhci_Host {
 
     hw_usb_xhci_DevCtx **devCtx;
 
-    task_TaskStruct *mgrTsk;
+    hw_usb_xhci_Device **dev;
+    hw_usb_xhci_Device **portDev;
 
     
 } hw_usb_xhci_Host;

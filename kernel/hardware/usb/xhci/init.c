@@ -281,6 +281,21 @@ static int _initHost(hw_usb_xhci_Host *host) {
 		}
 	}
 
+	// allocate device task array
+	host->dev = mm_kmalloc(sizeof(hw_usb_xhci_Device *) * hw_usb_xhci_mxSlot(host), mm_Attr_Shared, NULL);
+	if (host->dev == NULL) {
+		printk(RED, BLACK, "hw: xhci: host %#018lx failed to allocate device array\n", host);
+		return res_FAIL;
+	}
+	memset(host->dev, 0, sizeof(hw_usb_xhci_Device *) * hw_usb_xhci_mxSlot(host));
+	
+	host->portDev = mm_kmalloc(sizeof(hw_usb_xhci_Device *) * hw_usb_xhci_mxPort(host), mm_Attr_Shared, NULL);
+	if (host->portDev == NULL) {
+		printk(RED, BLACK, "hw: xhci: host %#018lx failed to allocate port device array\n", host);
+		return res_FAIL;
+	}
+	memset(host->dev, 0, sizeof(hw_usb_xhci_Device *) * hw_usb_xhci_mxPort(host));
+
 	// release this host from BIOS
 	for (void *extCap = hw_usb_xhci_nxtExtCap(host, NULL); extCap; extCap = hw_usb_xhci_nxtExtCap(host, extCap)) {
 		if (hw_usb_xhci_xhci_getExtCapId(extCap) == 0x01) {
@@ -330,7 +345,6 @@ static int _initHost(hw_usb_xhci_Host *host) {
 				ringTbl[(j << 1) | 1] = hw_usb_xhci_Ring_mxSz;
 			
 			hw_usb_xhci_IntrReg_write32(host, i, hw_usb_xhci_intrReg_IMod, 0);
-			printk(WHITE, BLACK, "%#018lx %d\n", tblSize, bit_ffs32(tblSize));
 			hw_usb_xhci_IntrReg_write32(host, i, hw_usb_xhci_intrReg_TblSize, tblSize | (hw_usb_xhci_IntrReg_read32(host, i, hw_usb_xhci_intrReg_TblSize) & ~0xffffu));
 			hw_usb_xhci_IntrReg_write64(host, i, hw_usb_xhci_intrReg_TblAddr, mm_dmas_virt2Phys(ringTbl) | (hw_usb_xhci_IntrReg_read64(host, i, hw_usb_xhci_intrReg_TblAddr) & 0x3ful));
 			// set dequeue pointer to the first trb of the first ring
@@ -355,16 +369,23 @@ static int _initHost(hw_usb_xhci_Host *host) {
 		hw_usb_xhci_OpReg_read32(host, hw_usb_xhci_Host_opReg_cmd), hw_usb_xhci_OpReg_read32(host, hw_usb_xhci_Host_opReg_status));
 
 	// set empty command to test
-	{
-		hw_usb_xhci_Request *req = hw_usb_xhci_makeRequest(1, hw_usb_xhci_Request_flags_Command);
-		hw_usb_xhci_TRB_setType(&req->input[0], hw_usb_xhci_TRB_Type_NoOpCmd);	
-		for (int i = 0; i < 10; i++) {
-			printk(WHITE, BLACK, "[%d]", i);
-			hw_usb_xhci_request(host, host->cmdRing, req, 0, 0);
-		}
-		hw_usb_xhci_freeRequest(req);
-	}
+	// {
+	// 	hw_usb_xhci_Request *req = hw_usb_xhci_makeRequest(1, hw_usb_xhci_Request_flags_Command);
+	// 	hw_usb_xhci_TRB_setType(&req->input[0], hw_usb_xhci_TRB_Type_NoOpCmd);	
+	// 	for (int i = 0; i < 10; i++) {
+	// 		printk(WHITE, BLACK, "[%d]", i);
+	// 		hw_usb_xhci_request(host, host->cmdRing, req, 0, 0);
+	// 	}
+	// 	hw_usb_xhci_freeRequest(req);
+	// }
 
+	// for qemu xhci, call portChange manually
+	if (host->pci->cfg->vendorId == 0x1b36 && host->pci->cfg->deviceId == 0x000d) {
+		for (int i = hw_usb_xhci_mxPort(host); i > 0; i--)
+			if (hw_usb_xhci_PortReg_read(host, i, hw_usb_xhci_Host_portReg_sc) & 1)
+				hw_usb_xhci_portChange(host, i);
+	}
+ 
 	return res_SUCC;
 }
 
@@ -376,3 +397,6 @@ int hw_usb_xhci_init() {
 	return res_SUCC;
 }
 
+int hw_usb_xhci_devInit(hw_usb_xhci_Device *dev) {
+	return res_SUCC;
+}

@@ -35,4 +35,6 @@ bit 0 indicates whether the task need to be scheduled
 #define task_Priority_Running   0x0
 #define task_Priority_Lowest    0x6
 
+#define task_Signal_kill	0x0
+#define task_Signal_Int		0x1
 #endif
