@@ -154,7 +154,7 @@ void hw_usb_xhci_InsReq(hw_usb_xhci_Host *host, hw_usb_xhci_Ring *ring, hw_usb_x
 
 void hw_usb_xhci_request(hw_usb_xhci_Host *host, hw_usb_xhci_Ring *ring, hw_usb_xhci_Request *req, u32 slot, u32 doorbell);
 
-hw_usb_xhci_Request *hw_usb_xhci_response(hw_usb_xhci_Ring *ring, hw_usb_xhci_TRB *result);
+hw_usb_xhci_Request *hw_usb_xhci_response(hw_usb_xhci_Ring *ring, hw_usb_xhci_TRB *result, u64 trbAddr);
 
 hw_usb_xhci_Request *hw_usb_xhci_makeRequest(u32 size, u32 flags);
 

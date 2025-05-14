@@ -17,7 +17,7 @@ intr_handlerDeclare(hw_usb_xhci_msiHandler) {
 		}
 		switch (hw_usb_xhci_TRB_getType(event)) {
 			case hw_usb_xhci_TRB_Type_CmdCmpl :
-				hw_usb_xhci_Request *req = hw_usb_xhci_response(host->cmdRing, event);
+				hw_usb_xhci_Request *req = hw_usb_xhci_response(host->cmdRing, event, *(u64 *)&event->dt1);
 				printk(YELLOW, BLACK, "response to command request %#018lx with code:%d\n", req, hw_usb_xhci_TRB_getCmplCode(event));
 				break;
 			case hw_usb_xhci_TRB_Type_PortStChg :

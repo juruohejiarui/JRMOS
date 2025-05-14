@@ -44,7 +44,7 @@ static __always_inline__ void _disablePartnerCtrl(hw_usb_xhci_Host *host) {
 }
 
 static __always_inline__ int _getRegAddr(hw_usb_xhci_Host *host) {
-	u64 phyAddr = ((host->pci->cfg->type0.bar[0] | (((u64)host->pci->cfg->type0.bar[1]) << 32))) & ~0xful;
+	u64 phyAddr = hw_pci_Cfg_getBar(&host->pci->cfg->type0.bar[0]);
 	host->capRegAddr = (u64)mm_dmas_phys2Virt(phyAddr);
 
 	printk(WHITE, BLACK, "hw: xhci: host %#018lx: capRegAddr:%#018lx\n", host, phyAddr);
@@ -117,7 +117,7 @@ static int _initHost(hw_usb_xhci_Host *host) {
 	printk(WHITE, BLACK, "hw: xhci: host %#018lx: capReg:%#018lx opReg:%#018lx rtReg:%#018lx dbReg:%#018lx\n",
 		host, host->capRegAddr, host->opRegAddr, host->rtRegAddr, host->dbRegAddr);
 	printk(WHITE, BLACK, "hw: xhci: host %#018lx: mxslot:%d mxintr:%d mxport:%d mxerst:%d mxscr:%d\n",
-		host, hw_usb_xhci_mxSlot(host), hw_usb_xhci_mxIntr(host), hw_usb_xhci_mxPort(host), hw_usb_xhci_mxERST(host), hw_usb_xhci_mxScrSz(host));
+		host, hw_usb_xhci_mxSlot(host), hw_usb_xhci_mxIntr(host), hw_usb_xhci_mxPort(host), 1 << hw_usb_xhci_mxERST(host), hw_usb_xhci_mxScrSz(host));
 
 	// check if the controller support neccessary features: 4K page, 64bit address, port power control
 	if (~hw_usb_xhci_OpReg_read32(host, hw_usb_xhci_Host_opReg_pgSize) & 0x1) {
@@ -151,7 +151,8 @@ static int _initHost(hw_usb_xhci_Host *host) {
 			printk(RED, BLACK, "hw: xhci: host %#018lx failed to stop\n", host);
 			return res_FAIL;
 		}
-		printk(GREEN, BLACK, "hw: xhci: host %#018lx stopped\n", host);
+		printk(GREEN, BLACK, "hw: xhci: host %#018lx stopped cmd:%#010x status:%#010x\n", 
+			host, hw_usb_xhci_OpReg_read32(host, hw_usb_xhci_Host_opReg_cmd), hw_usb_xhci_OpReg_read32(host, hw_usb_xhci_Host_opReg_status));
 	}
 
 	// reset the host
@@ -186,13 +187,14 @@ static int _initHost(hw_usb_xhci_Host *host) {
 		printk(WHITE, BLACK, "hw: xhci: host %#018lx use msix\n", host);
 
 		int vecNum = hw_pci_MsixCap_vecNum(host->msixCap);
+		vecNum = host->intrNum = min(vecNum, host->intrNum);
 
 		hw_pci_MsixTbl *tbl = hw_pci_getMsixTbl(msix, host->pci->cfg);
 		
-		printk(WHITE, BLACK, "hw: xhci: host %#018lx msixtbl:%#018lx vecNum:%d msgCtrl:%#010x\n", host, tbl, vecNum + 1, msix->msgCtrl);
+		printk(WHITE, BLACK, "hw: xhci: host %#018lx msixtbl:%#018lx vecNum:%d msgCtrl:%#010x\n", host, tbl, vecNum, msix->msgCtrl);
 
 		for (int i = 0; i < host->intrNum; i++) {
-			hw_pci_initIntr(host->intr + i, hw_usb_xhci_msiHandler, (u64)host | i, "xhci msi");
+			hw_pci_initIntr(host->intr + i, hw_usb_xhci_msiHandler, (u64)host | i, "xhci msix");
 		}
 		if (hw_pci_allocMsix(host->msixCap, host->pci->cfg, host->intr, host->intrNum) == res_FAIL) {
 			printk(RED, BLACK, "hw: xhci: host %#018lx failed to allocate msix interrupt\n", host);
@@ -308,7 +310,8 @@ static int _initHost(hw_usb_xhci_Host *host) {
 
 	// allocate event rings
 	{	
-		int tblSize = min(4, hw_usb_xhci_mxERST(host));
+		int tblSize = min(4, 1 << hw_usb_xhci_mxERST(host));
+		printk(WHITE, BLACK, "hw: xhci: host %#018lx event ring tbl size:%d\n", host, tblSize);
 		host->eveRings = mm_kmalloc(sizeof(hw_usb_xhci_EveRing *) * host->intrNum, mm_Attr_Shared, NULL);
 		for (int i = 0; i < host->intrNum; i++) {
 			host->eveRings[i] = hw_usb_xhci_allocEveRing(host, tblSize, hw_usb_xhci_Ring_mxSz);
@@ -326,7 +329,7 @@ static int _initHost(hw_usb_xhci_Host *host) {
 				ringTbl[(j << 1) | 1] = hw_usb_xhci_Ring_mxSz;
 			
 			hw_usb_xhci_IntrReg_write32(host, i, hw_usb_xhci_intrReg_IMod, 0);
-			hw_usb_xhci_IntrReg_write32(host, i, hw_usb_xhci_intrReg_TblSize, tblSize | (hw_usb_xhci_IntrReg_read32(host, i, hw_usb_xhci_intrReg_TblSize) & ~0xffffu));
+			hw_usb_xhci_IntrReg_write32(host, i, hw_usb_xhci_intrReg_TblSize, (bit_ffs32(tblSize) - 1) | (hw_usb_xhci_IntrReg_read32(host, i, hw_usb_xhci_intrReg_TblSize) & ~0xffffu));
 			hw_usb_xhci_IntrReg_write64(host, i, hw_usb_xhci_intrReg_TblAddr, mm_dmas_virt2Phys(ringTbl) | (hw_usb_xhci_IntrReg_read64(host, i, hw_usb_xhci_intrReg_TblAddr) & 0x3ful));
 			// set dequeue pointer to the first trb of the first ring
 			hw_usb_xhci_IntrReg_write64(host, i, hw_usb_xhci_intrReg_DeqPtr, ringTbl[0] | (1ul << 3));
@@ -353,7 +356,7 @@ static int _initHost(hw_usb_xhci_Host *host) {
 	{
 		hw_usb_xhci_Request *req = hw_usb_xhci_makeRequest(1, hw_usb_xhci_Request_flags_Command);
 		hw_usb_xhci_TRB_setType(&req->input[0], hw_usb_xhci_TRB_Type_NoOpCmd);	
-		for (int i = 0; i < hw_usb_xhci_Ring_mxSz * 2 + 10; i++) {
+		for (int i = 0; i < 10; i++) {
 			printk(WHITE, BLACK, "[%d]", i);
 			hw_usb_xhci_request(host, host->cmdRing, req, 0, 0);
 		}

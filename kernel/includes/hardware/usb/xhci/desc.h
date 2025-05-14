@@ -17,7 +17,6 @@ typedef struct hw_usb_xhci_Request {
     #define hw_usb_xhci_Request_flags_Finished  (1u << 0)
     #define hw_usb_xhci_Request_flags_Command   (1u << 1)
     hw_usb_xhci_TRB res;
-    ListNode lst;
     hw_usb_xhci_TRB input[];
 } __attribute__ ((packed)) hw_usb_xhci_Request;
 
@@ -188,8 +187,8 @@ typedef struct hw_usb_xhci_Ring {
     SpinLock lck;
     u32 curIdx, size;
     u32 cycBit, load;
-    ListNode reqLst;
     ListNode lst;
+    hw_usb_xhci_Request **reqs;
     hw_usb_xhci_TRB *trbs;
 } __attribute__ ((packed)) hw_usb_xhci_Ring;
 

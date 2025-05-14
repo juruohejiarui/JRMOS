@@ -27,7 +27,13 @@ hw_usb_xhci_Ring *hw_usb_xhci_allocRing(hw_usb_xhci_Host *host, u32 size) {
     ring->curIdx = 0;
     ring->size = size;
 
-    List_init(&ring->reqLst);
+    ring->reqs = mm_kmalloc(size * sizeof(hw_usb_xhci_Request *), mm_Attr_Shared, NULL);
+    if (!ring->reqs) {
+        printk(RED, BLACK, "hw: xhci: alloc ring request pointer failed\n");
+        mm_kfree(ring->trbs, mm_Attr_Shared);
+        mm_kfree(ring, mm_Attr_Shared);
+        return NULL;
+    }
     SpinLock_init(&ring->lck);
     
     ring->cycBit = 1;
@@ -49,11 +55,15 @@ hw_usb_xhci_Ring *hw_usb_xhci_allocRing(hw_usb_xhci_Host *host, u32 size) {
 }
 
 int hw_usb_xhci_freeRing(hw_usb_xhci_Host *host, hw_usb_xhci_Ring *ring) {
-    if (!ring || !List_isEmpty(&ring->reqLst)) return res_FAIL;
+    if (!ring || ring->load) return res_FAIL;
 
     SafeList_del(&host->ringLst, &ring->lst);
     if (mm_kfree(ring->trbs, mm_Attr_Shared) == res_FAIL) {
         printk(RED, BLACK, "hw: xhci: free ring trbs failed\n");
+        return res_FAIL;
+    }
+    if (mm_kfree(ring->reqs, mm_Attr_Shared) == res_FAIL) {
+        printk(RED, BLACK, "hw: xhci: free ring request pointer failed\n");
         return res_FAIL;
     }
     if (mm_kfree(ring, mm_Attr_Shared) == res_FAIL) {
@@ -74,7 +84,6 @@ static int _tryInsReq(hw_usb_xhci_Host *host, hw_usb_xhci_Ring *ring, hw_usb_xhc
         return res_FAIL;
     }
     ring->load += req->inputSz;
-    List_insTail(&ring->reqLst, &req->lst);
     // insert TRBs into the ring
     for (int i = 0; i < req->inputSz; i++) {
         // meet link TRB
@@ -87,6 +96,7 @@ static int _tryInsReq(hw_usb_xhci_Host *host, hw_usb_xhci_Ring *ring, hw_usb_xhc
         }
         hw_usb_xhci_TRB_copy(&req->input[i], &ring->trbs[ring->curIdx]);
         hw_usb_xhci_TRB_setCycBit(&ring->trbs[ring->curIdx], ring->cycBit);
+        ring->reqs[ring->curIdx] = req;
         ring->curIdx++;
     }
     SpinLock_unlockMask(&ring->lck);
@@ -104,10 +114,8 @@ void hw_usb_xhci_request(hw_usb_xhci_Host *host, hw_usb_xhci_Ring *ring, hw_usb_
     hw_usb_xhci_InsReq(host, ring, req);
     hw_usb_xhci_DbReg_write(host, slot, doorbell);
     task_current->priority = task_Priority_Lowest;
-
     while (~req->flags & hw_usb_xhci_Request_flags_Finished) {
         task_sche_yield();
-        hw_usb_xhci_DbReg_write(host, slot, doorbell);
     }
 
     task_current->priority = task_Priority_Running;
@@ -122,7 +130,6 @@ hw_usb_xhci_Request *hw_usb_xhci_makeRequest(u32 size, u32 flags) {
     memset(req->input, 0, size * sizeof(hw_usb_xhci_TRB));
     req->flags = flags;
     req->inputSz = size;
-    List_init(&req->lst);
     return req;
 }
 
@@ -135,16 +142,16 @@ int hw_usb_xhci_freeRequest(hw_usb_xhci_Request *req) {
 }
 
 // response the first request in the ring and wake the corresponding task
-hw_usb_xhci_Request *hw_usb_xhci_response(hw_usb_xhci_Ring *ring, hw_usb_xhci_TRB *result) {
+hw_usb_xhci_Request *hw_usb_xhci_response(hw_usb_xhci_Ring *ring, hw_usb_xhci_TRB *result, u64 trbAddr) {
     SpinLock_lockMask(&ring->lck);
-    if (List_isEmpty(&ring->reqLst)) {
+    if (!ring->load) {
         SpinLock_unlockMask(&ring->lck);
         printk(RED, BLACK, "hw: xhci: ring %#018lx has no request waiting for responese", ring);
         return NULL;
     }
 
-    hw_usb_xhci_Request *req = container(List_getHead(&ring->reqLst), hw_usb_xhci_Request, lst);
-    List_del(&req->lst);
+    u64 idx = (trbAddr - mm_dmas_virt2Phys(ring->trbs)) / sizeof(hw_usb_xhci_TRB);
+    hw_usb_xhci_Request *req = ring->reqs[idx];
 
     ring->load -= req->inputSz;
     SpinLock_unlockMask(&ring->lck);

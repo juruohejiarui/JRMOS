@@ -114,6 +114,8 @@ static __always_inline__ u32 *hw_pci_MsiCap_msk(hw_pci_MsiCap *cap) {
     return hw_pci_MsiCap_is64(cap) ? &cap->cap64.msk : &cap->cap32.msk;
 }
 
+static __always_inline__ u64 hw_pci_Cfg_getBar(u32 *bar) { return (((*bar >> 1) & 0x3 == 0x1) ? (u64)*bar : *(u64 *)bar) & ~0xful; }
+
 typedef struct hw_pci_MsixCap {
     hw_pci_CapHdr hdr;
     u16 msgCtrl;
@@ -151,7 +153,7 @@ void hw_pci_lstDev();
 void hw_pci_initIntr(intr_Desc *desc, void (*handler)(u64), u64 param, char *name);
 
 static __always_inline__ hw_pci_MsixTbl *hw_pci_getMsixTbl(hw_pci_MsixCap *cap, hw_pci_Cfg *cfg) {
-    return mm_dmas_phys2Virt((*(u64 *)&cfg->type0.bar[hw_pci_MsixCap_bir(cap)] & ~0xf) + hw_pci_MsixCap_tblOff(cap));
+    return mm_dmas_phys2Virt(hw_pci_Cfg_getBar(&cfg->type0.bar[hw_pci_MsixCap_bir(cap)]) + hw_pci_MsixCap_tblOff(cap));
 }
 
 int hw_pci_setMsix(hw_pci_MsixCap *cap, hw_pci_Cfg *cfg, intr_Desc *desc, u64 intrNum);

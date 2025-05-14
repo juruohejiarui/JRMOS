@@ -50,7 +50,7 @@ debug(){
 			-m 512M \
 			-D b.log \
 			-d \
-				trace:usb_xhci_run,trace:usb_xhci_irq_msi,trace:usb_xhci_irq_msix,trace:usb_xhci_doorbell_write,guest_errors \
+				int,trace:usb_xhci_run,guest_errors \
 			-smp 4"
 
 
