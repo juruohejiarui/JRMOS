@@ -136,7 +136,7 @@ static __always_inline__ u32 hw_usb_xhci_mxIntr(hw_usb_xhci_Host *host) { return
 static __always_inline__ u32 hw_usb_xhci_mxPort(hw_usb_xhci_Host *host) { return (hw_usb_xhci_CapReg_hcsParam(host, 1) >> 24) & ((1u << 8) - 1); }
 
 // maximum value of event ring segment table size
-static __always_inline__ u32 hw_usb_xhci_mxERST(hw_usb_xhci_Host *host) { return (1u << (hw_usb_xhci_CapReg_hcsParam(host, 2) >> 4) & 0xf); }
+static __always_inline__ u32 hw_usb_xhci_mxERST(hw_usb_xhci_Host *host) { return (1u << ((hw_usb_xhci_CapReg_hcsParam(host, 2) >> 4) & 0xf)); }
 
 static __always_inline__ u32 hw_usb_xhci_mxScrSz(hw_usb_xhci_Host *host) {
 	register u32 vl = hw_usb_xhci_CapReg_hcsParam(host, 2);
