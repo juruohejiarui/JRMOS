@@ -183,6 +183,18 @@ typedef union hw_usb_xhci_InCtx {
     hw_usb_xhci_InCtx64 *ctx64;
 } __attribute__ ((packed)) hw_usb_xhci_InCtx;
 
+#define hw_usb_xhci_InCtx_Ctrl 0x0
+#define hw_usb_xhci_InCtx_Slot 0x1
+#define hw_usb_xhci_InCtx_Ep(x, dir) ((((x) << 1) | dir) + 1)
+
+#define hw_usb_xhci_DevCtx_Slot 0x0
+#define hw_usb_xhci_DevCtx_Ep(x, dir) (((x) << 1) | dir)
+
+#define hw_usb_xhci_Speed_Full  1
+#define hw_usb_xhci_Speed_Low   2
+#define hw_usb_xhci_Speed_High  3
+#define hw_usb_xhci_Speed_Super 4
+
 typedef struct hw_usb_xhci_Ring {
     SpinLock lck;
     u32 curIdx, size;
@@ -204,7 +216,8 @@ typedef struct hw_usb_xhci_EveRing {
 typedef struct hw_usb_xhci_Device {
     struct hw_usb_xhci_Host *host;
     struct hw_usb_xhci_Device *parent;
-    u32 slotId, portId;
+    u32 slotId;
+    u16 portId, speed;
     u32 flag;
 
     #define hw_usb_xhci_Device_flag_Enbl    (1ul << 0)
@@ -216,7 +229,7 @@ typedef struct hw_usb_xhci_Device {
     hw_usb_xhci_DevCtx *ctx;
     hw_usb_xhci_InCtx *inCtx;
 
-    hw_usb_xhci_Ring *epRing[31];
+    hw_usb_xhci_Ring *epRing[32];
 
     hw_usb_devdesc_Device *devDesc;
     hw_usb_devdesc_Cfg *cfgDesc;
@@ -238,16 +251,6 @@ typedef struct hw_usb_xhci_Host {
     union {
         hw_pci_MsiCap *msiCap;
         hw_pci_MsixCap *msixCap;
-    };
-
-    union {
-        hw_usb_xhci_DevCtx32 *devCtx32;
-        hw_usb_xhci_DevCtx64 *devCtx64;
-    };
-
-    union {
-        hw_usb_xhci_InCtx32 *inCtx32;
-        hw_usb_xhci_InCtx64 *inCtx64;
     };
 
     intr_Desc *intr;
@@ -302,8 +305,9 @@ typedef struct hw_usb_xhci_Host {
 #define hw_usb_xhci_Host_opReg_dcbaa	0x30
 #define hw_usb_xhci_Host_opReg_cfg		0x38
 
-#define XHCI_Ext_Id_Legacy		0x1
-#define XHCI_Ext_Id_Protocol	0x2
+#define hw_usb_xhci_Ext_Id_Legacy		0x1
+
+#define hw_usb_xhci_Ext_Id_Protocol     0x2
 
 #define hw_usb_xhci_Host_portReg_baseOffset	    0x400
 #define hw_usb_xhci_Host_portReg_offset	        0x10

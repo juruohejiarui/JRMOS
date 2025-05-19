@@ -225,7 +225,9 @@ int task_freeThread(task_ThreadStruct *thread) {
     }
     while (thread->slabRecord.root) {
         mm_SlabRecord *record = container(thread->slabRecord.root, mm_SlabRecord, rbNode);
+        RBTree_del(&thread->slabRecord, &record->rbNode);
         mm_kfree(record->ptr, mm_Attr_Shared);
+        mm_kfree(record, mm_Attr_Shared);
     }
     if (hal_task_freeThread(thread) == res_FAIL) return res_FAIL;
     mm_kfree(thread, mm_Attr_Shared);
@@ -277,6 +279,8 @@ task_TaskStruct *task_newSubTask(void *entryAddr, u64 arg, u64 attr) {
     Atomic_inc(&task_pidCnt);
     tsk->state = task_state_Idle;
     tsk->vRuntime = task_current->vRuntime;
+
+    tsk->flag = attr & (task_attr_Usr | task_attr_Builtin);
 
     List_init(&task_current->scheNd);
 
@@ -343,15 +347,16 @@ void task_exit(u64 res) {
     
     task_current->priority = task_Priority_Lowest;
     task_current->state = task_state_NeedFree;
-    while (1) task_sche_wake(task_freeMgrTsk), task_sche_yield();
+    while (1) task_sche_yield();
 }
 
 task_TaskStruct *task_freeMgrTsk;
 
 u64 task_freeMgr(u64 arg) {
     u64 tot = 0;
+    task_current->priority = task_Priority_Lowest;
     while (1) {
-        task_sche_sleep();
+        if (SafeList_isEmpty(&task_mgr.freeTsks)) { task_sche_yield(); continue; }
         task_current->priority = task_Priority_Running;
         while (!SafeList_isEmpty(&task_mgr.freeTsks)) {
             task_TaskStruct *tsk = container(SafeList_getHead(&task_mgr.freeTsks), task_TaskStruct, scheNd);

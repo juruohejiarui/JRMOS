@@ -326,7 +326,7 @@ void printk(unsigned int fcol, unsigned int bcol, const char *fmt, ...) {
 }
 
 void printu(unsigned int fcol, unsigned int bcol, const char *fmt, ...) {
-    char buf[4096] = {0};
+    char buf[512] = {0};
     int len = 0;
     va_list args;
     va_start(args, fmt);

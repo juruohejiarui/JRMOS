@@ -298,7 +298,7 @@ static int _initHost(hw_usb_xhci_Host *host) {
 
 	// release this host from BIOS
 	for (void *extCap = hw_usb_xhci_nxtExtCap(host, NULL); extCap; extCap = hw_usb_xhci_nxtExtCap(host, extCap)) {
-		if (hw_usb_xhci_xhci_getExtCapId(extCap) == 0x01) {
+		if (hw_usb_xhci_xhci_getExtCapId(extCap) == hw_usb_xhci_Ext_Id_Legacy) {
 			printk(WHITE, BLACK, "hw: xhci: host %#018lx legacy support previous value: %#010x\n", host, hal_read32((u64)extCap));
 			hal_write32((u64)extCap, hal_read32((u64)extCap) | (1u << 24));
 			int timeout = 10;
@@ -397,6 +397,94 @@ int hw_usb_xhci_init() {
 	return res_SUCC;
 }
 
-int hw_usb_xhci_devInit(hw_usb_xhci_Device *dev) {
-	return res_SUCC;
+static __always_inline__ u32 _EpCtx_getDefaultMxPackSz0(u32 speed) {
+	switch (speed) {
+		case hw_usb_xhci_Speed_Full :
+		case hw_usb_xhci_Speed_High : return 64;
+		case hw_usb_xhci_Speed_Super : return 512;
+		case hw_usb_xhci_Speed_Low : return 8;
+	}
+	return 512;
 }
+
+int hw_usb_xhci_devInit(hw_usb_xhci_Device *dev) {
+	// get slot ID
+	hw_usb_xhci_Host *host = dev->host;
+
+	hw_usb_xhci_Request *req = hw_usb_xhci_makeRequest(1, hw_usb_xhci_Request_flags_Command);
+	hw_usb_xhci_TRB_setType(&req->input[0], hw_usb_xhci_TRB_Type_EnblSlot);
+	
+	// get slot Type
+	if (dev->flag & hw_usb_xhci_Device_flag_Direct) {
+		// read supported protocol capability
+		printk(WHITE, BLACK, "hw: xhci: dev %#018lx slot type:%d\n", dev, hw_usb_xhci_getSlotType(host, dev->portId));
+		hw_usb_xhci_TRB_setSlotType(&req->input[0], hw_usb_xhci_getSlotType(host, dev->portId));
+		dev->speed = (hw_usb_xhci_PortReg_read(host, dev->portId, hw_usb_xhci_Host_portReg_sc) >> 10) & ((1u << 4) - 1);
+	} else hw_usb_xhci_TRB_setSlotType(&req->input[0], 0), dev->speed = 0;
+
+	hw_usb_xhci_request(host, host->cmdRing, req, 0, 0);
+	if (hw_usb_xhci_TRB_getCmplCode(&req->res) != hw_usb_xhci_TRB_CmplCode_Succ) {
+		printk(RED, BLACK, "hw: xhci: dev %#018lx failed to enable slot\n", dev);
+		hw_usb_xhci_freeRequest(req);
+		return res_FAIL;
+	}
+
+	printk(GREEN, BLACK, "hw: xhci: dev %#018lx enabled slot:%d speed:%d\n", dev, req->res.ctrl >> 24, dev->speed);
+	dev->slotId = req->res.ctrl >> 24;
+	host->dev[dev->slotId] = dev;
+
+	dev->ctx = host->devCtx[dev->slotId];
+	dev->inCtx = hw_usb_xhci_allocInCtx(host);
+
+	if (dev->ctx == NULL || dev->inCtx == NULL) {
+		printk(RED, BLACK, "hw: xhci: dev %#018lx failed to allocate context\n", dev);
+		hw_usb_xhci_freeRequest(req);
+		return res_FAIL;
+	}
+
+	memset(&req->input[0], 0, sizeof(hw_usb_xhci_TRB));
+	hw_usb_xhci_TRB_setType(&req->input[0], hw_usb_xhci_TRB_Type_AddrDev);
+	hw_usb_xhci_TRB_setSlot(&req->input[0], dev->slotId);
+	hw_usb_xhci_TRB_setData(&req->input[0], mm_dmas_virt2Phys(dev->inCtx));
+
+	{
+		void *ctrlCtx = hw_usb_xhci_getCtxEntry(host, dev->inCtx, hw_usb_xhci_InCtx_Ctrl);
+		hw_usb_xhci_writeCtx(ctrlCtx, 1, ~0x0u, (1u << 0) | (1u << 1));
+	}
+
+	{
+		void *slotCtx = hw_usb_xhci_getCtxEntry(host, dev->inCtx, hw_usb_xhci_InCtx_Slot);
+		hw_usb_xhci_writeCtx(slotCtx, 0, hw_usb_xhci_SlotCtx_ctxEntries, 1);
+		hw_usb_xhci_writeCtx(slotCtx, 0, hw_usb_xhci_SlotCtx_speed, dev->speed);
+		hw_usb_xhci_writeCtx(slotCtx, 1, hw_usb_xhci_SlotCtx_rootPortNum, dev->portId);
+	}
+
+	{
+		void *ep0 = hw_usb_xhci_getCtxEntry(host, dev->inCtx, hw_usb_xhci_InCtx_Ep(0, 1));
+		hw_usb_xhci_writeCtx(ep0, 1, hw_usb_xhci_EpCtx_epType, hw_usb_xhci_EpCtx_epType_Ctrl);
+		hw_usb_xhci_writeCtx(ep0, 1, hw_usb_xhci_EpCtx_CErr, 3);
+		hw_usb_xhci_writeCtx(ep0, 1, hw_usb_xhci_EpCtx_mxPackSize, _EpCtx_getDefaultMxPackSz0(dev->speed));
+		
+		dev->epRing[hw_usb_xhci_DevCtx_Ep(0, 1)] = hw_usb_xhci_allocRing(host, hw_usb_xhci_Ring_mxSz);
+		if (dev->epRing[hw_usb_xhci_DevCtx_Ep(0, 1)] == NULL) {
+			printk(RED, BLACK, "hw: xhci: dev %#018lx failed to allocate ep ring\n", dev);
+			hw_usb_xhci_freeRequest(req);
+			return res_FAIL;
+		}
+
+		hw_usb_xhci_writeCtx64(ep0, 2, mm_dmas_virt2Phys(dev->epRing[hw_usb_xhci_DevCtx_Ep(0, 1)]->trbs));
+		hw_usb_xhci_writeCtx(ep0, 2, hw_usb_xhci_EpCtx_dcs, 1);
+
+		hw_usb_xhci_writeCtx(ep0, 4, hw_usb_xhci_EpCtx_aveTrbLen, 8);
+	}
+
+	hw_usb_xhci_request(host, host->cmdRing, req, 0, 0);
+	if (hw_usb_xhci_TRB_getCmplCode(&req->res) != hw_usb_xhci_TRB_CmplCode_Succ) {
+		printk(RED, BLACK, "hw: xhci: dev %#018lx failed to address device\n", dev);
+		hw_usb_xhci_freeRequest(req);
+		return res_FAIL;
+	}
+	printk(GREEN, BLACK, "hw: xhci: dev %#018lx addressed\n", dev);
+
+	return res_SUCC;
+} 

@@ -52,7 +52,7 @@ void _backtrace(hal_intr_PtReg *regs) {
 		regs->rsp, task_current->hal.rsp, task_current, task_current->hal.tss.rsp0);
 	printk(RED,BLACK,"====================== Kernel Stack Backtrace ======================\n");
 
-	for(i = 0;i < 20;i++)
+	for(i = 0;i < 10;i++)
 	{
 		if (_lookupKallsyms(ret_address, i))
 			break; 
@@ -73,8 +73,11 @@ static void _printRegs(u64 rsp) {
 	printk(WHITE, BLACK, "msr: IA32_KERNEL_GS_BASE:%#018lx, IA32_GS_BASE:%#018lx\n",
 		hal_hw_readMsr(hal_msr_IA32_KERNEL_GS_BASE), hal_hw_readMsr(hal_msr_IA32_GS_BASE));
 	printk(WHITE, BLACK, "cr3: %#018lx\n", hal_hw_getCR(3));
-	mm_map_dbg(1);
-	mm_buddy_dbg(1);
+	mm_map_dbg(0);
+	printk(WHITE, BLACK, "\n");
+	mm_buddy_dbg(0);
+	printk(WHITE, BLACK, "\n");
+	printk(WHITE, BLACK, "user stack %#018lx~%#018lx\n", task_current->hal.usrStkTop - task_usrStkSize, task_current->hal.usrStkTop);
 	_backtrace((hal_intr_PtReg *)rsp);
 }
 
@@ -260,25 +263,11 @@ void hal_intr_doPageFault(u64 rsp, u64 errorCode) {
 	u64 cr2 = 0;
 	__asm__ volatile("movq %%cr2, %0":"=r"(cr2)::"memory");
 	p = (u64 *)(rsp + 0x98);
-	// u64 pldEntry = MM_PageTable_getPldEntry(getCR3(), cr2);
-	// only has attributes
-	// if ((pldEntry & ~0xffful) == 0 && (pldEntry & 0xffful)) {
-		// map this virtual address without physics page
-		// Page *page = MM_Buddy_alloc(0, Page_Flag_Active);
-		// printk(WHITE, BLACK, " Task %d allocate one page %#018lx->%#018lx\n", Task_current->pid, page->phyAddr, cr2 & ~0xffful);
-		// MM_PageTable_map(getCR3(), cr2 & ~0xffful, page->phyAddr, pldEntry | MM_PageTable_Flag_Presented);
-		
-	// } else if (pldEntry & ~0xffful) {
-	// 	// has been presented, fault because of the old TLB
-	// 	// printk(BLACK, WHITE, "[Trap]");
-	// 	// printk(WHITE, BLACK, "Task %d old TLB\n");
-	// 	flushTLB();
-	// } else 
 	if (_isStkGrow(cr2, ((hal_intr_PtReg *)rsp)->rsp)) {
 		mm_Page *page = mm_allocPages(0, mm_Attr_Shared2U);
 		// SpinLock_lock(&_trapLogLck);
-		// // printk(ORANGE, BLACK, "[Trap] Task %d need one stack page %#018lx->%#018lx\n", task_current->pid, mm_getPhyAddr(page), cr2 & ~0xffful);
-		// // _printRegs(rsp);
+		// printk(ORANGE, BLACK, "[Trap] Task %d need one stack page %#018lx->%#018lx\n", task_current->pid, mm_getPhyAddr(page), cr2 & ~0xffful);
+		// _printRegs(rsp);
 		// SpinLock_unlock(&_trapLogLck);
 		mm_map(cr2 & ~0xffful, mm_getPhyAddr(page), mm_Attr_Shared2U | mm_Attr_Exist | mm_Attr_Writable);
 	} else {

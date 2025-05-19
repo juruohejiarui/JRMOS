@@ -62,7 +62,6 @@ void hw_usb_xhci_portChange(hw_usb_xhci_Host *host, u32 portIdx) {
 }
 
 void hw_usb_xhci_uninstallDev(hw_usb_xhci_Device *dev) {
-	printk(WHITE, BLACK, "hw: xhci: uninstall device %#018lx\n", dev);
 	if (dev->flag & hw_usb_xhci_Device_flag_Direct) {
 		dev->host->portDev[dev->portId] = NULL;
 	}
@@ -73,14 +72,26 @@ void hw_usb_xhci_uninstallDev(hw_usb_xhci_Device *dev) {
 			dev->epRing[i] = NULL;
 		}
 	}
+	if (dev->slotId) {
+		hw_usb_xhci_Request *req = hw_usb_xhci_makeRequest(1, hw_usb_xhci_Request_flags_Command);
+		hw_usb_xhci_TRB_setType(&req->input[0], hw_usb_xhci_TRB_Type_DisblSlot);
+		hw_usb_xhci_TRB_setSlot(&req->input[0], dev->slotId);
+		hw_usb_xhci_request(dev->host, dev->host->cmdRing, req, 0, 0);
+		if (hw_usb_xhci_TRB_getCmplCode(&req->res) != hw_usb_xhci_TRB_CmplCode_Succ) {
+			printk(RED, BLACK, "hw: xhci: device %#018lx failed to disable slot\n", dev);
+			return;
+		}
+		printk(GREEN, BLACK, "hw: xhci: device %#018lx disabled slot:%d\n", dev, dev->slotId);
+		hw_usb_xhci_freeRequest(req);
+	}
 	hw_usb_xhci_freeDev(dev);
+	printk(GREEN, BLACK, "hw: xhci: device %#018lx uninstalled\n", dev);
 	task_exit(-1);
 }
 
 void hw_usb_xhci_devMgrTsk(hw_usb_xhci_Device *dev) {
 	printk(WHITE, BLACK, "hw: xhci: device manager task %ld for device %#018lx under host %#018lx\n", task_current->pid, dev, dev->host);
-	int res = hw_usb_xhci_devInit(dev);
-	if (res == res_FAIL) {
+	if (hw_usb_xhci_devInit(dev) == res_FAIL) {
 		printk(RED, BLACK, "hw: xhci: device manager task for device %#018lx failed to initialize\n", dev);
 		hw_usb_xhci_uninstallDev(dev);
 		return;

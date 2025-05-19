@@ -12,6 +12,9 @@ static __always_inline__ u32 hw_usb_xhci_TRB_getType(hw_usb_xhci_TRB *trb) {
 static __always_inline__ void hw_usb_xhci_TRB_setType(hw_usb_xhci_TRB *trb, u32 type) {
 	hal_write32((u64)&trb->ctrl, (hal_read32((u64)&trb->ctrl) & (0xffff03ffu)) | (type << 10));
 }
+static __always_inline__ void hw_usb_xhci_TRB_setSlotType(hw_usb_xhci_TRB *trb, u32 type) {
+	hal_write32((u64)&trb->ctrl, (hal_read32((u64)&trb->ctrl) & (0xfff0ffffu)) | (type << 16));
+}
 static __always_inline__ u32 hw_usb_xhci_TRB_getCmplCode(hw_usb_xhci_TRB *trb) {
 	return (hal_read32((u64)&trb->status) >> 24) & 0xff;
 }
@@ -145,6 +148,35 @@ static __always_inline__ u32 hw_usb_xhci_mxScrSz(hw_usb_xhci_Host *host) {
 
 void *hw_usb_xhci_nxtExtCap(hw_usb_xhci_Host *host, void *cur);
 static __always_inline__ u32 hw_usb_xhci_xhci_getExtCapId(void *cur) { return hal_read8((u64)cur);}
+
+static __always_inline__ u8 hw_usb_xhci_Ext_Protocol_PortOff(void *extCap) { return hal_read8((u64)extCap + 8); }
+static __always_inline__ u8 hw_usb_xhci_Ext_Protocol_PortCnt(void *extCap) { return hal_read8((u64)extCap + 9); }
+
+static __always_inline__ u8 hw_usb_xhci_Ext_Protocol_contain(void *extCap, u32 port) {
+	register u32 st = hw_usb_xhci_Ext_Protocol_PortOff(extCap), 
+		cnt = hw_usb_xhci_Ext_Protocol_PortCnt(extCap);
+	return (port >= st && port < st + cnt);
+}
+
+
+static __always_inline__ u8 hw_usb_xhci_Ext_Protocol_slotType(void *extCap) { return hal_read8((u64)extCap + 12); }
+
+u8 hw_usb_xhci_getSlotType(hw_usb_xhci_Host *host, u32 portIdx);
+
+hw_usb_xhci_InCtx *hw_usb_xhci_allocInCtx(hw_usb_xhci_Host *host);
+
+static __always_inline__ void *hw_usb_xhci_getCtxEntry(hw_usb_xhci_Host *host, void *ctx, u32 ctxId) {
+	return (void *)((u64)ctx + (ctxId << ((host->flag & hw_usb_xhci_Host_flag_Ctx64) ? 6 : 5)));
+}
+
+static __always_inline__ void hw_usb_xhci_writeCtx(void *ctx, int dwIdx, u32 mask, u32 val) {
+	register u64 addr = (u64)ctx + dwIdx * sizeof(u32);
+	hal_write32(addr, (hal_read32(addr) & ~mask) | ((val << (bit_ffs32(mask) - 1) & mask)));
+}
+static __always_inline__ void hw_usb_xhci_writeCtx64(void *ctx, int dwIdx, u64 val) {
+	register u64 addr = (u64)ctx + dwIdx * 8;
+	hal_write64(addr, val);
+}
 
 hw_usb_xhci_Ring *hw_usb_xhci_allocRing(hw_usb_xhci_Host *host, u32 size);
 

@@ -57,6 +57,7 @@ void hal_task_newThread(hal_task_ThreadStruct *thread, u64 attr) {
 		hal_mm_PageTbl *pgd = mm_map_allocTbl();
 
 		memcpy(mm_dmas_phys2Virt(mm_krlTblPhysAddr), pgd, sizeof(hal_mm_PageTbl));
+		memset(pgd, 0, sizeof(hal_mm_PageTbl) / 2);
 		thread->pgd = mm_dmas_virt2Phys(pgd);
 	}
 	

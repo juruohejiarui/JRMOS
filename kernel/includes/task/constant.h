@@ -5,7 +5,7 @@
 
 #define task_krlStkSize	(32768ul)
 // 8 MB
-#define task_usrStkSize	(1ull << 23)
+#define task_usrStkSize	(1ull << 24)
 
 #define task_krlAddrSt	(0xffff800000000000ul)
 

@@ -196,7 +196,6 @@ int hal_cpu_enableAP() {
 
 	// copy it back
 	memcpy(backup, mm_dmas_phys2Virt(icr.vector << Page_4KShift), bootSz);
-
 	mm_kfree(backup, mm_Attr_Shared);
 	
 	// cancel the map 0x0(virt) -> 0x0(phys)

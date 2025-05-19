@@ -9,8 +9,27 @@ void *hw_usb_xhci_nxtExtCap(hw_usb_xhci_Host *host, void *cur) {
     return off ? (void *)((u64)cur + off * 4) : NULL;
 }
 
+u8 hw_usb_xhci_getSlotType(hw_usb_xhci_Host * host, u32 portIdx) {
+	for (void *expCap = hw_usb_xhci_nxtExtCap(host, NULL); expCap; expCap = hw_usb_xhci_nxtExtCap(host, expCap)) {
+        if (hw_usb_xhci_xhci_getExtCapId(expCap) == hw_usb_xhci_Ext_Id_Protocol) {
+            if (hw_usb_xhci_Ext_Protocol_contain(expCap, portIdx)) return hw_usb_xhci_Ext_Protocol_slotType(expCap);
+        }
+    }
+    return 0;
+}
+
+hw_usb_xhci_InCtx *hw_usb_xhci_allocInCtx(hw_usb_xhci_Host *host) {
+    void *ctx = mm_kmalloc((host->flag & hw_usb_xhci_Host_flag_Ctx64) ? sizeof(hw_usb_xhci_InCtx64) : sizeof(hw_usb_xhci_InCtx32), 0, NULL);
+    if (!ctx) {
+        printk(RED, BLACK, "hw: xhci: alloc input context failed\n");
+        return NULL;
+    }
+    memset(ctx, 0, (host->flag & hw_usb_xhci_Host_flag_Ctx64) ? sizeof(hw_usb_xhci_InCtx64) : sizeof(hw_usb_xhci_InCtx32));
+    return container(ctx, hw_usb_xhci_InCtx, ctx32);
+}
+
 hw_usb_xhci_Ring *hw_usb_xhci_allocRing(hw_usb_xhci_Host *host, u32 size) {
-    hw_usb_xhci_Ring *ring = mm_kmalloc(sizeof(hw_usb_xhci_Ring), mm_Attr_Shared, NULL);
+	hw_usb_xhci_Ring *ring = mm_kmalloc(sizeof(hw_usb_xhci_Ring), mm_Attr_Shared, NULL);
     if (!ring) {
         printk(RED, BLACK, "hw: xhci: alloc ring failed\n");
         return NULL;
@@ -122,7 +141,7 @@ void hw_usb_xhci_request(hw_usb_xhci_Host *host, hw_usb_xhci_Ring *ring, hw_usb_
 }
 
 hw_usb_xhci_Request *hw_usb_xhci_makeRequest(u32 size, u32 flags) {
-	hw_usb_xhci_Request *req = mm_kmalloc(sizeof(hw_usb_xhci_Request) + size * sizeof(hw_usb_xhci_TRB), mm_Attr_Shared, NULL);
+	hw_usb_xhci_Request *req = mm_kmalloc(sizeof(hw_usb_xhci_Request) + size * sizeof(hw_usb_xhci_TRB), 0, NULL);
     if (!req) {
         printk(RED, BLACK, "hw: xhci: alloc request failed\n");
         return NULL;
@@ -134,7 +153,7 @@ hw_usb_xhci_Request *hw_usb_xhci_makeRequest(u32 size, u32 flags) {
 }
 
 int hw_usb_xhci_freeRequest(hw_usb_xhci_Request *req) {
-	if (!req || mm_kfree(req, mm_Attr_Shared) == res_FAIL) {
+	if (!req || mm_kfree(req, 0) == res_FAIL) {
         printk(RED, BLACK, "hw: xhci: free request failed\n");
         return res_FAIL;
     }
@@ -223,7 +242,7 @@ hw_usb_xhci_Device *hw_usb_xhci_newDev(hw_usb_xhci_Host *host, hw_usb_xhci_Devic
         return NULL;
     }
     memset(dev, 0, sizeof(hw_usb_xhci_Device));
-    dev->flag = parent ? hw_usb_xhci_Device_flag_Direct : 0;
+    dev->flag = parent == NULL ? hw_usb_xhci_Device_flag_Direct : 0;
     dev->portId = portIdx;
 
     dev->parent = parent;
