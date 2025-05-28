@@ -79,7 +79,7 @@ int hal_hw_apic_initLocal() {
 	x = hal_hw_readMsr(0x1b);
 	printk(((x & 0x800) ? GREEN : RED), BLACK, "xAPIC ");
 	printk(((x & 0x400) ? GREEN : RED), BLACK, "x2APIC\n");
-	printk(WHITE, BLACK, "hw: apic: msr 0x1b: %#018lx\n", x);
+	printk(WHITE, BLACK, "hw: apic: msr 0x1b: %p\n", x);
 
 	// enable SVR[8] and SVR[12]
 	{
@@ -127,7 +127,7 @@ int hal_hw_apic_init() {
 
 int hal_hw_apic_initAP() {
 	u64 val = hal_hw_readMsr(0x1b);
-	printk(WHITE, BLACK, "hw: apic: cpu #%d: msr 0x1b:%#018lx\n", task_current->cpuId, val);
+	printk(WHITE, BLACK, "hw: apic: cpu #%d: msr 0x1b:%p\n", task_current->cpuId, val);
 	bit_set1(&val, 11);
 	if (hal_hw_apic_supportFlag & hal_hw_apic_supportFlag_X2Apic)
 		bit_set1(&val, 10);

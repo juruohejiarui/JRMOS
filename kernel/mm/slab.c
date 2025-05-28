@@ -51,7 +51,7 @@ int _delRecord(void *addr) {
         else node = node->left;
     }
     if (!record) {
-        printk(RED, BLACK, "mm: slab: delRecord(): failed to find record of private address %#018lx\n", addr);
+        printk(RED, BLACK, "mm: slab: delRecord(): failed to find record of private address %p\n", addr);
         return res_FAIL;
     }
     RBTree_del(&task_current->thread->slabRecord, node);
@@ -122,7 +122,7 @@ void mm_slab_dbg(int detail) {
         printk(YELLOW, BLACK, "[%2d] size=%lu using=%ld free=%ld\n", i, slab->size, slab->usingCnt, slab->freeCnt);
         for (ListNode *list = slab->blkList.next; list != &slab->blkList; list = list->next) {
             SlabBlk *blk = container(list, SlabBlk, list);
-            printk(WHITE, BLACK, "\t(%p): using=%5d free=%5d colMap[0]=%#018lx addr=%#018lx\n",
+            printk(WHITE, BLACK, "\t(%p): using=%5d free=%5d colMap[0]=%p addr=%p\n",
                 blk, blk->usingCnt, blk->freeCnt, blk->colMap[0], blk->addr);
         }
     }
@@ -232,7 +232,7 @@ static int _kfree(void *addr) {
         if (find) break;
     }
     if (!find) {
-        printk(RED, BLACK, "mm: slab: kfree(): invalid address %#018lx\n", addr);
+        printk(RED, BLACK, "mm: slab: kfree(): invalid address %p\n", addr);
         return res_FAIL;
     }
     u64 idx = ((u64)addr - (u64)blk->addr) >> _slab[sizeId].szShift;
@@ -270,7 +270,7 @@ void *mm_kmalloc(u64 size, u32 attr, void (*destructor)(void *)) {
 int mm_kfree(void *addr, u32 attr) {
     if (~attr & mm_Attr_Shared) {
         if (_delRecord(addr) == res_FAIL) {
-            printk(RED, BLACK, "mm: slab: kfree(): failed to delete record of private address %#018lx.\n", addr);
+            printk(RED, BLACK, "mm: slab: kfree(): failed to delete record of private address %p.\n", addr);
             return res_FAIL;
         }
     }

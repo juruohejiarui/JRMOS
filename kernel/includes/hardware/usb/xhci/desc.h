@@ -6,6 +6,7 @@
 #include <hardware/usb/devdesc.h>
 #include <interrupt/desc.h>
 #include <task/api.h>
+#include <task/request.h>
 
 
 typedef struct hw_usb_xhci_TRB {
@@ -14,6 +15,7 @@ typedef struct hw_usb_xhci_TRB {
 
 typedef struct hw_usb_xhci_Request {
     u32 flags, inputSz;
+    task_Request req;
     #define hw_usb_xhci_Request_flags_Finished  (1u << 0)
     #define hw_usb_xhci_Request_flags_Command   (1u << 1)
     hw_usb_xhci_TRB res;

@@ -7,7 +7,8 @@ void *task_syscall_tbl[task_syscall_tblSize];
 void task_syscall_initTbl() {
 	task_syscall_tbl[task_syscall_exit] = task_exit;
 	task_syscall_tbl[task_syscall_yield] = task_sche_yield;
-	task_syscall_tbl[task_syscall_sleep] = task_sche_sleep;
+	task_syscall_tbl[task_syscall_waitReq] = task_sche_waitReq;
+	task_syscall_tbl[task_syscall_finishReq] = task_sche_finishReq;
 }
 
 int task_syscall_init() {

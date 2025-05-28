@@ -27,6 +27,11 @@ static __always_inline__ task_TaskStruct *hal_task_getCurrent() {
 
 #define hal_task_current hal_task_getCurrent()
 
+// get the idle task of the specific cpu
+static __always_inline__ task_TaskStruct *hal_task_idleTask(int cpuIdx) {
+    return &((task_Union *)cpu_desc[cpuIdx].hal.initStk)->task;
+}
+
 int hal_task_dispatchTask(task_TaskStruct *tsk);
 
 void hal_task_sche_yield();

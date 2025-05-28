@@ -38,7 +38,7 @@ int mm_init() {
 
     mm_memStruct.zones[mm_memStruct.krlZoneId].availSt = upAlign(mm_memStruct.edStruct - task_krlAddrSt, mm_pageSize);
     // from now on, printk can be used
-    printk(WHITE, BLACK, "mm: edStruct: %#018lx mm_symbol_end: %#018lx kernel zone id:%d\nmm:", mm_memStruct.edStruct, &mm_symbol_end, mm_memStruct.krlZoneId);
+    printk(WHITE, BLACK, "mm: edStruct: %p mm_symbol_end: %p kernel zone id:%d\nmm:", mm_memStruct.edStruct, &mm_symbol_end, mm_memStruct.krlZoneId);
     u64 pgDescArrSize;
     {
         u64 mxAddr = 0;
@@ -66,7 +66,7 @@ int mm_init() {
 
         // initialize the pages
         memset(mm_memStruct.pages, 0, pgDescArrSize);
-        printk(WHITE, BLACK, "mm: page array: %#018lx~%#018lx\n", mm_memStruct.pages, tgrZone->availSt);
+        printk(WHITE, BLACK, "mm: page array: %p~%p\n", mm_memStruct.pages, tgrZone->availSt);
     }
     // modify the zone information, align the address space to 4K, write the pointer of page arrary, initialize usage information
     for (int i = 0; i < mm_memStruct.nrZones; i++) {
@@ -82,14 +82,14 @@ int mm_init() {
     }
     printk(WHITE, BLACK, "mm:");
     for (int i = 0; i < mm_memStruct.nrZones; i++) {
-        printk(YELLOW, BLACK, "\t[%2d]:addr:[%#018lx,%#018lx],avail:%#018lx\n", i, mm_memStruct.zones[i].phyAddrSt, mm_memStruct.zones[i].phyAddrEd, mm_memStruct.zones[i].availSt);
+        printk(YELLOW, BLACK, "\t[%2d]:addr:[%p,%p],avail:%p\n", i, mm_memStruct.zones[i].phyAddrSt, mm_memStruct.zones[i].phyAddrEd, mm_memStruct.zones[i].availSt);
     }
 
     // calculate the total available RAM
     mm_memStruct.totMem = 0;
     for (int i = 0; i < mm_memStruct.nrZones; i++)
         mm_memStruct.totMem += mm_memStruct.zones[i].totFree;
-    printk(WHITE, BLACK, "mm: totMem:%#018lx=%ldMB\n", mm_memStruct.totMem, mm_memStruct.totMem >> 10);
+    printk(WHITE, BLACK, "mm: totMem:%p=%ldMB\n", mm_memStruct.totMem, mm_memStruct.totMem >> 10);
 
     if (mm_buddy_init() == res_FAIL) return res_FAIL;
     if (mm_slab_init() == res_FAIL) return res_FAIL;

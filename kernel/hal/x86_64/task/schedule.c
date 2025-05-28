@@ -28,7 +28,7 @@ void hal_task_sche_switchTss(task_TaskStruct *prev, task_TaskStruct *next) {
 	cpuTss->ist2 = tskTss->ist2;
 
 
-	// printk(WHITE, BLACK, "from %#018lx,rip=%#018lx to %#018lx,rip=%#018lx\n", prev, prev->hal.rip, next, next->hal.rip);
+	// printk(WHITE, BLACK, "from %p,rip=%p to %p,rip=%p\n", prev, prev->hal.rip, next, next->hal.rip);
 
 	prev->hal.gsBase = hal_hw_readMsr(hal_msr_IA32_GS_BASE);
 	prev->hal.fsBase = hal_hw_readMsr(hal_msr_IA32_FS_BASE);
@@ -42,7 +42,7 @@ void hal_task_sche_switchTss(task_TaskStruct *prev, task_TaskStruct *next) {
 	hal_hw_writeMsr(hal_msr_IA32_GS_BASE, next->hal.gsBase);
 	hal_hw_writeMsr(hal_msr_IA32_FS_BASE, next->hal.fsBase);
 
-	// printk(WHITE, BLACK, "cpu %d: prev gsBase %#018lx next gsBase %#018lx\n", task_current->cpuId, prev->hal.gsBase, next->hal.gsBase);
+	// printk(WHITE, BLACK, "cpu %d: prev gsBase %p next gsBase %p\n", task_current->cpuId, prev->hal.gsBase, next->hal.gsBase);
 }
 
 void hal_task_sche_updOtherState() {

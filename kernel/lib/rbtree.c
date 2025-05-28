@@ -103,12 +103,10 @@ static __always_inline__ void _fixAfterIns(RBTree *tree, RBNode *node) {
 
 void RBTree_ins(RBTree *tree, RBNode *node) {
 	if (tree == NULL || node == NULL) return ;
-	SpinLock_lock(&tree->lock);
 	if (tree->root == NULL) {
 		tree->root = tree->left = node;
 		node->left = node->right = NULL;
 		node->unionParCol = 1;
-		SpinLock_unlock(&tree->lock);
 		return ;
 	}
 	RBNode **src = &tree->root, *lst = NULL;
@@ -116,7 +114,6 @@ void RBTree_ins(RBTree *tree, RBNode *node) {
 	_linkNode(src, node, lst);
 	// rebalance
 	_fixAfterIns(tree, node);
-	SpinLock_unlock(&tree->lock);
 }
 
 static __always_inline__ void _fixAfterDel(RBTree *tree, RBNode *node, RBNode *par) {
@@ -184,7 +181,6 @@ static __always_inline__ void _fixAfterDel(RBTree *tree, RBNode *node, RBNode *p
 
 void RBTree_del(RBTree *tree, RBNode *node) {
 	if (tree == NULL || node == NULL) return ;
-	SpinLock_lock(&tree->lock);
 
 	if (tree->left == node) tree->left = _getNext(tree, node);
 	RBNode *child, *par;
@@ -228,21 +224,9 @@ void RBTree_del(RBTree *tree, RBNode *node) {
 
 	rebalance:
 	if (col == RBTree_Col_Black) _fixAfterDel(tree, child, par);
-	SpinLock_unlock(&tree->lock);
 }
 
-RBNode *RBTree_getLeft(RBTree *tree) {
-	SpinLock_lock(&tree->lock);
-	if (tree == NULL || tree->root == NULL) {
-		SpinLock_unlock(&tree->lock);
-		return NULL;
-	}
-	RBNode *res = tree->left;
-	SpinLock_unlock(&tree->lock);
-	return res;
-}
-
-RBNode *RBTRee_getRight(RBTree *tree) {
+RBNode *RBTree_getRight(RBTree *tree) {
 	SpinLock_lock(&tree->lock);
 	if (tree == NULL || tree->root == NULL) {
 		SpinLock_unlock(&tree->lock);

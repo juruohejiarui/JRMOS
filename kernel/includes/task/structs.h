@@ -42,6 +42,10 @@ struct task_TaskStruct {
 	u64 pid;
 	volatile u64 state;
 	i64 vRuntime;
+	// the counter of io requests / collaboration requests.
+	// Move to sleep state when this value is greater than 0.
+	// Move back to running state / idle state when this value is reduced to 0.
+	Atomic reqWait;
 
 	task_ThreadStruct *thread;
 

@@ -99,7 +99,7 @@ static int _tryInsReq(hw_usb_xhci_Host *host, hw_usb_xhci_Ring *ring, hw_usb_xhc
     // check if the ring is full
     if (ring->load + req->inputSz > ring->size) {
         SpinLock_unlockMask(&ring->lck);
-        printk(RED, BLACK, "hw: xhci: ring %#018lx is full.\n", ring);
+        printk(RED, BLACK, "hw: xhci: ring %p is full.\n", ring);
         return res_FAIL;
     }
     ring->load += req->inputSz;
@@ -132,12 +132,8 @@ void hw_usb_xhci_InsReq(hw_usb_xhci_Host *host, hw_usb_xhci_Ring *ring, hw_usb_x
 void hw_usb_xhci_request(hw_usb_xhci_Host *host, hw_usb_xhci_Ring *ring, hw_usb_xhci_Request *req, u32 slot, u32 doorbell) {
     hw_usb_xhci_InsReq(host, ring, req);
     hw_usb_xhci_DbReg_write(host, slot, doorbell);
-    task_current->priority = task_Priority_Lowest;
-    while (~req->flags & hw_usb_xhci_Request_flags_Finished) {
-        task_sche_yield();
-    }
-
-    task_current->priority = task_Priority_Running;
+    // wait for the request to be finished
+    task_Request_send(&req->req);
 }
 
 hw_usb_xhci_Request *hw_usb_xhci_makeRequest(u32 size, u32 flags) {
@@ -146,6 +142,7 @@ hw_usb_xhci_Request *hw_usb_xhci_makeRequest(u32 size, u32 flags) {
         printk(RED, BLACK, "hw: xhci: alloc request failed\n");
         return NULL;
     }
+    task_Request_init(&req->req, hw_Request_Flag_Abort);
     memset(req->input, 0, size * sizeof(hw_usb_xhci_TRB));
     req->flags = flags;
     req->inputSz = size;
@@ -165,7 +162,7 @@ hw_usb_xhci_Request *hw_usb_xhci_response(hw_usb_xhci_Ring *ring, hw_usb_xhci_TR
     SpinLock_lockMask(&ring->lck);
     if (!ring->load) {
         SpinLock_unlockMask(&ring->lck);
-        printk(RED, BLACK, "hw: xhci: ring %#018lx has no request waiting for responese", ring);
+        printk(RED, BLACK, "hw: xhci: ring %p has no request waiting for responese", ring);
         return NULL;
     }
 
@@ -176,6 +173,7 @@ hw_usb_xhci_Request *hw_usb_xhci_response(hw_usb_xhci_Ring *ring, hw_usb_xhci_TR
     SpinLock_unlockMask(&ring->lck);
     hw_usb_xhci_TRB_copy(result, &req->res);
     req->flags |= hw_usb_xhci_Request_flags_Finished;
+    task_Request_response(&req->req);
     return req;
 }
 

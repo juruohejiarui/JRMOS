@@ -30,7 +30,7 @@ static int _searchInPci() {
 	// list xhci controller
 	for (ListNode *xhciDevNd = SafeList_getHead(&hw_usb_xhci_devLst); xhciDevNd != &hw_usb_xhci_devLst.head; xhciDevNd = xhciDevNd->next) {
 		hw_usb_xhci_Host *mgr = container(xhciDevNd, hw_usb_xhci_Host, lst);
-		printk(WHITE, BLACK, "hw: xhci: find controller: %#018lx pci: %02x:%02x:%02x\n", mgr, mgr->pci->busId, mgr->pci->devId, mgr->pci->funcId);
+		printk(WHITE, BLACK, "hw: xhci: find controller: %p pci: %02x:%02x:%02x\n", mgr, mgr->pci->busId, mgr->pci->devId, mgr->pci->funcId);
 	}
 
 	return res_SUCC;
@@ -48,11 +48,11 @@ static __always_inline__ int _getRegAddr(hw_usb_xhci_Host *host) {
 
 	host->capRegAddr = (u64)mm_dmas_phys2Virt(phyAddr);
 
-	printk(WHITE, BLACK, "hw: xhci: host %#018lx: %08x %08x capRegAddr:%#018lx\n", host, host->pci->cfg->type0.bar[0], host->pci->cfg->type0.bar[1], host->capRegAddr);
+	printk(WHITE, BLACK, "hw: xhci: host %p: %08x %08x capRegAddr:%p\n", host, host->pci->cfg->type0.bar[0], host->pci->cfg->type0.bar[1], host->capRegAddr);
 	
 	// map this address in dmas
 	if (mm_dmas_map(phyAddr) == res_FAIL) {
-		printk(RED, BLACK, "hw: xhci: host %#018lx failed to map cap regs\n", host);
+		printk(RED, BLACK, "hw: xhci: host %p failed to map cap regs\n", host);
 		return res_FAIL;
 	}
 	host->opRegAddr = host->capRegAddr + hw_usb_xhci_CapReg_capLen(host);
@@ -61,15 +61,15 @@ static __always_inline__ int _getRegAddr(hw_usb_xhci_Host *host) {
 
 	// map address in dmas
 	if (mm_dmas_map(mm_dmas_virt2Phys(host->opRegAddr)) == res_FAIL) {
-		printk(RED, BLACK, "hw: xhci: host %#018lx failed to map op regs\n", host);
+		printk(RED, BLACK, "hw: xhci: host %p failed to map op regs\n", host);
 		return res_FAIL;
 	}
 	if (mm_dmas_map(mm_dmas_virt2Phys(host->rtRegAddr)) == res_FAIL) {
-		printk(RED, BLACK, "hw: xhci: host %#018lx failed to map rt regs\n", host);
+		printk(RED, BLACK, "hw: xhci: host %p failed to map rt regs\n", host);
 		return res_FAIL;
 	}
 	if (mm_dmas_map(mm_dmas_virt2Phys(host->dbRegAddr)) == res_FAIL) {
-		printk(RED, BLACK, "hw: xhci: host %#018lx failed to map hcc regs\n", host);
+		printk(RED, BLACK, "hw: xhci: host %p failed to map hcc regs\n", host);
 		return res_FAIL;
 	}
 	return res_SUCC;
@@ -96,46 +96,46 @@ static int _initHost(hw_usb_xhci_Host *host) {
 		}
 	}
 	if (!msix && !msi) {
-		printk(RED, BLACK, "hw: xhci: controller %#018lx has no msi/msix descriptor\n", host);
+		printk(RED, BLACK, "hw: xhci: controller %p has no msi/msix descriptor\n", host);
 		return res_FAIL;
 	}
-	printk(WHITE, BLACK, "hw: xhci: controller %#018lx msi:%#018lx msix:%#018lx\n", host, msi, msix);
+	printk(WHITE, BLACK, "hw: xhci: controller %p msi:%p msix:%p\n", host, msi, msix);
 
 	if (msix) host->flag |= hw_usb_xhci_Host_flag_Msix;
 
-	printk(WHITE, BLACK, "hw: xhci: initialize device %#018lx: vendor:%04x device:%04x revision:%04x\n",
+	printk(WHITE, BLACK, "hw: xhci: initialize device %p: vendor:%04x device:%04x revision:%04x\n",
 		host, host->pci->cfg->vendorId, host->pci->cfg->deviceId, host->pci->cfg->revisionId);
 
 	_disablePartnerCtrl(host);
 
 	// get address of registers
 	if (_getRegAddr(host) == res_FAIL) {
-		printk(RED, BLACK, "hw: xhci: host %#018lx failed to get register address\n", host);
+		printk(RED, BLACK, "hw: xhci: host %p failed to get register address\n", host);
 		return res_FAIL;
 	}
 
 	// read information from capability registers
-	printk(WHITE, BLACK, "hw: xhci: host %#018lx: capReg:%#018lx opReg:%#018lx rtReg:%#018lx dbReg:%#018lx\n",
+	printk(WHITE, BLACK, "hw: xhci: host %p: capReg:%p opReg:%p rtReg:%p dbReg:%p\n",
 		host, host->capRegAddr, host->opRegAddr, host->rtRegAddr, host->dbRegAddr);
-	printk(WHITE, BLACK, "hw: xhci: host %#018lx: mxslot:%d mxintr:%d mxport:%d mxerst:%d mxscr:%d\n",
+	printk(WHITE, BLACK, "hw: xhci: host %p: mxslot:%d mxintr:%d mxport:%d mxerst:%d mxscr:%d\n",
 		host, hw_usb_xhci_mxSlot(host), hw_usb_xhci_mxIntr(host), hw_usb_xhci_mxPort(host), hw_usb_xhci_mxERST(host), hw_usb_xhci_mxScrSz(host));
 
 	// check if the controller support neccessary features: 4K page, 64bit address, port power control
 	if (~hw_usb_xhci_OpReg_read32(host, hw_usb_xhci_Host_opReg_pgSize) & 0x1) {
-		printk(RED, BLACK, "hw: xhci: host %#018lx does not support 4K page\n", host);
+		printk(RED, BLACK, "hw: xhci: host %p does not support 4K page\n", host);
 		return res_FAIL;
 	}
 	if (~hw_usb_xhci_CapReg_hccParam(host, 1) & 0x1) {
-		printk(RED, BLACK, "hw: xhci: host %#018lx does not support 64bit address\n", host);
+		printk(RED, BLACK, "hw: xhci: host %p does not support 64bit address\n", host);
 		return res_FAIL;
 	}
 	if (hw_usb_xhci_CapReg_hccParam(host, 1) & (1u << 3)) {
-		printk(RED, BLACK, "hw: xhci: host %#018lx doest not support port power control\n", host);
+		printk(RED, BLACK, "hw: xhci: host %p doest not support port power control\n", host);
 		return res_FAIL;
 	}
 	// check the context size
 	if (hw_usb_xhci_CapReg_hccParam(host, 1) & (1u << 2)) {
-		printk(YELLOW, BLACK, "hw: xhci: host %#018lx use 64 byte context\n", host);
+		printk(YELLOW, BLACK, "hw: xhci: host %p use 64 byte context\n", host);
 		host->flag |= hw_usb_xhci_Host_flag_Ctx64;
 	}
 
@@ -149,26 +149,26 @@ static int _initHost(hw_usb_xhci_Host *host) {
 			timer_mdelay(1);
 		} while (--timeout);
 		if (~hw_usb_xhci_OpReg_read32(host, hw_usb_xhci_Host_opReg_status) & (1u << 0)) {
-			printk(RED, BLACK, "hw: xhci: host %#018lx failed to stop\n", host);
+			printk(RED, BLACK, "hw: xhci: host %p failed to stop\n", host);
 			return res_FAIL;
 		}
-		printk(GREEN, BLACK, "hw: xhci: host %#018lx stopped cmd:%#010x status:%#010x\n", 
+		printk(GREEN, BLACK, "hw: xhci: host %p stopped cmd:%#010x status:%#010x\n", 
 			host, hw_usb_xhci_OpReg_read32(host, hw_usb_xhci_Host_opReg_cmd), hw_usb_xhci_OpReg_read32(host, hw_usb_xhci_Host_opReg_status));
 	}
 
 	// reset the host
 	if (hw_usb_xhci_reset(host) == res_FAIL) {
-		printk(RED, BLACK, "hw: xhci: host %#018lx failed to reset\n", host);
+		printk(RED, BLACK, "hw: xhci: host %p failed to reset\n", host);
 		return res_FAIL;
 	}
-	printk(GREEN, BLACK, "hw: xhci: host %#018lx reset\n", host);
+	printk(GREEN, BLACK, "hw: xhci: host %p reset\n", host);
 
 	// wait for ready of the host
 	if (hw_usb_xhci_waitReady(host) == res_FAIL) {
-		printk(RED, BLACK, "hw: xhci: host %#018lx failed to wait ready\n", host);
+		printk(RED, BLACK, "hw: xhci: host %p failed to wait ready\n", host);
 		return res_FAIL;
 	}
-	printk(GREEN, BLACK, "hw: xhci: host %#018lx ready\n", host);
+	printk(GREEN, BLACK, "hw: xhci: host %p ready\n", host);
 
 	// set max slot field of config register
 	hw_usb_xhci_OpReg_write32(host, hw_usb_xhci_Host_opReg_cfg,
@@ -179,47 +179,47 @@ static int _initHost(hw_usb_xhci_Host *host) {
 
 	host->intr = mm_kmalloc(sizeof(intr_Desc) * host->intrNum, mm_Attr_Shared, NULL);
 	if (host->intr == NULL) {
-		printk(RED, BLACK, "hw: xhci: host %#018lx failed to allocate interrupt descriptor\n", host);
+		printk(RED, BLACK, "hw: xhci: host %p failed to allocate interrupt descriptor\n", host);
 		return res_FAIL;
 	}
 
 	if (host->flag & hw_usb_xhci_Host_flag_Msix) {
 		host->msixCap = msix;
-		printk(WHITE, BLACK, "hw: xhci: host %#018lx use msix\n", host);
+		printk(WHITE, BLACK, "hw: xhci: host %p use msix\n", host);
 
 		int vecNum = hw_pci_MsixCap_vecNum(host->msixCap);
 		vecNum = host->intrNum = min(vecNum, host->intrNum);
 
 		hw_pci_MsixTbl *tbl = hw_pci_getMsixTbl(msix, host->pci->cfg);
 		
-		printk(WHITE, BLACK, "hw: xhci: host %#018lx msixtbl:%#018lx vecNum:%d msgCtrl:%#010x\n", host, tbl, vecNum, msix->msgCtrl);
+		printk(WHITE, BLACK, "hw: xhci: host %p msixtbl:%p vecNum:%d msgCtrl:%#010x\n", host, tbl, vecNum, msix->msgCtrl);
 
 		for (int i = 0; i < host->intrNum; i++) {
 			hw_pci_initIntr(host->intr + i, hw_usb_xhci_msiHandler, (u64)host | i, "xhci msix");
 		}
 		if (hw_pci_allocMsix(host->msixCap, host->pci->cfg, host->intr, host->intrNum) == res_FAIL) {
-			printk(RED, BLACK, "hw: xhci: host %#018lx failed to allocate msix interrupt\n", host);
+			printk(RED, BLACK, "hw: xhci: host %p failed to allocate msix interrupt\n", host);
 			return res_FAIL;
 		}
 	} else {
 		host->msiCap = msi;
-		printk(WHITE, BLACK, "hw: xhci: host %#018lx use msi\n", host);
+		printk(WHITE, BLACK, "hw: xhci: host %p use msi\n", host);
 
 		int vecNum = hw_pci_MsiCap_vecNum(host->msiCap);
 		host->intrNum = vecNum = min(vecNum, host->intrNum);
 
-		printk(WHITE, BLACK, "hw: xhci: host %#018lx msi: %s vecNum:%d mgsCtrl:%#010x\n", 
+		printk(WHITE, BLACK, "hw: xhci: host %p msi: %s vecNum:%d mgsCtrl:%#010x\n", 
 				host, hw_pci_MsiCap_is64(msi) ? "64B" : "32B", vecNum, *hw_pci_MsiCap_msgCtrl(msi));
 
 		for (int i = 0; i < vecNum; i++)
 			hw_pci_initIntr(host->intr + i, hw_usb_xhci_msiHandler, (u64)host | i, "xhci msi");
 		if (hw_pci_allocMsi(host->msiCap, host->intr, host->intrNum) == res_FAIL) {
-			printk(RED, BLACK, "hw: xhci: host %#018lx failed to set msi interrupt\n", host);
+			printk(RED, BLACK, "hw: xhci: host %p failed to set msi interrupt\n", host);
 			return res_FAIL;
 		}
 	}
 	hw_pci_disableIntx(host->pci->cfg);
-	printk(GREEN, BLACK, "hw: xhci: host %#018lx msi/msix set\n", host);
+	printk(GREEN, BLACK, "hw: xhci: host %p msi/msix set\n", host);
 
 	{
 		int res;
@@ -227,9 +227,9 @@ static int _initHost(hw_usb_xhci_Host *host) {
 		if (host->flag & hw_usb_xhci_Host_flag_Msix) res = hw_pci_enableMsixAll(host->msixCap, host->pci->cfg, host->intr, host->intrNum);
 		else res = hw_pci_enableMsiAll(host->msiCap, host->intr, host->intrNum);
 
-		if (res == res_SUCC) printk(GREEN, BLACK, "hw: xhci: host %#018lx msi/msix enabled\n", host);
+		if (res == res_SUCC) printk(GREEN, BLACK, "hw: xhci: host %p msi/msix enabled\n", host);
 		else {
-			printk(RED, BLACK, "hw: xhci: host %#018lx msi/msix enable failed\n", host);
+			printk(RED, BLACK, "hw: xhci: host %p msi/msix enable failed\n", host);
 			return res_FAIL;
 		}
 	}
@@ -237,7 +237,7 @@ static int _initHost(hw_usb_xhci_Host *host) {
 	// allocate device context
 	u64 *dcbaa = mm_kmalloc(2048, mm_Attr_Shared, NULL);
 	if (dcbaa == NULL) {
-		printk(RED, BLACK, "hw: xhci: host %#018lx failed to allocate dcbaa\n", host);
+		printk(RED, BLACK, "hw: xhci: host %p failed to allocate dcbaa\n", host);
 		return res_FAIL;
 	}
 	hw_usb_xhci_OpReg_write64(host, hw_usb_xhci_Host_opReg_dcbaa, mm_dmas_virt2Phys(dcbaa));
@@ -247,13 +247,13 @@ static int _initHost(hw_usb_xhci_Host *host) {
 		u32 mxScrSz = max(63, hw_usb_xhci_mxScrSz(host));
 		u64 *scrArr = mm_kmalloc(upAlign((mxScrSz + 1) * sizeof(u64), Page_4KSize), mm_Attr_Shared, NULL);
 		if (scrArr == NULL) {
-			printk(RED, BLACK, "hw: xhci: host %#018lx failed to allocate scratchpad array\n", host);
+			printk(RED, BLACK, "hw: xhci: host %p failed to allocate scratchpad array\n", host);
 			return res_FAIL;
 		}
 		for (u32 i = 0; i <= mxScrSz; i++) {
 			void *item = mm_kmalloc(Page_4KSize, mm_Attr_Shared, NULL);
 			if (item == NULL) {
-				printk(RED, BLACK, "hw: xhci: host %#018lx failed to allocate scratchpad item\n", host);
+				printk(RED, BLACK, "hw: xhci: host %p failed to allocate scratchpad item\n", host);
 				return res_FAIL;
 			}
 			memset(item, 0, Page_4KSize);
@@ -267,14 +267,14 @@ static int _initHost(hw_usb_xhci_Host *host) {
 	{
 		host->devCtx = mm_kmalloc(max(64, sizeof(hw_usb_xhci_DevCtx *) * (hw_usb_xhci_mxSlot(host) + 1)), mm_Attr_Shared, NULL);
 		if (host->devCtx == NULL) {
-			printk(RED, BLACK, "hw: xhci: host %#018lx failed to allocate device context array\n", host);
+			printk(RED, BLACK, "hw: xhci: host %p failed to allocate device context array\n", host);
 			return res_FAIL;
 		}
 		u64 ctxSize = host->flag & hw_usb_xhci_Host_flag_Ctx64 ? sizeof(hw_usb_xhci_DevCtx64) : sizeof(hw_usb_xhci_DevCtx32);
 		for (u32 i = hw_usb_xhci_mxSlot(host); i; i--) {
 			host->devCtx[i] = mm_kmalloc(ctxSize, mm_Attr_Shared, NULL);
 			if (host->devCtx[i] == NULL) {
-				printk(RED, BLACK, "hw: xhci: host %#018lx failed to allocate device context\n", host);
+				printk(RED, BLACK, "hw: xhci: host %p failed to allocate device context\n", host);
 				return res_FAIL;
 			}
 			dcbaa[i] = mm_dmas_virt2Phys(host->devCtx[i]);
@@ -284,14 +284,14 @@ static int _initHost(hw_usb_xhci_Host *host) {
 	// allocate device task array
 	host->dev = mm_kmalloc(sizeof(hw_usb_xhci_Device *) * (hw_usb_xhci_mxSlot(host) + 1), mm_Attr_Shared, NULL);
 	if (host->dev == NULL) {
-		printk(RED, BLACK, "hw: xhci: host %#018lx failed to allocate device array\n", host);
+		printk(RED, BLACK, "hw: xhci: host %p failed to allocate device array\n", host);
 		return res_FAIL;
 	}
 	memset(host->dev, 0, sizeof(hw_usb_xhci_Device *) * (hw_usb_xhci_mxSlot(host) + 1));
 	
 	host->portDev = mm_kmalloc(sizeof(hw_usb_xhci_Device *) * (hw_usb_xhci_mxPort(host) + 1), mm_Attr_Shared, NULL);
 	if (host->portDev == NULL) {
-		printk(RED, BLACK, "hw: xhci: host %#018lx failed to allocate port device array\n", host);
+		printk(RED, BLACK, "hw: xhci: host %p failed to allocate port device array\n", host);
 		return res_FAIL;
 	}
 	memset(host->portDev, 0, sizeof(hw_usb_xhci_Device *) * (hw_usb_xhci_mxPort(host) + 1));
@@ -299,7 +299,7 @@ static int _initHost(hw_usb_xhci_Host *host) {
 	// release this host from BIOS
 	for (void *extCap = hw_usb_xhci_nxtExtCap(host, NULL); extCap; extCap = hw_usb_xhci_nxtExtCap(host, extCap)) {
 		if (hw_usb_xhci_xhci_getExtCapId(extCap) == hw_usb_xhci_Ext_Id_Legacy) {
-			printk(WHITE, BLACK, "hw: xhci: host %#018lx legacy support previous value: %#010x\n", host, hal_read32((u64)extCap));
+			printk(WHITE, BLACK, "hw: xhci: host %p legacy support previous value: %#010x\n", host, hal_read32((u64)extCap));
 			hal_write32((u64)extCap, hal_read32((u64)extCap) | (1u << 24));
 			int timeout = 10;
 			while (timeout--) {
@@ -308,17 +308,17 @@ static int _initHost(hw_usb_xhci_Host *host) {
 				timer_mdelay(1);
 			}
 			if (hal_read32((u64)extCap) & (1u << 16)) {
-				printk(RED, BLACK, "hw: xhci: host %#018lx failed to release legacy support\n", host);
+				printk(RED, BLACK, "hw: xhci: host %p failed to release legacy support\n", host);
 				return res_FAIL;
 			}
-			printk(GREEN, BLACK, "hw: xhci: host %#018lx release legacy support\n", host);
+			printk(GREEN, BLACK, "hw: xhci: host %p release legacy support\n", host);
 		}
 	}
 
 	// allocate command ring
 	host->cmdRing = hw_usb_xhci_allocRing(host, hw_usb_xhci_Ring_mxSz);
 	if (host->cmdRing == NULL) {
-		printk(RED, BLACK, "hw: xhci: host %#018lx failed to allocate command ring\n", host);
+		printk(RED, BLACK, "hw: xhci: host %p failed to allocate command ring\n", host);
 		return res_FAIL;
 	}
 
@@ -327,17 +327,17 @@ static int _initHost(hw_usb_xhci_Host *host) {
 	// allocate event rings
 	{	
 		int tblSize = min(4, hw_usb_xhci_mxERST(host));
-		printk(WHITE, BLACK, "hw: xhci: host %#018lx event ring tbl size:%d\n", host, tblSize);
+		printk(WHITE, BLACK, "hw: xhci: host %p event ring tbl size:%d\n", host, tblSize);
 		host->eveRings = mm_kmalloc(sizeof(hw_usb_xhci_EveRing *) * host->intrNum, mm_Attr_Shared, NULL);
 		for (int i = 0; i < host->intrNum; i++) {
 			host->eveRings[i] = hw_usb_xhci_allocEveRing(host, tblSize, hw_usb_xhci_Ring_mxSz);
 			if (host->eveRings[i] == NULL) {
-				printk(RED, BLACK, "hw: xhci: host %#018lx failed to allocate event ring\n", host);
+				printk(RED, BLACK, "hw: xhci: host %p failed to allocate event ring\n", host);
 				return res_FAIL;
 			}
 			u64 *ringTbl = mm_kmalloc(max(128, 2 * sizeof(u64) * tblSize), mm_Attr_Shared, NULL);
 			if (ringTbl == NULL) {
-				printk(RED, BLACK, "hw: xhci: host %#018lx failed to allocate event ring table\n", host);
+				printk(RED, BLACK, "hw: xhci: host %p failed to allocate event ring table\n", host);
 				return res_FAIL;
 			}
 			for (int j = 0; j < tblSize; j++)
@@ -365,7 +365,7 @@ static int _initHost(hw_usb_xhci_Host *host) {
 	// restart the host
 	hw_usb_xhci_OpReg_write32(host, hw_usb_xhci_Host_opReg_cmd, (1u << 0) | (1u << 2) | (1u << 3));
 
-	printk(GREEN, BLACK, "hw: xhci: host %#018lx initialized. cmd:%#010x state:%#010x\n", host, 
+	printk(GREEN, BLACK, "hw: xhci: host %p initialized. cmd:%#010x state:%#010x\n", host, 
 		hw_usb_xhci_OpReg_read32(host, hw_usb_xhci_Host_opReg_cmd), hw_usb_xhci_OpReg_read32(host, hw_usb_xhci_Host_opReg_status));
 
 	// set empty command to test
@@ -417,19 +417,19 @@ int hw_usb_xhci_devInit(hw_usb_xhci_Device *dev) {
 	// get slot Type
 	if (dev->flag & hw_usb_xhci_Device_flag_Direct) {
 		// read supported protocol capability
-		printk(WHITE, BLACK, "hw: xhci: dev %#018lx slot type:%d\n", dev, hw_usb_xhci_getSlotType(host, dev->portId));
+		printk(WHITE, BLACK, "hw: xhci: dev %p slot type:%d\n", dev, hw_usb_xhci_getSlotType(host, dev->portId));
 		hw_usb_xhci_TRB_setSlotType(&req->input[0], hw_usb_xhci_getSlotType(host, dev->portId));
 		dev->speed = (hw_usb_xhci_PortReg_read(host, dev->portId, hw_usb_xhci_Host_portReg_sc) >> 10) & ((1u << 4) - 1);
 	} else hw_usb_xhci_TRB_setSlotType(&req->input[0], 0), dev->speed = 0;
 
 	hw_usb_xhci_request(host, host->cmdRing, req, 0, 0);
 	if (hw_usb_xhci_TRB_getCmplCode(&req->res) != hw_usb_xhci_TRB_CmplCode_Succ) {
-		printk(RED, BLACK, "hw: xhci: dev %#018lx failed to enable slot\n", dev);
+		printk(RED, BLACK, "hw: xhci: dev %p failed to enable slot\n", dev);
 		hw_usb_xhci_freeRequest(req);
 		return res_FAIL;
 	}
 
-	printk(GREEN, BLACK, "hw: xhci: dev %#018lx enabled slot:%d speed:%d\n", dev, req->res.ctrl >> 24, dev->speed);
+	printk(GREEN, BLACK, "hw: xhci: dev %p enabled slot:%d speed:%d\n", dev, req->res.ctrl >> 24, dev->speed);
 	dev->slotId = req->res.ctrl >> 24;
 	host->dev[dev->slotId] = dev;
 
@@ -437,7 +437,7 @@ int hw_usb_xhci_devInit(hw_usb_xhci_Device *dev) {
 	dev->inCtx = hw_usb_xhci_allocInCtx(host);
 
 	if (dev->ctx == NULL || dev->inCtx == NULL) {
-		printk(RED, BLACK, "hw: xhci: dev %#018lx failed to allocate context\n", dev);
+		printk(RED, BLACK, "hw: xhci: dev %p failed to allocate context\n", dev);
 		hw_usb_xhci_freeRequest(req);
 		return res_FAIL;
 	}
@@ -467,7 +467,7 @@ int hw_usb_xhci_devInit(hw_usb_xhci_Device *dev) {
 		
 		dev->epRing[hw_usb_xhci_DevCtx_Ep(0, 1)] = hw_usb_xhci_allocRing(host, hw_usb_xhci_Ring_mxSz);
 		if (dev->epRing[hw_usb_xhci_DevCtx_Ep(0, 1)] == NULL) {
-			printk(RED, BLACK, "hw: xhci: dev %#018lx failed to allocate ep ring\n", dev);
+			printk(RED, BLACK, "hw: xhci: dev %p failed to allocate ep ring\n", dev);
 			hw_usb_xhci_freeRequest(req);
 			return res_FAIL;
 		}
@@ -480,11 +480,11 @@ int hw_usb_xhci_devInit(hw_usb_xhci_Device *dev) {
 
 	hw_usb_xhci_request(host, host->cmdRing, req, 0, 0);
 	if (hw_usb_xhci_TRB_getCmplCode(&req->res) != hw_usb_xhci_TRB_CmplCode_Succ) {
-		printk(RED, BLACK, "hw: xhci: dev %#018lx failed to address device\n", dev);
+		printk(RED, BLACK, "hw: xhci: dev %p failed to address device\n", dev);
 		hw_usb_xhci_freeRequest(req);
 		return res_FAIL;
 	}
-	printk(GREEN, BLACK, "hw: xhci: dev %#018lx addressed\n", dev);
+	printk(GREEN, BLACK, "hw: xhci: dev %p addressed\n", dev);
 
 	return res_SUCC;
 } 

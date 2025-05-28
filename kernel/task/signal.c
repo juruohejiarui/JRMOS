@@ -5,7 +5,7 @@
 void task_signal_setHandler(u64 signal, void (*handler)(u64), u64 param) {
     task_current->thread->sigHandler[signal] = handler;
     task_current->thread->sigParam[signal] = param;
-    printk(WHITE, BLACK, "task: signal: task #%d set handler for signal #%d with param %#018lx\n", task_current->pid, signal, param);
+    printk(WHITE, BLACK, "task: signal: task #%d set handler for signal #%d with param %p\n", task_current->pid, signal, param);
 }
 
 void task_signal_send(task_TaskStruct *target, u64 signal) {

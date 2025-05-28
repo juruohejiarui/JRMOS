@@ -52,7 +52,7 @@ int screen_enableBuf() {
     mm_Page *pages = mm_allocPages(max(0, log2BufSize - mm_pageShift), mm_Attr_Shared);
     if (pages == NULL) return res_FAIL;
     _bufAddr = mm_dmas_phys2Virt(mm_getPhyAddr(pages));
-    printk(WHITE, BLACK, "screen: buf addr=%#018lx\ncopying...", _bufAddr);
+    printk(WHITE, BLACK, "screen: buf addr=%p\ncopying...", _bufAddr);
     // copy the screen to buf
     memcpy(position.fbAddr, _bufAddr, bufSize);
     printk(GREEN, BLACK, "done\n");
@@ -193,8 +193,9 @@ static __always_inline__ int _sprintf(char *buf, const char *fmt, va_list args) 
                     break;
                 case 'p':
                     if (fld_w == -1) {
-                        fld_w = 2 * sizeof(void *);
+                        fld_w = 2 * sizeof(void *) + 2;
                         flags |= flag_fill_zero;
+                        flags |= flag_special;
                     }
                     str = _number(str, (unsigned long)va_arg(args, void *), 16, fld_w, prec, flags);
                     break;

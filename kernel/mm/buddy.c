@@ -26,7 +26,7 @@ static __always_inline__ int _getBit(mm_Page *page) {
 static __always_inline__ void _revBit(mm_Page *page) {
     if (page->buddyId == 1) return ;
     u64 bitId = (mm_getPhyAddr(page) >> (mm_pageShift + page->ord + 1));
-    // printk(WHITE, BLACK, "_revBit(): page:%#018lx ord=%d, bitId=%#018lx\n", mm_getPhyAddr(page), page->ord, bitId);
+    // printk(WHITE, BLACK, "_revBit(): page:%p ord=%d, bitId=%p\n", mm_getPhyAddr(page), page->ord, bitId);
     bit_rev(&_buddy.revBit[page->ord + 1][bitId >> 6], bitId & 63);
 }
 
@@ -130,15 +130,15 @@ mm_Page *mm_allocPages(u64 log2Size, u32 attr) {
 }
 
 int mm_freePages(mm_Page *pages) {
-    // printk(WHITE, BLACK, "mm: buddy: try free %#018lx->%#018lx attr=%#010x\n", pages, mm_getPhyAddr(pages), pages->attr);
+    // printk(WHITE, BLACK, "mm: buddy: try free %p->%p attr=%#010x\n", pages, mm_getPhyAddr(pages), pages->attr);
     if (~pages->attr & (mm_Attr_HeadPage | mm_Attr_Allocated)) {
-        printk(RED, BLACK, "mm: buddy: invalid pages %#018lx: not head page or allocated page\n", pages);
+        printk(RED, BLACK, "mm: buddy: invalid pages %p: not head page or allocated page\n", pages);
         while (1) ;
         return res_FAIL;
     }
 
     if (~pages->attr & mm_Attr_Shared) {
-        // printk(WHITE, BLACK, "delete private page %#018lx\n", pages);
+        // printk(WHITE, BLACK, "delete private page %p\n", pages);
         SafeList_del(&task_current->thread->pgRecord, &pages->list);
     }
     
@@ -153,8 +153,8 @@ int mm_freePages(mm_Page *pages) {
         if (_getBit(pages)) break;
         mm_Page *bud = _getBuddy(pages);
         // printk(WHITE, BLACK, 
-        //     "\tpages:%#018lx->%#018lx ord=%d buddyId=%d attr=%#010x\n"
-        //     "\tbud  :%#018lx->%#018lx ord=%d buddyId=%d attr=%#010x prev:%#018lx next:%#018lx\n", 
+        //     "\tpages:%p->%p ord=%d buddyId=%d attr=%#010x\n"
+        //     "\tbud  :%p->%p ord=%d buddyId=%d attr=%#010x prev:%p next:%p\n", 
         //     pages, mm_getPhyAddr(pages), pages->ord, pages->buddyId, pages->attr,
         //     bud, mm_getPhyAddr(bud), bud->ord, bud->buddyId, bud->attr, bud->list.prev, bud->list.next);
         List_del(&bud->list);

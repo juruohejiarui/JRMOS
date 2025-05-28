@@ -32,7 +32,7 @@ int hal_hw_hpet_init() {
         printk(RED, BLACK, "hw: hpet: cannot find HPET configuration in UEFI Table.\n");
         return res_FAIL;
     }
-    printk(WHITE, BLACK, "hw: hpet: desc:%#018lx addr:%#018lx\n", hal_hw_hpet_xsdtDesc, hal_hw_hpet_xsdtDesc->addr.addr);
+    printk(WHITE, BLACK, "hw: hpet: desc:%p addr:%p\n", hal_hw_hpet_xsdtDesc, hal_hw_hpet_xsdtDesc->addr.addr);
 
     hal_hw_io_out32(0xcf8, 0x8000f8f0);
     u32 x = hal_hw_io_in32(0xcfc) & 0xffffc000;

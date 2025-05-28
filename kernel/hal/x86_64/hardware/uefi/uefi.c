@@ -37,6 +37,6 @@ int hal_hw_uefi_loadTbl() {
 		((hal_hw_uefi_CfgTbl *)mm_dmas_phys2Virt(hal_hw_uefi_info->cfgTbls))[rsdpIdx].vendorTbl);
 	hal_hw_uefi_xsdtTbl = (hal_hw_uefi_XsdtDesc *)mm_dmas_phys2Virt(hal_hw_uefi_rsdpTbl->xsdtAddr);
 
-	printk(WHITE, BLACK, "hw: uefi: rsdp:%#018lx xsdt:%#018lx\n", hal_hw_uefi_rsdpTbl, hal_hw_uefi_xsdtTbl);
+	printk(WHITE, BLACK, "hw: uefi: rsdp:%p xsdt:%p\n", hal_hw_uefi_rsdpTbl, hal_hw_uefi_xsdtTbl);
 	return res_SUCC;
 }

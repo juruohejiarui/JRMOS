@@ -14,9 +14,9 @@
 typedef struct hal_cpu_Desc {
     u32 x2apic;
     u32 apic;
-    // index of tss64 in gdt table    
     u8 *initStk;
     hal_intr_TSS *tss;
+    // index of tss64 in gdt table    
     u16 trIdx;
     u8 reserved[4];
     u16 idtTblSz;

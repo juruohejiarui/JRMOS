@@ -70,7 +70,7 @@ int _parseMadt() {
 		printk(RED, BLACK, "cpu: cannot for MADT.\n");
 		return res_FAIL;
 	}
-	printk(WHITE, BLACK, "cpu: MADT:%#018lx length=%ld\n", madt, madt->hdr.length);
+	printk(WHITE, BLACK, "cpu: MADT:%p length=%ld\n", madt, madt->hdr.length);
 
 	// first scan the table for type9 (x2apic)
 	for (u64 off = sizeof(hal_hw_uefi_MadtDesc); off < madt->hdr.length; ) {
@@ -120,7 +120,7 @@ int hal_cpu_init() {
 	if (_parseMadt() == res_FAIL) return res_FAIL;
 	printk(WHITE, BLACK, "cpu:\n");
 	for (int i = 0; i < cpu_num; i++) {
-		printk(WHITE, BLACK, "\t#%d: x2apic:%lx apic:%lx stk:%#018lx idtTbl:%#018lx idtPtr:%#018lx tss:%#018lx\n",
+		printk(WHITE, BLACK, "\t#%d: x2apic:%lx apic:%lx stk:%p idtTbl:%p idtPtr:%p tss:%p\n",
 			i, cpu_desc[i].hal.x2apic, cpu_desc[i].hal.apic, cpu_desc[i].hal.initStk, cpu_desc[i].hal.idtTbl, &cpu_desc[i].hal.idtTblSz,
 			cpu_desc[i].hal.tss);
 	}
@@ -179,7 +179,7 @@ int hal_cpu_enableAP() {
 	icr.deliverMode = hal_hw_apic_DeliveryMode_Startup;
 	icr.DestShorthand = hal_hw_apic_DestShorthand_None;
 
-	printk(WHITE, BLACK, "cpu: startup vector: %#x sz=%ld backup=%#018lx\n", icr.vector, bootSz, backup);
+	printk(WHITE, BLACK, "cpu: startup vector: %#x sz=%ld backup=%p\n", icr.vector, bootSz, backup);
 	memcpy(mm_dmas_phys2Virt(icr.vector << Page_4KShift), backup, bootSz);
 	memcpy(&hal_cpu_apBootEntry, mm_dmas_phys2Virt(icr.vector << Page_4KShift), bootSz);
 

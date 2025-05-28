@@ -70,23 +70,6 @@ void task_sche_yield() {
     hal_task_sche_yield();
 }
 
-void task_sche_sleep() {
-    task_current->state = task_state_NeedSleep;
-    while (task_current->state == task_state_NeedSleep) task_sche_yield();
-}
-
-void task_sche_wake(task_TaskStruct *task) {
-    // mask interrupt
-    SpinLock_lockMask(&task_mgr.scheLck[task->cpuId]);
-    if (task->state == task_state_NeedSleep) task->state = task_state_Running;
-    else if (task->state == task_state_Sleep) {
-        task->state = task_state_Idle;
-        SafeList_del(&task_mgr.sleepTsks, &task->scheNd);
-        RBTree_ins(&task_mgr.tasks[task->cpuId], &task->rbNd);
-    }
-    SpinLock_unlockMask(&task_mgr.scheLck[task->cpuId]);
-}
-
 void task_sche_preempt(task_TaskStruct *task) {
     // mask interrupt
     {
@@ -122,19 +105,34 @@ void task_sche_preempt(task_TaskStruct *task) {
 
 int cnt = 0;
 
+void task_sche_finishReq(task_TaskStruct *task) {
+    Atomic_dec(&task->reqWait);
+    if (task_current->reqWait.value == 0) {
+        SpinLock_lockMask(&task_mgr.scheLck[task->cpuId]);
+        // if the task is in sleep state, move it back to running state
+        if (task->state == task_state_Sleep) {
+            task->state = task_state_Idle;
+            SafeList_del(&task_mgr.sleepTsks, &task->scheNd);
+            RBTree_ins(cpu_getvar(tsks), &task->rbNd);
+            // sync the vRuntime of the task
+            task_sche_syncVRuntime(task);
+        }
+        SpinLock_unlockMask(&task_mgr.scheLck[task->cpuId]);
+    }
+}
+
 // state transition for current task when switch to other task
 static __always_inline__ void task_sche_hangCur() {
-    // printk(WHITE, BLACK, "hang %#018lx flag=%#018lx\n", task_current, task_current->flag);
+    // wait for request, then switch to idle task
+    if (task_current->reqWait.value > 0) {
+        SafeList_insTail(&task_mgr.sleepTsks, &task_current->scheNd);
+        task_current->state = task_state_Sleep;
+    }
     switch (task_current->state) {
         case task_state_NeedFree :
-            // printk(WHITE, BLACK, "move #%d to free list\n", task_current->pid);
             task_current->state = task_state_Free;
             SafeList_insTail(&task_mgr.freeTsks, &task_current->scheNd);
-            break;
-        case task_state_NeedSleep :
-            // printk(WHITE, BLACK, "move #%d to sleep list\n", task_current->pid);
-            task_current->state = task_state_Sleep;
-            SafeList_insTail(&task_mgr.sleepTsks, &task_current->scheNd);
+            if (task_freeMgrTsk->reqWait.value > 0) task_sche_finishReq(task_freeMgrTsk);
             break;
         default:
             task_current->state = task_state_Idle;
@@ -143,6 +141,7 @@ static __always_inline__ void task_sche_hangCur() {
     }
 }
 
+// main process of scheduling, take the next task and switch to it
 void task_sche() {
     SpinLock_lock(cpu_getvar(scheLck));
     task_TaskStruct *nxtTsk;
@@ -168,8 +167,6 @@ void task_sche() {
     task_sche_hangCur();
     nxtTsk->state = task_state_Running;
     SpinLock_unlock(cpu_getvar(scheLck));
-    // if (task_current->cpuId == 0) 
-        // printk(WHITE, BLACK, "cpu #%d: #%d->#%d\n", task_current->cpuId, task_current->pid, nxtTsk->pid);
     hal_task_sche_switch(nxtTsk);
 }
 
@@ -264,66 +261,30 @@ void task_initIdle() {
 }
 
 // insert new task to cfs tree
-static void _insertNewTsk(task_TaskStruct *tsk) {
+static __always_inline__ void _insertNewTsk(task_TaskStruct *tsk) {
+    task_sche_syncVRuntime(tsk);
+
     SpinLock_lockMask(&task_mgr.scheLck[tsk->cpuId]);
     RBTree_ins(&task_mgr.tasks[tsk->cpuId], &tsk->rbNd);
     SpinLock_unlockMask(&task_mgr.scheLck[tsk->cpuId]);
 }
 
-task_TaskStruct *task_newSubTask(void *entryAddr, u64 arg, u64 attr) {
+task_TaskStruct *_newTask(void *entryAddr, u64 arg, u64 attr, task_ThreadStruct *thread) {
     task_Union *tskUnion = mm_kmalloc(sizeof(task_Union), mm_Attr_Shared, NULL);
-    memset(tskUnion, 0, sizeof(task_Union));
-    task_TaskStruct *tsk = &tskUnion->task;
-
-    tsk->pid = task_pidCnt.value;
-    Atomic_inc(&task_pidCnt);
-    tsk->state = task_state_Idle;
-    tsk->vRuntime = task_current->vRuntime;
-
-    tsk->flag = attr & (task_attr_Usr | task_attr_Builtin);
-
-    List_init(&task_current->scheNd);
-
-    tsk->thread = task_current->thread;
-
-    hal_task_newSubTask(tsk, entryAddr, arg, attr);
-    
-    task_insSubTask(tsk, tsk->thread);
-
-    if (hal_task_dispatchTask(tsk) == res_FAIL) {
-        printk(RED, BLACK, "task: failed to dispatch task #%ld.\n", tsk->pid);
-        task_delSubTask(tsk);
-        mm_kfree(tsk, mm_Attr_Shared);
-        return NULL;
-    }
-
-    _insertNewTsk(tsk);
-
-    return tsk;
-}
-
-task_TaskStruct *task_newTask(void *entryAddr, u64 arg, u64 attr) {
-    task_Union *tskUnion = mm_kmalloc(sizeof(task_Union), mm_Attr_Shared, NULL);
-    memset(tskUnion, 0, sizeof(task_Union));
     if (tskUnion == NULL) {
         printk(RED, BLACK, "task: failed to allocate task structure.\n");
         return NULL;
     }
+    memset(tskUnion, 0, sizeof(task_Union));
     task_TaskStruct *tsk = &tskUnion->task;
 
     tsk->pid = task_pidCnt.value;
     Atomic_inc(&task_pidCnt);
     tsk->state = task_state_Idle;
-    tsk->vRuntime = task_current->vRuntime;
 
     List_init(&task_current->scheNd);
 
-    tsk->thread = task_newThread(attr);
-
-    if (tsk->thread == NULL) {
-        mm_kfree(tskUnion, mm_Attr_Shared);
-        return NULL;
-    }
+    tsk->thread = thread;
     
     hal_task_newTask(tsk, entryAddr, arg, attr);
 
@@ -332,12 +293,26 @@ task_TaskStruct *task_newTask(void *entryAddr, u64 arg, u64 attr) {
     if (hal_task_dispatchTask(tsk) == res_FAIL) {
         printk(RED, BLACK, "task: failed to dispatch task #%ld.\n", tsk->pid);
         task_delSubTask(tsk);
-        mm_kfree(tsk, mm_Attr_Shared);
+        mm_kfree(tskUnion, mm_Attr_Shared);
         return NULL;
     }
-    
+
     _insertNewTsk(tsk);
 
+    return tsk;
+}
+
+task_TaskStruct *task_newSubTask(void *entryAddr, u64 arg, u64 attr) {
+    return _newTask(entryAddr, arg, attr, task_current->thread);
+}
+
+task_TaskStruct *task_newTask(void *entryAddr, u64 arg, u64 attr) {
+    task_ThreadStruct *thread = task_newThread(attr);
+    if (thread == NULL) {
+        printk(RED, BLACK, "task: failed to create thread for new task.\n");
+        return NULL;
+    }
+    task_TaskStruct *tsk = _newTask(entryAddr, arg, attr, thread);
     return tsk;
 }
 
@@ -354,9 +329,8 @@ task_TaskStruct *task_freeMgrTsk;
 
 u64 task_freeMgr(u64 arg) {
     u64 tot = 0;
-    task_current->priority = task_Priority_Lowest;
     while (1) {
-        if (SafeList_isEmpty(&task_mgr.freeTsks)) { task_sche_yield(); continue; }
+        if (SafeList_isEmpty(&task_mgr.freeTsks)) task_sche_waitReq();
         task_current->priority = task_Priority_Running;
         while (!SafeList_isEmpty(&task_mgr.freeTsks)) {
             task_TaskStruct *tsk = container(SafeList_getHead(&task_mgr.freeTsks), task_TaskStruct, scheNd);
@@ -366,7 +340,6 @@ u64 task_freeMgr(u64 arg) {
                 printk(RED, BLACK, "task: failed to free task #%ld.\n", pid);
             } else printk(GREEN, BLACK, "task: task #%ld is killed, tot=%ld\n", pid, ++tot);
         }
-        task_current->priority = task_Priority_Lowest;
     }
     return 0;
 }

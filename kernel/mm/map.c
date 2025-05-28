@@ -90,7 +90,7 @@ void mm_map_dbg(int detail) {
 int mm_map_freeTbl(hal_mm_PageTbl *tbl) {
     mm_Page *pg = mm_getDesc(mm_dmas_virt2Phys(tbl));
     if (~pg->attr & (mm_Attr_MMU | mm_Attr_HeadPage)) {
-        printk(RED, BLACK, "mm: failed to free page table %#018lx. Invalid table pointer.\n", tbl);
+        printk(RED, BLACK, "mm: failed to free page table %p. Invalid table pointer.\n", tbl);
         while (1) ;
         return res_FAIL;
     }
