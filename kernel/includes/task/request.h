@@ -18,6 +18,7 @@ static __always_inline__ void task_Request_init(task_Request *req, u64 flags) {
 }
 
 static __always_inline__ void task_Request_send(task_Request *req) {
+	Atomic_btr(&req->flags, 1);
 	if (req->flags.value & hw_Request_Flag_Abort) task_sche_waitReq();
 }
 

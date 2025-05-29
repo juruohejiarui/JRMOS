@@ -99,7 +99,7 @@ void hal_init_init() {
 
 	// for (int i = 0; i < cpu_num * 200; i++) task_newTask(hal_init_test, i, task_attr_Builtin); 
 
-	for (int i = 0; i < cpu_num * 2; i++) task_newTask(hal_init_testUsr, i, task_attr_Builtin | task_attr_Usr);
+	// for (int i = 0; i < cpu_num * 2; i++) task_newTask(hal_init_testUsr, i, task_attr_Builtin | task_attr_Usr);
 
 	while (1) {
 		// mm_dbg();

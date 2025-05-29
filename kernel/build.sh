@@ -21,8 +21,10 @@ fi
 ln -s ../hal/${ARCH}/includes/ ./includes/hal
 ln -s ../hal/${ARCH}/Tools/ ./Tools/hal
 
-make genrely ARCH=${ARCH}
-make gen ARCH=${ARCH}
+if [ $ARCH = "x86_64" ]; then
+	make genrely ARCH=${ARCH}
+	make gen ARCH=${ARCH}
+fi
 make rely ARCH=${ARCH}
 
 if [ $? -ne 0 ]; then

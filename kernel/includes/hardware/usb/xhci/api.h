@@ -58,9 +58,6 @@ static __always_inline__ void hw_usb_xhci_TRB_setIntrTarget(hw_usb_xhci_TRB *trb
 static __always_inline__ u64 hw_usb_xhci_TRB_setStatus(hw_usb_xhci_TRB *trb, u32 val) {
 	hal_write32((u64)&trb->status, val);
 }
-static __always_inline__ u64 hw_usb_xhci_TRB_mkSetup(u8 bmReqT, u8 bReq, u16 wVal, u16 wIdx, u16 wLen) {
-	return (u64)bmReqT | (((u64)bReq) << 8) | (((u64)wVal) << 16) | (((u64)wIdx) << 32) | (((u64)wLen) << 48);
-}
 static __always_inline__ u32 hw_usb_xhci_TRB_mkStatus(u32 trbTransLen, u32 tdSize, u32 intrTarget) {
 	return trbTransLen | (tdSize << 17) | (intrTarget << 22);
 }
@@ -77,9 +74,37 @@ static __always_inline__ int hw_usb_xhci_TRB_getPos(hw_usb_xhci_TRB *trb) {
 	return ((u64)trb - ((u64)trb & ~0xfffful)) / sizeof(hw_usb_xhci_TRB);
 }
 
+static __always_inline__ int hw_usb_xhci_TRB_getEp(hw_usb_xhci_TRB *trb) {
+	return (hal_read32((u64)&trb->ctrl) >> 16) & 0x1f;
+}
+
 static __always_inline__ void hw_usb_xhci_TRB_copy(hw_usb_xhci_TRB *src, hw_usb_xhci_TRB *dst) {
 	hal_write64((u64)dst, *(u64 *)src);
 	hal_write64((u64)dst + sizeof(u64), *(u64 *)((u64)src + sizeof(u64)));
+}
+
+static __always_inline__ u64 hw_usb_xhci_mkCtrlReqSetup(u8 bmReqT, u8 bReq, u16 wVal, u16 wIdx, u16 wLen) {
+	return (u64)bmReqT | (((u64)bReq) << 8) | (((u64)wVal) << 16) | (((u64)wIdx) << 32) | (((u64)wLen) << 48);
+}
+
+void hw_usb_xhci_mkCtrlDataReq(hw_usb_xhci_Request *req, u64 setup, int dir, void *data, u16 len) {
+	hw_usb_xhci_TRB *trb = &req->input[0];
+	hw_usb_xhci_TRB_setData(trb, setup);
+	hw_usb_xhci_TRB_setStatus(trb, hw_usb_xhci_TRB_mkStatus(0x08, 0, 0));
+	hw_usb_xhci_TRB_setType(trb, hw_usb_xhci_TRB_Type_SetupStage);
+	hw_usb_xhci_TRB_setCtrlBit(trb, hw_usb_xhci_TRB_ctrl_idt);
+	hw_usb_xhci_TRB_setTRT(trb, dir == hw_usb_xhci_TRB_ctrl_dir_in ? hw_usb_xhci_TRB_trt_In : hw_usb_xhci_TRB_trt_Out);
+
+	trb++;
+	hw_usb_xhci_TRB_setData(trb, mm_dmas_virt2Phys(data));
+	hw_usb_xhci_TRB_setStatus(trb, hw_usb_xhci_TRB_mkStatus(len, 0, 0));
+	hw_usb_xhci_TRB_setType(trb, hw_usb_xhci_TRB_Type_DataStage);
+	hw_usb_xhci_TRB_setDir(trb, dir);
+
+	trb++;
+	hw_usb_xhci_TRB_setDir(trb, ((~dir) & 1));
+	hw_usb_xhci_TRB_setType(trb, hw_usb_xhci_TRB_Type_StatusStage);
+	hw_usb_xhci_TRB_setCtrlBit(trb, hw_usb_xhci_TRB_ctrl_ioc);
 }
 
 static __always_inline__ u8 hw_usb_xhci_CapReg_capLen(hw_usb_xhci_Host *host) { return hal_read8(host->capRegAddr + hw_usb_xhci_Host_capReg_capLen); }
@@ -174,7 +199,7 @@ static __always_inline__ void hw_usb_xhci_writeCtx(void *ctx, int dwIdx, u32 mas
 	hal_write32(addr, (hal_read32(addr) & ~mask) | ((val << (bit_ffs32(mask) - 1) & mask)));
 }
 static __always_inline__ void hw_usb_xhci_writeCtx64(void *ctx, int dwIdx, u64 val) {
-	register u64 addr = (u64)ctx + dwIdx * 8;
+	register u64 addr = (u64)ctx + dwIdx * sizeof(u32);
 	hal_write64(addr, val);
 }
 

@@ -411,7 +411,7 @@ int hw_usb_xhci_devInit(hw_usb_xhci_Device *dev) {
 	// get slot ID
 	hw_usb_xhci_Host *host = dev->host;
 
-	hw_usb_xhci_Request *req = hw_usb_xhci_makeRequest(1, hw_usb_xhci_Request_flags_Command);
+	hw_usb_xhci_Request *req = hw_usb_xhci_makeRequest(1, hw_usb_xhci_Request_flags_Command), *req2 = hw_usb_xhci_makeRequest(3, 0);
 	hw_usb_xhci_TRB_setType(&req->input[0], hw_usb_xhci_TRB_Type_EnblSlot);
 	
 	// get slot Type
@@ -460,19 +460,18 @@ int hw_usb_xhci_devInit(hw_usb_xhci_Device *dev) {
 	}
 
 	{
-		void *ep0 = hw_usb_xhci_getCtxEntry(host, dev->inCtx, hw_usb_xhci_InCtx_Ep(0, 1));
+		void *ep0 = hw_usb_xhci_getCtxEntry(host, dev->inCtx, hw_usb_xhci_InCtx_CtrlEp);
 		hw_usb_xhci_writeCtx(ep0, 1, hw_usb_xhci_EpCtx_epType, hw_usb_xhci_EpCtx_epType_Ctrl);
 		hw_usb_xhci_writeCtx(ep0, 1, hw_usb_xhci_EpCtx_CErr, 3);
 		hw_usb_xhci_writeCtx(ep0, 1, hw_usb_xhci_EpCtx_mxPackSize, _EpCtx_getDefaultMxPackSz0(dev->speed));
 		
-		dev->epRing[hw_usb_xhci_DevCtx_Ep(0, 1)] = hw_usb_xhci_allocRing(host, hw_usb_xhci_Ring_mxSz);
-		if (dev->epRing[hw_usb_xhci_DevCtx_Ep(0, 1)] == NULL) {
+		dev->epRing[hw_usb_xhci_DevCtx_CtrlEp] = hw_usb_xhci_allocRing(host, hw_usb_xhci_Ring_mxSz);
+		if (dev->epRing[hw_usb_xhci_DevCtx_CtrlEp] == NULL) {
 			printk(RED, BLACK, "hw: xhci: dev %p failed to allocate ep ring\n", dev);
-			hw_usb_xhci_freeRequest(req);
-			return res_FAIL;
+			goto Fail_To_Initialize;
 		}
 
-		hw_usb_xhci_writeCtx64(ep0, 2, mm_dmas_virt2Phys(dev->epRing[hw_usb_xhci_DevCtx_Ep(0, 1)]->trbs));
+		hw_usb_xhci_writeCtx64(ep0, 2, mm_dmas_virt2Phys(dev->epRing[hw_usb_xhci_DevCtx_CtrlEp]->trbs));
 		hw_usb_xhci_writeCtx(ep0, 2, hw_usb_xhci_EpCtx_dcs, 1);
 
 		hw_usb_xhci_writeCtx(ep0, 4, hw_usb_xhci_EpCtx_aveTrbLen, 8);
@@ -481,10 +480,61 @@ int hw_usb_xhci_devInit(hw_usb_xhci_Device *dev) {
 	hw_usb_xhci_request(host, host->cmdRing, req, 0, 0);
 	if (hw_usb_xhci_TRB_getCmplCode(&req->res) != hw_usb_xhci_TRB_CmplCode_Succ) {
 		printk(RED, BLACK, "hw: xhci: dev %p failed to address device\n", dev);
-		hw_usb_xhci_freeRequest(req);
-		return res_FAIL;
+		goto Fail_To_Initialize;
 	}
 	printk(GREEN, BLACK, "hw: xhci: dev %p addressed\n", dev);
+	
+	// get device descriptor
+	dev->devDesc = mm_kmalloc(0xff, 0, NULL);
+
+	// make data ctrl request
+	hw_usb_xhci_mkCtrlDataReq(req2, hw_usb_xhci_mkCtrlReqSetup(0x80, 0x6, 0x0100, 0x0, 0x8), hw_usb_xhci_TRB_ctrl_dir_in, dev->devDesc, 8);
+
+	hw_usb_xhci_request(host, dev->epRing[hw_usb_xhci_DevCtx_CtrlEp], req2, dev->slotId, hw_usb_xhci_DbReq_make(hw_usb_xhci_DevCtx_CtrlEp, 0));
+	if (hw_usb_xhci_TRB_getCmplCode(&req->res) != hw_usb_xhci_TRB_CmplCode_Succ) {
+		printk(RED, BLACK, "hw: xhci: dev %p failed to get first 8 bytes of device descriptor, code=%d\n", dev, hw_usb_xhci_TRB_getCmplCode(&req->res));
+		goto Fail_To_Initialize;
+	}
+
+	// set max package size 0
+	{
+		u32 mxPkgSz0 = (dev->speed >= 4 ? (1u << (dev->devDesc->bMxPackSz0)) : dev->devDesc->bMxPackSz0);
+		hw_usb_xhci_writeCtx(hw_usb_xhci_getCtxEntry(host, dev->inCtx, hw_usb_xhci_InCtx_CtrlEp), 1, hw_usb_xhci_EpCtx_mxPackSize, mxPkgSz0);
+	}
+
+	hw_usb_xhci_TRB_setType(&req->input[0], hw_usb_xhci_TRB_Type_EvalCtx);
+	hw_usb_xhci_request(host, host->cmdRing, req, 0, 0);
+	if (hw_usb_xhci_TRB_getCmplCode(&req->res) != hw_usb_xhci_TRB_CmplCode_Succ) {
+		printk(RED, BLACK, "hw: xhci: dev %p failed to evaluate context, code=%d\n", dev, hw_usb_xhci_TRB_getCmplCode(&req->res));
+		goto Fail_To_Initialize;
+	}
+	hw_usb_xhci_mkCtrlDataReq(req2, hw_usb_xhci_mkCtrlReqSetup(0x80, 0x6, 0x0100, 0x0, 0xff), hw_usb_xhci_TRB_ctrl_dir_in, dev->devDesc, 0xff);
+	hw_usb_xhci_request(host, dev->epRing[hw_usb_xhci_DevCtx_CtrlEp], req2, dev->slotId, hw_usb_xhci_DbReq_make(hw_usb_xhci_DevCtx_CtrlEp, 0));
+	if (hw_usb_xhci_TRB_getCmplCode(&req2->res) != hw_usb_xhci_TRB_CmplCode_Succ) {
+		printk(RED, BLACK, "hw: xhci: dev %p failed to get device description, code=%d\n", dev, hw_usb_xhci_TRB_getCmplCode(&req->res));
+		goto Fail_To_Initialize;
+	}
+	printk(GREEN, BLACK, "hw: xhci: dev %p get device descriptor.\n", dev);
+
+	dev->cfgDesc = mm_kmalloc(sizeof(void *) & dev->devDesc->bNumCfg, 0, NULL);
+	for (int i = 0; i < dev->devDesc->bNumCfg; i++) {
+		dev->cfgDesc[i] = mm_kmalloc(0xff, 0, NULL);
+		hw_usb_xhci_mkCtrlDataReq(req2, hw_usb_xhci_mkCtrlReqSetup(0x80, 0x6, 0x0200 | i, 0x0, 0xff), hw_usb_xhci_TRB_ctrl_dir_in, dev->cfgDesc[i], 0xff);
+		hw_usb_xhci_request(host, dev->epRing[hw_usb_xhci_DevCtx_CtrlEp], req2, dev->slotId, hw_usb_xhci_DbReq_make(hw_usb_xhci_DevCtx_CtrlEp, 0));
+		if (hw_usb_xhci_TRB_getCmplCode(&req2->res) != hw_usb_xhci_TRB_CmplCode_Succ) {
+			printk(RED, BLACK, "hw: xhci: dev %p failed to get configuration description #%d, code=%d\n",
+				dev, i, hw_usb_xhci_TRB_getCmplCode(&req->res));
+			goto Fail_To_Initialize;
+		}
+	}
+	printk(GREEN, BLACK, "hw: xhci: dev %p get configuration descriptor.\n", dev);
+
+	hw_usb_xhci_freeRequest(req);
+	hw_usb_xhci_freeRequest(req2);
 
 	return res_SUCC;
+	Fail_To_Initialize:
+	hw_usb_xhci_freeRequest(req);
+	hw_usb_xhci_freeRequest(req2);
+	return res_FAIL;
 } 

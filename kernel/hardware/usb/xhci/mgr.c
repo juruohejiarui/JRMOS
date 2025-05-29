@@ -16,15 +16,24 @@ intr_handlerDeclare(hw_usb_xhci_msiHandler) {
 			eveRing->curIdx = 0;
 		}
 		switch (hw_usb_xhci_TRB_getType(event)) {
-			case hw_usb_xhci_TRB_Type_CmdCmpl :
+			case hw_usb_xhci_TRB_Type_CmdCmpl : {
 				hw_usb_xhci_Request *req = hw_usb_xhci_response(host->cmdRing, event, *(u64 *)&event->dt1);
 				printk(YELLOW, BLACK, "response to command request %p with code:%d\n", req, hw_usb_xhci_TRB_getCmplCode(event));
 				break;
+			}
 			case hw_usb_xhci_TRB_Type_PortStChg :
 				hw_usb_xhci_OpReg_write32(host, hw_usb_xhci_Host_opReg_status, (1u << 4));
 				hw_usb_xhci_portChange(host, event->dt1 >> 24);
 				printk(YELLOW, BLACK, "response to port status change.\n");
 				break;
+			case hw_usb_xhci_TRB_Type_TransEve : {
+				hw_usb_xhci_Device *dev = host->dev[hw_usb_xhci_TRB_getSlot(event)];
+				hw_usb_xhci_Ring *epRing = dev->epRing[hw_usb_xhci_TRB_getEp(event)];
+				hw_usb_xhci_Request *req = hw_usb_xhci_response(epRing, event, *(u64 *)&event->dt1);
+				hw_usb_xhci_TRB_copy(event, &req->res);
+				req->flags |= hw_usb_xhci_Request_flags_Finished;
+				break;
+			}
 		}
 	}
 	hw_usb_xhci_IntrReg_write64(host, intrId, hw_usb_xhci_intrReg_DeqPtr, mm_dmas_virt2Phys(event) | (1ul << 3));
@@ -97,5 +106,8 @@ void hw_usb_xhci_devMgrTsk(hw_usb_xhci_Device *dev) {
 	}
 	printk(GREEN, BLACK, "hw: xhci: device manager task for device %p initialized\n", dev);
 	task_signal_setHandler(task_Signal_Int, (void *)hw_usb_xhci_uninstallDev, (u64)dev);
+
+	// search for drivers
+	
 	while (1) hal_hw_hlt();
 }

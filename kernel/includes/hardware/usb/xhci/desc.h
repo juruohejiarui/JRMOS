@@ -188,9 +188,12 @@ typedef union hw_usb_xhci_InCtx {
 #define hw_usb_xhci_InCtx_Ctrl 0x0
 #define hw_usb_xhci_InCtx_Slot 0x1
 #define hw_usb_xhci_InCtx_Ep(x, dir) ((((x) << 1) | dir) + 1)
+#define hw_usb_xhci_InCtx_CtrlEp hw_usb_xhci_InCtx_Ep(0, 1)
 
 #define hw_usb_xhci_DevCtx_Slot 0x0
 #define hw_usb_xhci_DevCtx_Ep(x, dir) (((x) << 1) | dir)
+#define hw_usb_xhci_DevCtx_CtrlEp hw_usb_xhci_DevCtx_Ep(0, 1)
+
 
 #define hw_usb_xhci_Speed_Full  1
 #define hw_usb_xhci_Speed_Low   2
@@ -234,7 +237,7 @@ typedef struct hw_usb_xhci_Device {
     hw_usb_xhci_Ring *epRing[32];
 
     hw_usb_devdesc_Device *devDesc;
-    hw_usb_devdesc_Cfg *cfgDesc;
+    hw_usb_devdesc_Cfg **cfgDesc;
 
     ListNode lst;
 } hw_usb_xhci_Device;

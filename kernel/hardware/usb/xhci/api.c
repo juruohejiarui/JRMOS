@@ -130,6 +130,7 @@ void hw_usb_xhci_InsReq(hw_usb_xhci_Host *host, hw_usb_xhci_Ring *ring, hw_usb_x
 
 // insert the request, write the doorbell register, then wait for the reply
 void hw_usb_xhci_request(hw_usb_xhci_Host *host, hw_usb_xhci_Ring *ring, hw_usb_xhci_Request *req, u32 slot, u32 doorbell) {
+    req->flags &= ~hw_Request_Flag_Finish;
     hw_usb_xhci_InsReq(host, ring, req);
     hw_usb_xhci_DbReg_write(host, slot, doorbell);
     // wait for the request to be finished
