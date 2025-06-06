@@ -2,6 +2,41 @@
 #include <mm/mm.h>
 #include <timer/api.h>
 #include <screen/screen.h>
+#include <lib/algorithm.h>
+
+void hw_usb_xhci_mkCtrlDataReq(hw_usb_xhci_Request *req, u64 setup, int dir, void *data, u16 len) {
+	hw_usb_xhci_TRB *trb = &req->input[0];
+	hw_usb_xhci_TRB_setData(trb, setup);
+	hw_usb_xhci_TRB_setStatus(trb, hw_usb_xhci_TRB_mkStatus(0x08, 0, 0));
+	hw_usb_xhci_TRB_setType(trb, hw_usb_xhci_TRB_Type_SetupStage);
+	hw_usb_xhci_TRB_setCtrlBit(trb, hw_usb_xhci_TRB_ctrl_idt);
+	hw_usb_xhci_TRB_setTRT(trb, dir == hw_usb_xhci_TRB_ctrl_dir_in ? hw_usb_xhci_TRB_trt_In : hw_usb_xhci_TRB_trt_Out);
+
+	trb++;
+	hw_usb_xhci_TRB_setData(trb, mm_dmas_virt2Phys(data));
+	hw_usb_xhci_TRB_setStatus(trb, hw_usb_xhci_TRB_mkStatus(len, 0, 0));
+	hw_usb_xhci_TRB_setType(trb, hw_usb_xhci_TRB_Type_DataStage);
+	hw_usb_xhci_TRB_setDir(trb, dir);
+
+	trb++;
+	hw_usb_xhci_TRB_setDir(trb, ((~dir) & 1));
+	hw_usb_xhci_TRB_setType(trb, hw_usb_xhci_TRB_Type_StatusStage);
+	hw_usb_xhci_TRB_setCtrlBit(trb, hw_usb_xhci_TRB_ctrl_ioc);
+}
+
+void hw_usb_xhci_mkCtrlReq(hw_usb_xhci_Request *req, u64 setup, int dir) {
+    hw_usb_xhci_TRB *trb = &req->input[0];
+    hw_usb_xhci_TRB_setData(trb, setup);
+    hw_usb_xhci_TRB_setStatus(trb, hw_usb_xhci_TRB_mkStatus(0x08, 0, 0));
+    hw_usb_xhci_TRB_setType(trb, hw_usb_xhci_TRB_Type_SetupStage);
+    hw_usb_xhci_TRB_setCtrlBit(trb, hw_usb_xhci_TRB_ctrl_idt);
+    hw_usb_xhci_TRB_setTRT(trb, hw_usb_xhci_TRB_trt_No);
+
+    trb++;
+    hw_usb_xhci_TRB_setDir(trb, ((~dir) & 1));
+    hw_usb_xhci_TRB_setType(trb, hw_usb_xhci_TRB_Type_StatusStage);
+    hw_usb_xhci_TRB_setCtrlBit(trb, hw_usb_xhci_TRB_ctrl_ioc);
+}
 
 void *hw_usb_xhci_nxtExtCap(hw_usb_xhci_Host *host, void *cur) {
     if (!cur) return (void *)(host->capRegAddr + (hw_usb_xhci_CapReg_hccParam(host, 1) >> 16) * 4);
@@ -247,6 +282,9 @@ hw_usb_xhci_Device *hw_usb_xhci_newDev(hw_usb_xhci_Host *host, hw_usb_xhci_Devic
     dev->parent = parent;
     dev->host = host;
 
+    dev->device.drv = NULL;
+    dev->device.parent = &host->mgr;
+
     // make new task for the device
     dev->mgrTsk = task_newTask(hw_usb_xhci_devMgrTsk, (u64)dev, task_attr_Builtin);
 
@@ -261,4 +299,40 @@ int hw_usb_xhci_freeDev(hw_usb_xhci_Device *dev) {
         return res_FAIL;
     }
     return res_SUCC;
+}
+
+int hw_usb_xhci_isXhciDev(hw_Device *dev) {
+    SafeList_enum(&hw_usb_xhci_hostLst, hostNd) {
+        if (dev->parent == container(hostNd, hw_Device, lst)) return res_SUCC;
+    }
+    return res_FAIL;
+}
+
+int hw_usb_xhci_EpCtx_calcInterval(hw_usb_xhci_Device *dev, int epType, u32 bInterval) {
+    int speed = hw_usb_xhci_readCtx(hw_usb_xhci_getCtxEntry(dev->host, dev->inCtx, hw_usb_xhci_InCtx_Slot), 0, hw_usb_xhci_SlotCtx_speed);
+    switch (speed) {
+        case hw_usb_xhci_Speed_Full:
+        case hw_usb_xhci_Speed_Low :
+            if ((epType & 0x3) == 0x3) {
+                u8 interval = 0;
+                for (int i = 3; i <= 10; i++)
+                    if (abs((1 << i) - 8 * bInterval) < (abs((1 << interval) - 8 * bInterval)))
+                        interval = i;
+                return interval;
+            }
+        default: return bInterval;
+    } 
+    return -1;
+}
+
+void hw_usb_xhci_EpCtx_writeESITPay(void *ctx, u64 val) {
+    hw_usb_xhci_writeCtx(ctx, 0, hw_usb_xhci_EpCtx_mxESITPayH, (val >> 16) & 0xffu);
+    hw_usb_xhci_writeCtx(ctx, 1, hw_usb_xhci_EpCtx_mxESITPayL, val & 0xffffu);
+}
+
+u64 hw_usb_xhci_EpCtx_readESITPay(void *ctx) {
+    u64 val = hw_usb_xhci_readCtx(ctx, 0, hw_usb_xhci_EpCtx_mxESITPayH);
+    val <<= 16;
+    val |= hw_usb_xhci_readCtx(ctx, 1, hw_usb_xhci_EpCtx_mxESITPayL);
+    return val;
 }

@@ -319,7 +319,6 @@ task_TaskStruct *task_newTask(void *entryAddr, u64 arg, u64 attr) {
 void task_exit(u64 res) {
     /// @todo free simd struct
     hal_task_exit(res);
-    
     task_current->priority = task_Priority_Lowest;
     task_current->state = task_state_NeedFree;
     while (1) task_sche_yield();

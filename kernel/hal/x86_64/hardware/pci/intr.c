@@ -38,7 +38,9 @@ void (*hal_hw_pci_intrLst[0x40])(void) = {
 
 void hal_hw_pci_intr_dispatcher(u64 rsp, u64 num) {
 	intr_Desc *intr = cpu_getvar(hal.intrDesc[num - 0x40]);
-	printk(WHITE, BLACK, "hw: pci: intr #%d on cpu #%d desc:%p handler:%p ctrl:%p\n", num, task_current->cpuId, intr, intr->handler, intr->ctrl);
+
+	// printk(WHITE, BLACK, "hw: pci: intr #%d on cpu #%d desc:%p handler:%p ctrl:%p\n", num, task_current->cpuId, intr, intr->handler, intr->ctrl);
+	
 	if (intr == NULL || intr->handler == NULL) {
 		printk(RED, BLACK, "hw: pci: no handler for intr #%d on cpu #%d\n", num, task_current->cpuId);
 		while (1) hal_hw_hlt();

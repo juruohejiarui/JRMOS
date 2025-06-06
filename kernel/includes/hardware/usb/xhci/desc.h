@@ -1,8 +1,9 @@
-#ifndef __HARDWARD_USB_XHCI_DESC_H__
+#ifndef __HARDWARE_USB_XHCI_DESC_H__
 #define __HARDWARE_USB_XHCI_DESC_H__
 
 #include <hal/hardware/reg.h>
 #include <hardware/pci.h>
+#include <hardware/mgr.h>
 #include <hardware/usb/devdesc.h>
 #include <interrupt/desc.h>
 #include <task/api.h>
@@ -221,6 +222,9 @@ typedef struct hw_usb_xhci_EveRing {
 typedef struct hw_usb_xhci_Device {
     struct hw_usb_xhci_Host *host;
     struct hw_usb_xhci_Device *parent;
+
+    hw_Device device;
+
     u32 slotId;
     u16 portId, speed;
     u32 flag;
@@ -252,6 +256,8 @@ typedef struct hw_usb_xhci_Port {
 
 typedef struct hw_usb_xhci_Host {
     hw_pci_Dev *pci;
+
+    hw_Device mgr;
 
     union {
         hw_pci_MsiCap *msiCap;
@@ -285,8 +291,6 @@ typedef struct hw_usb_xhci_Host {
 
     hw_usb_xhci_Device **dev;
     hw_usb_xhci_Device **portDev;
-
-    
 } hw_usb_xhci_Host;
 
 #define hw_usb_xhci_Host_capReg_capLen      0x0

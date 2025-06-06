@@ -5,7 +5,9 @@ intr_handlerDeclare(hw_usb_xhci_msiHandler) {
 	hw_usb_xhci_Host *host = (void *)(param & ~0xfful);
 	u32 intrId = param & 0xff;
 	hw_usb_xhci_EveRing *eveRing = host->eveRings[intrId];
-	printk(WHITE, BLACK, "hw: xhci: host %p handle MSI interrupt %d\n", host, intrId);
+
+	// printk(WHITE, BLACK, "hw: xhci: host %p handle MSI interrupt %d\n", host, intrId);
+
 	// get event trb froma event ring
 	hw_usb_xhci_TRB *event;
 	hw_usb_xhci_OpReg_write32(host, hw_usb_xhci_Host_opReg_status, (1u << 3));
@@ -18,13 +20,13 @@ intr_handlerDeclare(hw_usb_xhci_msiHandler) {
 		switch (hw_usb_xhci_TRB_getType(event)) {
 			case hw_usb_xhci_TRB_Type_CmdCmpl : {
 				hw_usb_xhci_Request *req = hw_usb_xhci_response(host->cmdRing, event, *(u64 *)&event->dt1);
-				printk(YELLOW, BLACK, "response to command request %p with code:%d\n", req, hw_usb_xhci_TRB_getCmplCode(event));
+				// printk(YELLOW, BLACK, "response to command request %p with code:%d\n", req, hw_usb_xhci_TRB_getCmplCode(event));
 				break;
 			}
 			case hw_usb_xhci_TRB_Type_PortStChg :
 				hw_usb_xhci_OpReg_write32(host, hw_usb_xhci_Host_opReg_status, (1u << 4));
 				hw_usb_xhci_portChange(host, event->dt1 >> 24);
-				printk(YELLOW, BLACK, "response to port status change.\n");
+				// printk(YELLOW, BLACK, "response to port status change.\n");
 				break;
 			case hw_usb_xhci_TRB_Type_TransEve : {
 				hw_usb_xhci_Device *dev = host->dev[hw_usb_xhci_TRB_getSlot(event)];
@@ -108,6 +110,15 @@ void hw_usb_xhci_devMgrTsk(hw_usb_xhci_Device *dev) {
 	task_signal_setHandler(task_Signal_Int, (void *)hw_usb_xhci_uninstallDev, (u64)dev);
 
 	// search for drivers
+	SafeList_enum(&hw_drvLst, drvNd) {
+		hw_Driver *drv = container(drvNd, hw_Driver, lst);
+		if (drv->check && drv->check(&dev->device) == res_SUCC) {
+			printk(WHITE, BLACK, "hw: xhci: device %p found driver %s\n", dev, drv->name);
+			dev->device.drv = drv;
+			drv->cfg(&dev->device);
+			drv->install(&dev->device);
+		}
+	}
 	
 	while (1) hal_hw_hlt();
 }

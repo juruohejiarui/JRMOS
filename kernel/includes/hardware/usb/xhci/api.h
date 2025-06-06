@@ -4,7 +4,7 @@
 #include <hal/hardware/reg.h>
 #include <hardware/usb/xhci/desc.h>
 
-extern SafeList hw_usb_xhci_devLst;
+extern SafeList hw_usb_xhci_hostLst;
 
 static __always_inline__ u32 hw_usb_xhci_TRB_getType(hw_usb_xhci_TRB *trb) {
 	return (hal_read32((u64)&trb->ctrl) >> 10) & ((1 << 6) - 1);
@@ -87,25 +87,9 @@ static __always_inline__ u64 hw_usb_xhci_mkCtrlReqSetup(u8 bmReqT, u8 bReq, u16 
 	return (u64)bmReqT | (((u64)bReq) << 8) | (((u64)wVal) << 16) | (((u64)wIdx) << 32) | (((u64)wLen) << 48);
 }
 
-void hw_usb_xhci_mkCtrlDataReq(hw_usb_xhci_Request *req, u64 setup, int dir, void *data, u16 len) {
-	hw_usb_xhci_TRB *trb = &req->input[0];
-	hw_usb_xhci_TRB_setData(trb, setup);
-	hw_usb_xhci_TRB_setStatus(trb, hw_usb_xhci_TRB_mkStatus(0x08, 0, 0));
-	hw_usb_xhci_TRB_setType(trb, hw_usb_xhci_TRB_Type_SetupStage);
-	hw_usb_xhci_TRB_setCtrlBit(trb, hw_usb_xhci_TRB_ctrl_idt);
-	hw_usb_xhci_TRB_setTRT(trb, dir == hw_usb_xhci_TRB_ctrl_dir_in ? hw_usb_xhci_TRB_trt_In : hw_usb_xhci_TRB_trt_Out);
+void hw_usb_xhci_mkCtrlDataReq(hw_usb_xhci_Request *req, u64 setup, int dir, void *data, u16 len);
 
-	trb++;
-	hw_usb_xhci_TRB_setData(trb, mm_dmas_virt2Phys(data));
-	hw_usb_xhci_TRB_setStatus(trb, hw_usb_xhci_TRB_mkStatus(len, 0, 0));
-	hw_usb_xhci_TRB_setType(trb, hw_usb_xhci_TRB_Type_DataStage);
-	hw_usb_xhci_TRB_setDir(trb, dir);
-
-	trb++;
-	hw_usb_xhci_TRB_setDir(trb, ((~dir) & 1));
-	hw_usb_xhci_TRB_setType(trb, hw_usb_xhci_TRB_Type_StatusStage);
-	hw_usb_xhci_TRB_setCtrlBit(trb, hw_usb_xhci_TRB_ctrl_ioc);
-}
+void hw_usb_xhci_mkCtrlReq(hw_usb_xhci_Request *req, u64 setup, int dir);
 
 static __always_inline__ u8 hw_usb_xhci_CapReg_capLen(hw_usb_xhci_Host *host) { return hal_read8(host->capRegAddr + hw_usb_xhci_Host_capReg_capLen); }
 
@@ -183,7 +167,6 @@ static __always_inline__ u8 hw_usb_xhci_Ext_Protocol_contain(void *extCap, u32 p
 	return (port >= st && port < st + cnt);
 }
 
-
 static __always_inline__ u8 hw_usb_xhci_Ext_Protocol_slotType(void *extCap) { return hal_read8((u64)extCap + 12); }
 
 u8 hw_usb_xhci_getSlotType(hw_usb_xhci_Host *host, u32 portIdx);
@@ -194,6 +177,11 @@ static __always_inline__ void *hw_usb_xhci_getCtxEntry(hw_usb_xhci_Host *host, v
 	return (void *)((u64)ctx + (ctxId << ((host->flag & hw_usb_xhci_Host_flag_Ctx64) ? 6 : 5)));
 }
 
+static __always_inline__ u32 hw_usb_xhci_readCtx(void *ctx, int dwIdx, u32 mask) {
+	register u64 addr = (u64)ctx + dwIdx * sizeof(u32);
+	return (hal_read32(addr) & mask) >> (bit_ffs32(mask) - 1);
+}
+
 static __always_inline__ void hw_usb_xhci_writeCtx(void *ctx, int dwIdx, u32 mask, u32 val) {
 	register u64 addr = (u64)ctx + dwIdx * sizeof(u32);
 	hal_write32(addr, (hal_read32(addr) & ~mask) | ((val << (bit_ffs32(mask) - 1) & mask)));
@@ -202,6 +190,12 @@ static __always_inline__ void hw_usb_xhci_writeCtx64(void *ctx, int dwIdx, u64 v
 	register u64 addr = (u64)ctx + dwIdx * sizeof(u32);
 	hal_write64(addr, val);
 }
+
+int hw_usb_xhci_EpCtx_calcInterval(hw_usb_xhci_Device *dev, int epType, u32 bInterval);
+
+void hw_usb_xhci_EpCtx_writeESITPay(void *ctx, u64 val);
+
+u64 hw_usb_xhci_EpCtx_readESITPay(void *ctx);
 
 hw_usb_xhci_Ring *hw_usb_xhci_allocRing(hw_usb_xhci_Host *host, u32 size);
 
@@ -236,5 +230,8 @@ void hw_usb_xhci_devMgrTsk(hw_usb_xhci_Device *dev);
 int hw_usb_xhci_init();
 
 int hw_usb_xhci_devInit(hw_usb_xhci_Device *dev);
+
+// check if the device is a XHCI Device
+int hw_usb_xhci_isXhciDev(hw_Device *dev);
 
 #endif

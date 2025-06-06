@@ -25,4 +25,8 @@
     (ta) / (tb) * (tb); \
 })
 
+#define abs(a) ({ \
+    register __typeof__(a) ta = (a); ta < 0 ? -ta : ta; \
+})
+
 #endif

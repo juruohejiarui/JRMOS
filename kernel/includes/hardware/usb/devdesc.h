@@ -8,6 +8,14 @@ typedef struct hw_usb_devdesc_Hdr {
 	u8 type;
 } __attribute__ ((packed)) hw_usb_devdesc_Hdr;
 
+#define hw_usb_devdesc_Type_Dev		0x01
+#define hw_usb_devdesc_Type_Cfg 	0x02
+#define hw_usb_devdesc_Type_Str		0x03
+#define hw_usb_devdesc_Type_Inter	0x04
+#define hw_usb_devdesc_Type_Ep		0x05
+#define hw_usb_devdesc_Type_HID		0x21
+#define hw_usb_devdesc_Type_Report	0x22
+
 typedef struct hw_usb_devdesc_Device {
 	hw_usb_devdesc_Hdr hdr;
 	u16 bcdUsb;
@@ -34,7 +42,7 @@ typedef struct hw_usb_devdesc_Cfg {
 	u8 bMxPw;
 } __attribute__ ((packed)) hw_usb_devdesc_Cfg;
 
-typedef struct hw_usb_devdesc_Intr {
+typedef struct hw_usb_devdesc_Inter {
 	hw_usb_devdesc_Hdr hdr;
 	u8 bIntrNum;
 	u8 bAlterSet;
@@ -43,7 +51,7 @@ typedef struct hw_usb_devdesc_Intr {
 	u8 bInterSubCls;
 	u8 bInterProtocol;
 	u8 iIntr;
-} __attribute__ ((packed)) hw_usb_devdesc_Intr;
+} __attribute__ ((packed)) hw_usb_devdesc_Inter;
 
 typedef struct hw_usb_devdesc_Ep {
 	hw_usb_devdesc_Hdr hdr;
@@ -52,5 +60,28 @@ typedef struct hw_usb_devdesc_Ep {
 	u16 wMxPktSz;
 	u8 bInterval;
 } __attribute__ ((packed)) hw_usb_devdesc_Ep;
+
+typedef struct hw_usb_devdesc_Hid {
+	hw_usb_devdesc_Hdr hdr;
+	u16 bcdHid;
+	u8 bCountryCode;
+	u8 bNumDesc;
+	struct {
+		u8 bDescType;
+		u16 wDescLen;
+	} __attribute__ ((packed)) desc[1];
+} __attribute__ ((packed)) hw_usb_devdesc_Hid;
+
+static __always_inline__ int hw_usb_devdesc_Ep_epId(hw_usb_devdesc_Ep *ep) {
+	return ((ep->bEpAddr & 0xf) << 1) + (ep->bEpAddr >> 7);
+}
+
+static __always_inline__ int hw_usb_devdesc_Ep_epType(hw_usb_devdesc_Ep *ep) { return (ep->bmAttr & 0x3) | ((ep->bEpAddr >> 5) & 0x4); }
+
+static __always_inline__ hw_usb_devdesc_Hdr *hw_usb_devdesc_getNxt(hw_usb_devdesc_Cfg *cfg, hw_usb_devdesc_Hdr *cur) {
+	if (!cur) return (hw_usb_devdesc_Hdr *)((u64)cfg + cfg->hdr.len);
+	if ((u64)cur + cur->len >= (u64)cfg + cfg->wTotLen) return NULL;
+	return (hw_usb_devdesc_Hdr *)((u64)cur + cur->len);
+}
 
 #endif

@@ -4,31 +4,33 @@
 #include <timer/api.h>
 #include <screen/screen.h>
 
-SafeList hw_usb_xhci_devLst;
+SafeList hw_usb_xhci_hostLst;
 
 // search xhci device in pci list
 static int _searchInPci() {
-	SafeList_init(&hw_usb_xhci_devLst);
-	for (ListNode *pciDevNd = SafeList_getHead(&hw_pci_devLst); pciDevNd != &hw_pci_devLst.head; pciDevNd = pciDevNd->next) {
+	SafeList_init(&hw_usb_xhci_hostLst);
+	SafeList_enum(&hw_pci_devLst, pciDevNd) {
 		hw_pci_Dev *dev = container(pciDevNd, hw_pci_Dev, lst);
 		if (dev->cfg->class == 0x0c && dev->cfg->subclass == 0x03 && dev->cfg->progIf == 0x30) {
-			hw_usb_xhci_Host *mgr = mm_kmalloc(sizeof(hw_usb_xhci_Host), mm_Attr_Shared, NULL);
-			if (mgr == NULL) {
+			hw_usb_xhci_Host *host = mm_kmalloc(sizeof(hw_usb_xhci_Host), mm_Attr_Shared, NULL);
+			if (host == NULL) {
 				printk(RED, BLACK, "xhci: failed to allocate xhci manager structure.\n");
 				return res_FAIL;
 			}
-			mgr->pci = dev;
-			mgr->intrNum = 0;
-			mgr->flag = 0;
-			SafeList_insTail(&hw_usb_xhci_devLst, &mgr->lst);
+			memset(host, 0, sizeof(hw_usb_xhci_Host));
+			host->pci = dev;
+			host->intrNum = 0;
+			host->flag = 0;
+
+			SafeList_insTail(&hw_usb_xhci_hostLst, &host->lst);
 			
-			SafeList_init(&mgr->devLst);
-			SafeList_init(&mgr->ringLst);
+			SafeList_init(&host->devLst);
+			SafeList_init(&host->ringLst);
 		}
 	}
 
 	// list xhci controller
-	for (ListNode *xhciDevNd = SafeList_getHead(&hw_usb_xhci_devLst); xhciDevNd != &hw_usb_xhci_devLst.head; xhciDevNd = xhciDevNd->next) {
+	SafeList_enum(&hw_usb_xhci_hostLst, xhciDevNd) {
 		hw_usb_xhci_Host *mgr = container(xhciDevNd, hw_usb_xhci_Host, lst);
 		printk(WHITE, BLACK, "hw: xhci: find controller: %p pci: %02x:%02x:%02x\n", mgr, mgr->pci->busId, mgr->pci->devId, mgr->pci->funcId);
 	}
@@ -391,7 +393,7 @@ static int _initHost(hw_usb_xhci_Host *host) {
 
 int hw_usb_xhci_init() {
 	if (_searchInPci() == res_FAIL) return res_FAIL;
-	for (ListNode *xhciDevNd = SafeList_getHead(&hw_usb_xhci_devLst); xhciDevNd != &hw_usb_xhci_devLst.head; xhciDevNd = xhciDevNd->next) {
+	SafeList_enum(&hw_usb_xhci_hostLst, xhciDevNd) {
 		if (_initHost(container(xhciDevNd, hw_usb_xhci_Host, lst)) == res_FAIL) return res_FAIL;
 	}
 	return res_SUCC;
@@ -465,7 +467,7 @@ int hw_usb_xhci_devInit(hw_usb_xhci_Device *dev) {
 		hw_usb_xhci_writeCtx(ep0, 1, hw_usb_xhci_EpCtx_CErr, 3);
 		hw_usb_xhci_writeCtx(ep0, 1, hw_usb_xhci_EpCtx_mxPackSize, _EpCtx_getDefaultMxPackSz0(dev->speed));
 		
-		dev->epRing[hw_usb_xhci_DevCtx_CtrlEp] = hw_usb_xhci_allocRing(host, hw_usb_xhci_Ring_mxSz);
+		dev->epRing[hw_usb_xhci_DevCtx_CtrlEp] = hw_usb_xhci_allocRing(host, hw_usb_xhci_Ring_mxSz >> 1);
 		if (dev->epRing[hw_usb_xhci_DevCtx_CtrlEp] == NULL) {
 			printk(RED, BLACK, "hw: xhci: dev %p failed to allocate ep ring\n", dev);
 			goto Fail_To_Initialize;

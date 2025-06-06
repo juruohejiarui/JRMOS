@@ -4,6 +4,7 @@
 #include <screen/screen.h>
 
 void init_init() {
+	hw_driver_init();
 	if (hw_pci_init() == res_FAIL) {
 		printk(RED, BLACK, "init: failed to initialize pci.\n");
 		while (1) ;
