@@ -265,10 +265,6 @@ void hal_intr_doPageFault(u64 rsp, u64 errorCode) {
 	p = (u64 *)(rsp + 0x98);
 	if (_isStkGrow(cr2, ((hal_intr_PtReg *)rsp)->rsp)) {
 		mm_Page *page = mm_allocPages(0, mm_Attr_Shared2U);
-		// SpinLock_lock(&_trapLogLck);
-		// printk(ORANGE, BLACK, "[Trap] Task %d need one stack page %p->%p\n", task_current->pid, mm_getPhyAddr(page), cr2 & ~0xffful);
-		// _printRegs(rsp);
-		// SpinLock_unlock(&_trapLogLck);
 		mm_map(cr2 & ~0xffful, mm_getPhyAddr(page), mm_Attr_Shared2U | mm_Attr_Exist | mm_Attr_Writable);
 	} else {
 		SpinLock_lock(&_trapLogLck);
@@ -327,11 +323,6 @@ void hal_intr_doSIMDError(u64 rsp, u64 errorCode) {
 	u64 *p = NULL;
 	p = (u64 *)(rsp + 0x98);
 	printk(RED,BLACK,"do_simd_error(19),ERROR_CODE:%p,RSP:%p,RIP:%p\n",errorCode , rsp , *p);
-	// printk(WHITE, BLACK, "task %ld on processor %d\n", Task_current->pid, SMP_getCurCPUIndex());
-	// u32 mxcsr = SIMD_getMXCSR();
-	// printk(WHITE, BLACK, "mxcsr:%#010x\t", mxcsr);
-	// mxcsr &= ~((1ull<< 6) - 1);
-	// SIMD_setMXCSR(mxcsr);
 	while(1) hal_hw_hlt();
 }
 

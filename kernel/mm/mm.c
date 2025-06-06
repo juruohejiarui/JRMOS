@@ -14,6 +14,7 @@ int mm_init() {
     hal_mm_loadmap();
     int krlZoneId = -1, lstRam = 0;
     mm_memStruct.nrZones = 0;
+
     for (int i = 0; i < mm_nrMemMapEntries; i++) {
         mm_MemMap *entry = &mm_memMapEntries[i];
         if (entry->attr & mm_Attr_Firmware) continue;
@@ -39,34 +40,12 @@ int mm_init() {
     mm_memStruct.zones[mm_memStruct.krlZoneId].availSt = upAlign(mm_memStruct.edStruct - task_krlAddrSt, mm_pageSize);
     // from now on, printk can be used
     printk(WHITE, BLACK, "mm: edStruct: %p mm_symbol_end: %p kernel zone id:%d\nmm:", mm_memStruct.edStruct, &mm_symbol_end, mm_memStruct.krlZoneId);
-    u64 pgDescArrSize;
-    {
-        u64 mxAddr = 0;
-        for (int i = 0; i < mm_nrMemMapEntries; i++)
-            mxAddr = max(mxAddr, mm_memMapEntries[i].addr + mm_memMapEntries[i].size);
-        pgDescArrSize = (upAlign(mxAddr, mm_pageSize) >> mm_pageShift) * sizeof(mm_Page);
-        pgDescArrSize = upAlign(pgDescArrSize, mm_pageSize);
-    }
-    // find a valid space for page array
-    {
-        mm_Zone *tgrZone = NULL;
-        for (int i = 0; i < mm_memStruct.nrZones; i++) {
-            mm_Zone *zone = &mm_memStruct.zones[i];
-            if (zone->availSt + pgDescArrSize <= zone->phyAddrEd) {
-                tgrZone = zone;
-                break;
-            }
-        }
-        if (tgrZone == NULL) {
-            printk(RED, BLACK, "mm: failed to find valid space for page descriptor array.");
-            return res_FAIL;
-        }
-        mm_memStruct.pages = mm_dmas_phys2Virt(tgrZone->availSt);
-        tgrZone->availSt += pgDescArrSize;
 
-        // initialize the pages
-        memset(mm_memStruct.pages, 0, pgDescArrSize);
-        printk(WHITE, BLACK, "mm: page array: %p~%p\n", mm_memStruct.pages, tgrZone->availSt);
+    // print layout
+    for (int i = 0; i < mm_nrMemMapEntries; i++) {
+        mm_MemMap *entry = &mm_memMapEntries[i];
+        if (entry->attr & mm_Attr_Firmware) continue;
+        printk(WHITE, BLACK, "\t%d: %lx %lx\n", i, entry->addr, entry->size);
     }
     // modify the zone information, align the address space to 4K, write the pointer of page arrary, initialize usage information
     for (int i = 0; i < mm_memStruct.nrZones; i++) {
@@ -77,12 +56,31 @@ int mm_init() {
         zone->totFree = zone->phyAddrEd - zone->availSt;
         zone->totUsing = 0;
 
-        zone->page = mm_getDesc(zone->phyAddrSt);
         zone->pageLen = (zone->phyAddrEd - zone->phyAddrSt) >> mm_pageShift;
     }
     printk(WHITE, BLACK, "mm:");
     for (int i = 0; i < mm_memStruct.nrZones; i++) {
-        printk(YELLOW, BLACK, "\t[%2d]:addr:[%p,%p],avail:%p\n", i, mm_memStruct.zones[i].phyAddrSt, mm_memStruct.zones[i].phyAddrEd, mm_memStruct.zones[i].availSt);
+        printk(YELLOW, BLACK, "\t[%2d]:addr:[%p,%p],avail:%p free:%lx\n", i, mm_memStruct.zones[i].phyAddrSt, mm_memStruct.zones[i].phyAddrEd, mm_memStruct.zones[i].availSt, mm_memStruct.zones[i].totFree);
+    }
+
+    // find space for each zone to place page descriptor array
+    for (int i = 0; i < mm_memStruct.nrZones; i++) {
+        mm_Zone *zone = &mm_memStruct.zones[i], *tgrZone = NULL;
+        u64 pgDescArrSz = upAlign((zone->phyAddrEd - zone->phyAddrSt) / Page_4KSize * sizeof(mm_Page), Page_4KSize);
+        for (int j = 0; j < mm_memStruct.nrZones; j++) {
+            mm_Zone *zone2 = &mm_memStruct.zones[j];
+            if (zone2->totFree >= pgDescArrSz) {
+                tgrZone = zone2;
+                break;
+            }
+        } 
+        if (tgrZone == NULL) {
+            printk(RED, BLACK, "failed to allocate page descriptor array for zone %d: size:%#lx\n", i, pgDescArrSz);
+            while (1) ;
+        }
+        zone->page = mm_dmas_phys2Virt(zone->availSt + zone->totUsing);
+        zone->totUsing += pgDescArrSz;
+        tgrZone->totFree -= pgDescArrSz;
     }
 
     // calculate the total available RAM
@@ -126,4 +124,24 @@ void mm_dbg() {
     mm_buddy_dbg(0);
     mm_slab_dbg(0);
     printk(WHITE, BLACK, "\r");
+}
+
+mm_Page *mm_getDesc(u64 phyAddr) {
+    for (int i = 0; i < mm_memStruct.nrZones; i++) {
+        mm_Zone *zone = &mm_memStruct.zones[i];
+        if (zone->phyAddrEd <= phyAddr) continue;
+        if (zone->phyAddrSt > phyAddr) break;
+        return zone->page + ((phyAddr - zone->phyAddrSt) >> Page_4KShift);
+    }
+    return NULL;
+}
+
+u64 mm_getPhyAddr(mm_Page *desc) {
+    for (int i = 0; i < mm_memStruct.nrZones; i++) {
+        mm_Zone *zone = &mm_memStruct.zones[i];
+        mm_Page *lstPage = zone->page + ((zone->phyAddrEd - zone->phyAddrSt) >> Page_4KShift);
+        if (zone->page <= desc && desc < lstPage)
+            return zone->phyAddrSt + ((desc - zone->page) << Page_4KShift);
+    }
+    return (u64)NULL;
 }

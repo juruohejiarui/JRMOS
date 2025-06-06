@@ -11,8 +11,8 @@ void mm_dbg();
 // the group should not be in any list when calling this function
 mm_Page *mm_divPageGrp(mm_Page *grpHdr);
 // get the page descriptor for a specific physical address
-static __always_inline__ mm_Page *mm_getDesc(u64 phyAddr) { return &mm_memStruct.pages[phyAddr >> mm_pageShift]; }
-static __always_inline__ u64 mm_getPhyAddr(mm_Page *desc) { return (((u64)desc - (u64)mm_memStruct.pages) / sizeof(mm_Page)) << mm_pageShift; }
+mm_Page *mm_getDesc(u64 phyAddr);
+u64 mm_getPhyAddr(mm_Page *desc);
 
 mm_Page *mm_init_allocPage(u64 num, u32 attr);
 

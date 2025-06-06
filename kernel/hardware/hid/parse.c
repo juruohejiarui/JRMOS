@@ -277,6 +277,8 @@ static struct hw_hid_Report *_registerReport(struct hw_hid_Parser *parser, u32 t
     List_insTail(&repEnum->reportLst, &report->lst);
     List_init(&report->fieldLst);
 
+    printk(WHITE, BLACK, "hw: hid: parser %p: new report %p, type=%d id=%d\n", parser, report, type, id);
+
     return report;
 }
 
@@ -444,9 +446,13 @@ int hw_hid_parse(u8 *report, u32 reportLen, hw_hid_Parser *parser) {
 
 
 int hw_hid_parseKeyboardInput(hw_hid_Parser *parser, u8 *report, hw_hid_KeyboardInput *input) {
-
+    struct hw_hid_ReportEnum *repEnum = &parser->reportEnum[hw_hid_ReportType_Input];
+    struct hw_hid_Report *rep = repEnum->report[0];
+    // get modify key status
+    input->modifier = _getReportUData(report, rep->field[0]);
+    for (int i = 0; i < 6; i++) input->keys[i] = _getReportUData(report, rep->field[i + 1]);
 }
 
 int hw_hid_parseMouseInput(hw_hid_Parser *parser, u8 *report, hw_hid_MouseInput *input) {
-
+    
 }
