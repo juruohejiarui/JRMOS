@@ -4,6 +4,66 @@
 #include <lib/algorithm.h>
 #include <mm/mm.h>
 
+static SafeList _parserLst;
+
+void hw_hid_init() {
+    SafeList_init(&_parserLst);
+}
+
+static void _initParser(hw_hid_Parser *parser, hw_Device *dev) {
+    memset(parser, 0, sizeof(hw_hid_Parser));
+    for (int i = 0; i < hw_hid_Parser_ReportTypes; i++) {
+        List_init(&parser->reportEnum[i].reportLst);
+    }
+    parser->colCap = hw_hid_Parser_DefaultColCap;
+    parser->col = mm_kmalloc(sizeof(struct hw_hid_Collection) * parser->colCap, mm_Attr_Shared, NULL);
+    if (!parser->col) {
+        printk(RED, BLACK, "hw: hid: parser %p: collection allocation failed\n", parser);
+        return;
+    }
+    parser->dev = dev;
+    memset(parser->col, 0, sizeof(struct hw_hid_Collection) * parser->colCap);
+}
+
+
+hw_hid_Parser *hw_hid_getParser(hw_Device *dev, int create) {
+    hw_hid_Parser *par = NULL;
+    SafeList_enum(&_parserLst, parserNd) {
+        hw_hid_Parser *parser = container(parserNd, hw_hid_Parser, lst);
+        if (parser->dev == dev) {
+            par = parser;
+            SafeList_exitEnum(&_parserLst);
+        }
+    }
+    if (par == NULL && create) {
+        par = mm_kmalloc(sizeof(hw_hid_Parser), mm_Attr_Shared, NULL);
+        if (par == NULL) {
+            printk(RED, BLACK, "hw: hid: failed to create new parser.\n");
+            return NULL;
+        }
+        _initParser(par, dev);
+        SafeList_insTail(&_parserLst, &par->lst);
+    }
+    return par;
+}
+
+int hw_hid_delParser(hw_Device *dev) {
+    hw_hid_Parser *par = NULL;
+    SafeList_enum(&_parserLst, parserNd) {
+        hw_hid_Parser *parser = container(parserNd, hw_hid_Parser, lst);
+        if (parser->dev == dev) {
+            par = parser;
+            SafeList_exitEnum(&_parserLst);
+        }
+    }
+    if (par == NULL) {
+        printk(RED, BLACK, "hw: hid: no parser for device %p\n", dev);
+        return res_FAIL;
+    }
+    SafeList_del(&_parserLst, &par->lst);
+    return res_SUCC;
+}
+
 static u32 hw_hid_Item_udata(struct hw_hid_Item *item) {
     switch (item->size) {
         case 0 : return 0;
@@ -288,7 +348,7 @@ static struct hw_hid_Field *_registerField(struct hw_hid_Report *report, u32 usa
         return NULL;
     }
     struct hw_hid_Field *field = mm_kmalloc(
-        sizeof(struct hw_hid_Field) + usage * sizeof(struct hw_hid_Usage) + 3 * usage * sizeof(u32), mm_Attr_Shared, NULL);
+        sizeof(struct hw_hid_Field) + usage * sizeof(struct hw_hid_Usage), mm_Attr_Shared, NULL);
     if (!field) {
         printk(RED, BLACK, "hw: hid: report %p: field allocation failed\n", report);
         return NULL;
@@ -403,21 +463,6 @@ static int _parseMain(struct hw_hid_Parser *parser, struct hw_hid_Item *item) {
     memset(&parser->loc, 0, sizeof(struct hw_hid_ParserLocal));
     return ret;
 }
-
-void hw_hid_initParser(hw_hid_Parser *parser) {
-    memset(parser, 0, sizeof(hw_hid_Parser));
-    for (int i = 0; i < hw_hid_Parser_ReportTypes; i++) {
-        List_init(&parser->reportEnum[i].reportLst);
-    }
-    parser->colCap = hw_hid_Parser_DefaultColCap;
-    parser->col = mm_kmalloc(sizeof(struct hw_hid_Collection) * parser->colCap, mm_Attr_Shared, NULL);
-    if (!parser->col) {
-        printk(RED, BLACK, "hw: hid: parser %p: collection allocation failed\n", parser);
-        return;
-    }
-    memset(parser->col, 0, sizeof(struct hw_hid_Collection) * parser->colCap);
-}
-
 int hw_hid_parse(u8 *report, u32 reportLen, hw_hid_Parser *parser) {
     u8 *st = report, *ed = report + reportLen;
     struct hw_hid_Item item;
@@ -443,16 +488,71 @@ int hw_hid_parse(u8 *report, u32 reportLen, hw_hid_Parser *parser) {
     return res_FAIL;
 }
 
+static SpinLock _printLck;
+static int _initPrintLck;
 
+static void _printReportEnum(struct hw_hid_ReportEnum *repEnum) {
+    int repIdx = 0;
+    for (ListNode *repNd = repEnum->reportLst.next; repNd != &repEnum->reportLst; repNd = repNd->next, repIdx++) {
+        printk(WHITE, BLACK, "Report #%d:\n", repIdx);
+        struct hw_hid_Report *rep = container(repNd, struct hw_hid_Report, lst);
+        for (int i = 0; i < rep->fieldCnt; i++) {
+            struct hw_hid_Field *field = rep->field[i];
+            printk(WHITE, BLACK, "\tphy:[%d %d] logical:[%d %d] off:%d sz:%d cnt:%d flag:%d", 
+                field->physicalMin, field->physicalMax,
+                field->logicalMin, field->logicalMax, 
+                field->reportOff, field->reportSz, field->reportCnt,
+                field->flag);
+            printk(WHITE, BLACK, "\n");
+        }
+    }
+}
+
+void hw_hid_printParser(hw_hid_Parser *parser) {
+    if (!_initPrintLck) SpinLock_init(&_printLck);
+    SpinLock_lock(&_printLck);
+    printk(WHITE, BLACK, "parser %p:\nInput:\n", parser);
+    struct hw_hid_ReportEnum *repEnum = &parser->reportEnum[hw_hid_ReportType_Input];
+    _printReportEnum(repEnum);
+
+    printk(WHITE, BLACK, "Output:\n", parser);
+    repEnum = &parser->reportEnum[hw_hid_ReportType_Output];
+    _printReportEnum(repEnum);
+    SpinLock_unlock(&_printLck);
+}
+
+u32 _getReportUData(u8 *report, struct hw_hid_Field *field, int idx) {
+    u32 off = field->reportSz * idx + field->reportOff;
+    u32 mask = (1u << field->reportSz) - 1;
+    mask <<= (off & 0x7);
+    return (*(u32 *)(report + (off / 8)) & mask) >> (off & 0x7);
+}
+
+i32 _getReportSData(u8 *report, struct hw_hid_Field *field, int idx) {
+    u32 off = field->reportSz * idx + field->reportOff;
+    u32 mask = (1u << field->reportSz) - 1;
+    mask <<= (off & 0x7);
+    u32 rawData = (*(u32 *)(report + (off / 8)) & mask) >> (off & 0x7);
+    i32 data = (rawData << (32 - field->reportSz));
+    return data >> (32 - field->reportSz);
+}
 
 int hw_hid_parseKeyboardInput(hw_hid_Parser *parser, u8 *report, hw_hid_KeyboardInput *input) {
     struct hw_hid_ReportEnum *repEnum = &parser->reportEnum[hw_hid_ReportType_Input];
     struct hw_hid_Report *rep = repEnum->report[0];
     // get modify key status
-    input->modifier = _getReportUData(report, rep->field[0]);
-    for (int i = 0; i < 6; i++) input->keys[i] = _getReportUData(report, rep->field[i + 1]);
+    input->modifier = 0;
+    for (int i = 0; i < rep->field[0]->reportCnt; i++) input->modifier |= (_getReportUData(report, rep->field[0], i) << i);
+    for (int i = 0; i < 6; i++) input->keys[i] = _getReportUData(report, rep->field[1], i);
+    return res_SUCC;
 }
 
 int hw_hid_parseMouseInput(hw_hid_Parser *parser, u8 *report, hw_hid_MouseInput *input) {
-    
+    struct hw_hid_ReportEnum *repEnum = &parser->reportEnum[hw_hid_ReportType_Input];
+    struct hw_hid_Report *rep = repEnum->report[0];
+    input->buttons = _getReportUData(report, rep->field[0], 0);
+    input->x = _getReportSData(report, rep->field[1], 0);
+    input->y = _getReportSData(report, rep->field[1], 1);
+    input->wheel = (rep->fieldCnt == 3 ? _getReportSData(report, rep->field[2], 0) : _getReportSData(report, rep->field[1], 2));
+    return res_SUCC;
 }

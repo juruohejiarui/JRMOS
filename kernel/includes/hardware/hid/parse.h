@@ -3,6 +3,7 @@
 
 #include <lib/dtypes.h>
 #include <lib/list.h>
+#include <hardware/mgr.h>
 
 // global item tags
 #define hw_hid_Item_tag_UsagePage          0x0
@@ -100,6 +101,10 @@ struct hw_hid_Collection {
 #define hw_hid_Parser_ReportTypes 3
 #define hw_hid_Parser_DefaultColCap 1
 
+#define hw_hid_Parser_type_Keyboard 1
+#define hw_hid_Parser_type_Mouse    2
+#define hw_hid_Parser_type_Reserved 0
+
 struct hw_hid_Usage {
     u32 hid; // usage id
     u32 colIdx;
@@ -150,6 +155,9 @@ struct hw_hid_Parser {
     u32 colStk[hw_hid_Parser_CollectStkSz];
     struct hw_hid_Collection *col;
     u32 mxApp;
+    u32 type;
+    ListNode lst;
+    hw_Device *dev;
 };
 
 typedef struct hw_hid_KeyboardInput {
@@ -168,9 +176,15 @@ typedef struct hw_hid_KeyboardOutput {
 
 typedef struct hw_hid_Parser hw_hid_Parser;
 
-void hw_hid_initParser(hw_hid_Parser *parser);
+void hw_hid_init();
+
+hw_hid_Parser *hw_hid_getParser(hw_Device *dev, int create);
+
+int hw_hid_delParser(hw_Device *dev);
 
 int hw_hid_parse(u8 *report, u32 reportLen, hw_hid_Parser *parser);
+
+void hw_hid_printParser(hw_hid_Parser *parser);
 
 int hw_hid_parseKeyboardInput(hw_hid_Parser *parser, u8 *report, hw_hid_KeyboardInput *input);
 

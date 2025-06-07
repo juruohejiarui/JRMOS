@@ -1,4 +1,5 @@
 #include <hardware/mgr.h>
+#include <hardware/hid/parse.h>
 #include <hardware/usb/hid/api.h>
 
 SafeList hw_drvLst;
@@ -16,6 +17,7 @@ void hw_driver_init() {
     SafeList_init(&hw_drvLst);
 
     // register some built-in drivers
+    hw_hid_init();
     hw_usb_hid_init();
 }
 

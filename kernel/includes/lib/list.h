@@ -91,4 +91,9 @@ static __always_inline__ void SafeList_insTail(SafeList *list, ListNode *node) {
 		node_name != &(list)->head ? 1 : (SpinLock_unlockMask(&(list)->lck), 0); \
 		node_name = node_name->next)
 
+#define SafeList_exitEnum(list) \
+	{ \
+		SpinLock_unlockMask(&(list)->lck); \
+		break; \
+	}
 #endif

@@ -72,6 +72,10 @@ void hw_usb_xhci_portChange(hw_usb_xhci_Host *host, u32 portIdx) {
 }
 
 void hw_usb_xhci_uninstallDev(hw_usb_xhci_Device *dev) {
+	if (dev->device.drv != NULL) {
+		if (dev->device.drv->uninstall(&dev->device) == res_FAIL)
+			printk(RED, BLACK, "hw: xhci: failed to uninstall device %p\n", dev);
+	}
 	if (dev->flag & hw_usb_xhci_Device_flag_Direct) {
 		dev->host->portDev[dev->portId] = NULL;
 	}

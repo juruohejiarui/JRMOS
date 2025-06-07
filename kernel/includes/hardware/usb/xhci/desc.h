@@ -243,7 +243,11 @@ typedef struct hw_usb_xhci_Device {
     hw_usb_devdesc_Device *devDesc;
     hw_usb_devdesc_Cfg **cfgDesc;
 
+    // pointer to the interrrupt descriptor under cfgDesc
+    hw_usb_devdesc_Inter *inter;
+
     ListNode lst;
+
 } hw_usb_xhci_Device;
 
 typedef struct hw_usb_xhci_Port {

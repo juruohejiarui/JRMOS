@@ -38,7 +38,7 @@ int hw_usb_hid_config(hw_Device *dev) {
         if (hdr->type == hw_usb_devdesc_Type_Inter) {
             hw_usb_devdesc_Inter *inter = container(hdr, hw_usb_devdesc_Inter, hdr);
             if (inter->bInterCls == 0x03) {
-                if (interDesc == NULL || interDesc->bInterSubCls == 0x01) interDesc = inter;
+                if (interDesc == NULL || interDesc->bInterSubCls != 0x01) interDesc = inter;
                 break;
             }
         }
@@ -160,34 +160,32 @@ int hw_usb_hid_config(hw_Device *dev) {
     goto Fail;
     FoundReport:
     // parse report
-    hw_hid_Parser *parser = mm_kmalloc(sizeof(hw_hid_Parser), mm_Attr_Shared, NULL);
+    hw_hid_Parser *parser = hw_hid_getParser(dev, 1);
     if (parser == NULL) {
         printk(RED, BLACK, "hw: usb hid: device %p failed to allocate parser\n", dev);
         goto Fail;
     }
-    hw_hid_initParser(parser);
-    // print the report descriptor
-    static SpinLock _printLck;
-    static int _printCnt = 0;
-    if (_printCnt++ == 0) SpinLock_init(&_printLck);
-    SpinLock_lock(&_printLck);
-    printk(WHITE, BLACK, "hw: usb hid: device %p report descriptor:\n", dev);
-    for (int i = 0; i < reportSz; i++) {
-        if (i % 16 == 0) {
-            if (i > 0) printk(RED, BLACK, "\n");
-            printk(RED, BLACK, "    ");
-        }
-        printk(WHITE, BLACK, "%02x ", report[i]);
-    }
-    printk(RED, BLACK, "\n");
-    SpinLock_unlock(&_printLck);
+
     if (hw_hid_parse(report, reportSz, parser) == res_FAIL) {
         printk(RED, BLACK, "hw: usb hid: device %p failed to parse report descriptor\n", dev);
         mm_kfree(parser, mm_Attr_Shared);
         mm_kfree(report, mm_Attr_Shared);
         goto Fail;
     }
+
     mm_kfree(report, mm_Attr_Shared);
+
+    hw_hid_printParser(parser);
+
+    // decide parser type
+    if (interDesc->bInterSubCls == 0x01)
+        parser->type = interDesc->bInterProtocol;
+    else {
+        printk(RED, BLACK, "hw: usb hid: device %p unsupported custom device.\n", dev);
+        mm_kfree(parser, 0);
+        goto Fail;
+    }
+    usbDev->inter = interDesc;
 
     return res_SUCC;
 
@@ -198,6 +196,49 @@ int hw_usb_hid_config(hw_Device *dev) {
 }
 
 int hw_usb_hid_install(hw_Device *dev) {
+    hw_usb_xhci_Device *usbDev = container(dev, hw_usb_xhci_Device, device);
+    hw_hid_Parser *parser = hw_hid_getParser(dev, 0);
+    if (parser == NULL) {
+        printk(RED, BLACK, "hw: usb hid: faileed to find parser for device %p.\n", dev);
+        return res_FAIL;
+    }
+    // set_protocol & set_idle
+    hw_usb_xhci_Request *req = hw_usb_xhci_makeRequest(2, 0);
+    hw_usb_xhci_mkCtrlReq(req, hw_usb_xhci_mkCtrlReqSetup(0x21, 0x0b, 1, usbDev->inter->bIntrNum, 0), hw_usb_xhci_TRB_ctrl_dir_out);
+    hw_usb_xhci_request(usbDev->host, usbDev->epRing[hw_usb_xhci_DevCtx_CtrlEp], req, usbDev->slotId, hw_usb_xhci_DbReq_make(hw_usb_xhci_DevCtx_CtrlEp, 0));
+    if (hw_usb_xhci_TRB_getCmplCode(&req->res) != hw_usb_xhci_TRB_CmplCode_Succ) {
+        printk(RED, BLACK, "hw: usb hid: device %p failed on SET_PROTOCOL request\n", usbDev);
+        return res_FAIL;
+    }
+    
+    hw_usb_xhci_mkCtrlReq(req, hw_usb_xhci_mkCtrlReqSetup(0x21, 0x0a, 1, usbDev->inter->bIntrNum, 0), hw_usb_xhci_TRB_ctrl_dir_out);
+    hw_usb_xhci_request(usbDev->host, usbDev->epRing[hw_usb_xhci_DevCtx_CtrlEp], req, usbDev->slotId, hw_usb_xhci_DbReq_make(hw_usb_xhci_DevCtx_CtrlEp, 0));
+    if (hw_usb_xhci_TRB_getCmplCode(&req->res) != hw_usb_xhci_TRB_CmplCode_Succ) {
+        printk(RED, BLACK, "hw: usb hid: device %p failed on SET_IDLE request\n", usbDev);
+        return res_FAIL;
+    }
+    // get endpoints
+    int inEp = -1, outEp = -1;
+    for (hw_usb_devdesc_Hdr *hdr = hw_usb_devdesc_getNxt(usbDev->cfgDesc[0], &usbDev->inter->hdr);
+            hdr != NULL && hdr->type != hw_usb_devdesc_Type_Inter;
+            hdr = hw_usb_devdesc_getNxt(usbDev->cfgDesc[0], hdr)) {
+        if (hdr->type == hw_usb_devdesc_Type_Ep) {
+            hw_usb_devdesc_Ep *ep = container(hdr, hw_usb_devdesc_Ep, hdr);
+            int epId = hw_usb_devdesc_Ep_epId(ep);
+            if (epId & 1) inEp = epId;
+            else outEp = epId;
+        }
+    }
+    printk(WHITE, BLACK, "hw: usb hid: device %p inEp:%d outEp:%d\n", usbDev, inEp, outEp);
+    hw_usb_xhci_freeRequest(req);
+    switch (parser->type) {
+        case hw_hid_Parser_type_Keyboard :
+            hw_usb_hid_keyboard(usbDev, parser, inEp, outEp);
+            break;
+        case hw_hid_Parser_type_Mouse :
+            hw_usb_hid_mouse(usbDev, parser, inEp);
+    }
+    return res_SUCC;
 }
 
 int hw_usb_hid_uninstall() {
