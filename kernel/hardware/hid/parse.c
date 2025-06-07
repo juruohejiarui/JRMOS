@@ -550,7 +550,8 @@ int hw_hid_parseKeyboardInput(hw_hid_Parser *parser, u8 *report, hw_hid_Keyboard
 int hw_hid_parseMouseInput(hw_hid_Parser *parser, u8 *report, hw_hid_MouseInput *input) {
     struct hw_hid_ReportEnum *repEnum = &parser->reportEnum[hw_hid_ReportType_Input];
     struct hw_hid_Report *rep = repEnum->report[0];
-    input->buttons = _getReportUData(report, rep->field[0], 0);
+    input->buttons = 0;
+    for (int i = 0; i < rep->field[0]->reportCnt; i++) input->buttons |= (_getReportUData(report, rep->field[0], i) << i);
     input->x = _getReportSData(report, rep->field[1], 0);
     input->y = _getReportSData(report, rep->field[1], 1);
     input->wheel = (rep->fieldCnt == 3 ? _getReportSData(report, rep->field[2], 0) : _getReportSData(report, rep->field[1], 2));
