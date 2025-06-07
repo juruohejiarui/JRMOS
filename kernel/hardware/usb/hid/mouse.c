@@ -26,6 +26,6 @@ int hw_usb_hid_mouse(hw_usb_xhci_Device *dev, hw_hid_Parser *parser, int inEp) {
             while (1) hal_hw_hlt();
         }
         hw_hid_parseMouseInput(parser, rawReport, &input);
-        printk(WHITE, BLACK, "Mouse: btn:%d (%d,%d,%d)\r", input.buttons, input.x, input.y, input.wheel);
+        printk(WHITE, BLACK, "Mouse: btn:%2x (%4d,%4d,%4d)\r", input.buttons, input.x, input.y, input.wheel);
     }
 }

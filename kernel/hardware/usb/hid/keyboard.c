@@ -29,7 +29,7 @@ int hw_usb_hid_keyboard(hw_usb_xhci_Device *dev, hw_hid_Parser *parser, int inEp
             while (1) hal_hw_hlt();
         }
         hw_hid_parseKeyboardInput(parser, rawReport, &input);
-        printk(WHITE, BLACK, "                         Keyboard: modi:%x key:%x %x %x %x %x %x\r", 
+        printk(WHITE, BLACK, "                                      Keyboard: modi:%x key:%x %x %x %x %x %x\r", 
             input.modifier, input.keys[0], input.keys[1], input.keys[2], input.keys[3], input.keys[4], input.keys[5]);
     }
 }

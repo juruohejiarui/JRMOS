@@ -119,10 +119,10 @@ void hw_usb_xhci_devMgrTsk(hw_usb_xhci_Device *dev) {
 		if (drv->check && drv->check(&dev->device) == res_SUCC) {
 			printk(WHITE, BLACK, "hw: xhci: device %p found driver %s\n", dev, drv->name);
 			dev->device.drv = drv;
-			drv->cfg(&dev->device);
-			drv->install(&dev->device);
+			SafeList_exitEnum(&hw_drvLst);
 		}
 	}
-	
+	dev->device.drv->cfg(&dev->device);
+	dev->device.drv->install(&dev->device);
 	while (1) hal_hw_hlt();
 }
