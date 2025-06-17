@@ -70,3 +70,31 @@ hw_buf_ListBuf *hw_buf_ListBuf_create(char *iden) {
 	hw_buf_setDesc(&buf->desc, iden, hw_Buf_Type_List);
 	return buf;
 }
+
+int hw_buf_ByteBuf_pop(hw_buf_ByteBuf *buf, u8 *output, int size) {
+	SpinLock_lockMask(&buf->lck);
+	int actSz = 0;
+	while (size > 0 && buf->load > 0) {
+		*(output++) = buf->data[buf->head++];
+		actSz++, buf->load--;
+		if (buf->head == buf->size) buf->head = 0;
+	}
+	buf->load -= actSz;
+	SpinLock_unlockMask(&buf->lck);
+	return actSz;
+}
+
+int hw_buf_ByteBuf_push(hw_buf_ByteBuf *buf, u8 *input, int size) {
+	SpinLock_lockMask(&buf->lck);
+	if (buf->size - buf->load < size) {
+		SpinLock_unlockMask(&buf->lck);
+		return res_FAIL;
+	}
+	while (size > 0) {
+		buf->data[buf->tail++] = *(input++);
+		if (buf->tail == buf->size) buf->tail = 0;
+	}
+	buf->load += size;
+	SpinLock_unlockMask(&buf->lck);
+	return res_SUCC;
+}
