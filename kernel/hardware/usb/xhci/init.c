@@ -484,7 +484,7 @@ int hw_usb_xhci_devInit(hw_usb_xhci_Device *dev) {
 		printk(RED, BLACK, "hw: xhci: dev %p failed to address device\n", dev);
 		goto Fail_To_Initialize;
 	}
-	printk(GREEN, BLACK, "hw: xhci: dev %p addressed\n", dev);
+	// printk(GREEN, BLACK, "hw: xhci: dev %p addressed\n", dev);
 	
 	// get device descriptor
 	dev->devDesc = mm_kmalloc(0xff, 0, NULL);

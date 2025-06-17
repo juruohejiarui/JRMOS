@@ -180,7 +180,7 @@ void hw_hid_init();
 
 hw_hid_Parser *hw_hid_getParser(hw_Device *dev, int create);
 
-int hw_hid_delParser(hw_Device *dev);
+int hw_hid_delParser(hw_hid_Parser *parser);
 
 int hw_hid_parse(u8 *report, u32 reportLen, hw_hid_Parser *parser);
 

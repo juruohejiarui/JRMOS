@@ -51,7 +51,6 @@ void RBTree_init(RBTree *tree, RBTree_Insert insert, RBTree_Comparator cmp) {
 	SpinLock_init(&tree->lock);
 	tree->root = tree->left = NULL;
 	tree->insert = insert;
-	tree->cmp = cmp;
 }
 
 static __always_inline__ void _fixAfterIns(RBTree *tree, RBNode *node) {

@@ -43,4 +43,7 @@ static __always_inline__ void hal_cpu_sendIntr_all(u64 irq){
 
 void hal_cpu_sendIntr(u64 irq, u32 cpuId);
 
+// check current processor and set flags
+void hal_cpu_chk();
+
 #endif

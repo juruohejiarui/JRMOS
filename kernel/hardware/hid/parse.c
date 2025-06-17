@@ -6,8 +6,11 @@
 
 static SafeList _parserLst;
 
+static SpinLock _printLck;
+
 void hw_hid_init() {
     SafeList_init(&_parserLst);
+    SpinLock_init(&_printLck);
 }
 
 static void _initParser(hw_hid_Parser *parser, hw_Device *dev) {
@@ -47,21 +50,9 @@ hw_hid_Parser *hw_hid_getParser(hw_Device *dev, int create) {
     return par;
 }
 
-int hw_hid_delParser(hw_Device *dev) {
-    hw_hid_Parser *par = NULL;
-    SafeList_enum(&_parserLst, parserNd) {
-        hw_hid_Parser *parser = container(parserNd, hw_hid_Parser, lst);
-        if (parser->dev == dev) {
-            par = parser;
-            SafeList_exitEnum(&_parserLst);
-        }
-    }
-    if (par == NULL) {
-        printk(RED, BLACK, "hw: hid: no parser for device %p\n", dev);
-        return res_FAIL;
-    }
-    SafeList_del(&_parserLst, &par->lst);
-    return res_SUCC;
+int hw_hid_delParser(hw_hid_Parser *parser) {
+    SafeList_del(&_parserLst, &parser->lst);
+    return mm_kfree(parser->col, mm_Attr_Shared) == res_SUCC && mm_kfree(parser, mm_Attr_Shared) == res_SUCC ? res_SUCC : res_FAIL;
 }
 
 static u32 hw_hid_Item_udata(struct hw_hid_Item *item) {
@@ -428,11 +419,7 @@ static int _addField(struct hw_hid_Parser *parser, u32 type, u32 flags) {
     field->physicalMin = parser->glo.physicalMin;
     field->physicalMax = parser->glo.physicalMax;
     field->unitExponent = parser->glo.unitExponent;
-    field->unit = parser->glo.unit;
-
-    printk(WHITE, BLACK, "hw: hid: parser %p: field st:%d sz:%d cnt:%d type:%d\n",
-        parser, field->reportOff, field->reportSz, field->reportCnt, type);
-    
+    field->unit = parser->glo.unit;    
     return res_SUCC;
 }
 
@@ -488,9 +475,6 @@ int hw_hid_parse(u8 *report, u32 reportLen, hw_hid_Parser *parser) {
     return res_FAIL;
 }
 
-static SpinLock _printLck;
-static int _initPrintLck;
-
 static void _printReportEnum(struct hw_hid_ReportEnum *repEnum) {
     int repIdx = 0;
     for (ListNode *repNd = repEnum->reportLst.next; repNd != &repEnum->reportLst; repNd = repNd->next, repIdx++) {
@@ -509,7 +493,6 @@ static void _printReportEnum(struct hw_hid_ReportEnum *repEnum) {
 }
 
 void hw_hid_printParser(hw_hid_Parser *parser) {
-    if (!_initPrintLck) SpinLock_init(&_printLck);
     SpinLock_lock(&_printLck);
     printk(WHITE, BLACK, "parser %p:\nInput:\n", parser);
     struct hw_hid_ReportEnum *repEnum = &parser->reportEnum[hw_hid_ReportType_Input];

@@ -202,3 +202,23 @@ int hal_cpu_enableAP() {
 	for (int i = 0; i < 256; i++) ((u64 *)mm_dmas_phys2Virt(mm_krlTblPhysAddr))[i] = 0;
 	return res_SUCC;
 }
+
+void hal_cpu_chk() {
+	u32 a, b, c, d;
+	hal_hw_cpu_cpuid(0x1, 0x0, &a, &b, &c, &d);
+	u64 flags = 0;
+	if (c & (1u << 20)) flags |= hal_cpu_flags_sse42;
+	if (c & (1u << 26)) flags |= hal_cpu_flags_xsave;
+	if (c & (1u << 27)) flags |= hal_cpu_flags_osxsave;
+	if (c & (1u << 27)) flags |= hal_cpu_flags_avx;
+
+	hal_cpu_setvar(hal.flags, flags);
+
+	printk(WHITE, BLACK, "cpu #%d: sse42[%c] xsave[%c] osxsave[%c] avx[%c]\n", 
+		hal_cpu_getvar(hal.apic), 
+		(flags & hal_cpu_flags_sse42   ? 'y' : 'n'),
+		(flags & hal_cpu_flags_xsave   ? 'y' : 'n'),
+		(flags & hal_cpu_flags_osxsave ? 'y' : 'n'),
+		(flags & hal_cpu_flags_avx     ? 'y' : 'n')
+	);
+}

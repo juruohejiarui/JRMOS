@@ -22,7 +22,6 @@ typedef struct RBTree {
 	RBNode *root, *left;
 	SpinLock lock;
 	RBTree_Insert insert;
-	RBTree_Comparator cmp;
 } RBTree;
 
 #define RBTree_Col_Red		0

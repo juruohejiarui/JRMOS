@@ -127,7 +127,6 @@ int hal_hw_apic_init() {
 
 int hal_hw_apic_initAP() {
 	u64 val = hal_hw_readMsr(0x1b);
-	printk(WHITE, BLACK, "hw: apic: cpu #%d: msr 0x1b:%p\n", task_current->cpuId, val);
 	bit_set1(&val, 11);
 	if (hal_hw_apic_supportFlag & hal_hw_apic_supportFlag_X2Apic)
 		bit_set1(&val, 10);

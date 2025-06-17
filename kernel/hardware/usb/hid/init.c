@@ -68,7 +68,7 @@ int hw_usb_hid_config(hw_Device *dev) {
         hw_usb_xhci_writeCtx(inCtx, 1, ~0x0u, 1);
         for (int i = 0; i < interDesc->bNumEp; i++) {
             int epId = hw_usb_devdesc_Ep_epId(epDesc[i]), epType = hw_usb_devdesc_Ep_epType(epDesc[i]);
-            printk(WHITE, BLACK, "hw: usb hid: device %p ep %d: id:%d type:%d\n", usbDev, i, epId, epType);
+            // printk(WHITE, BLACK, "hw: usb hid: device %p ep %d: id:%d type:%d\n", usbDev, i, epId, epType);
             // write addflags of ctrl context
             hw_usb_xhci_writeCtx(inCtx, 1, (1u << epId), 1);
 
@@ -168,7 +168,7 @@ int hw_usb_hid_config(hw_Device *dev) {
 
     if (hw_hid_parse(report, reportSz, parser) == res_FAIL) {
         printk(RED, BLACK, "hw: usb hid: device %p failed to parse report descriptor\n", dev);
-        mm_kfree(parser, mm_Attr_Shared);
+        hw_hid_delParser(parser);
         mm_kfree(report, mm_Attr_Shared);
         goto Fail;
     }
@@ -182,7 +182,7 @@ int hw_usb_hid_config(hw_Device *dev) {
         parser->type = interDesc->bInterProtocol;
     else {
         printk(RED, BLACK, "hw: usb hid: device %p unsupported custom device.\n", dev);
-        mm_kfree(parser, 0);
+        hw_hid_delParser(parser);
         goto Fail;
     }
     usbDev->inter = interDesc;

@@ -11,6 +11,12 @@
 #define hal_cpu_intr_Pause      0x81
 #define hal_cpu_intr_Execute    0x82
 
+#define hal_cpu_flags_sse42     (1ul << 0)
+#define hal_cpu_flags_xsave     (1ul << 1)
+#define hal_cpu_flags_osxsave   (1ul << 2)
+#define hal_cpu_flags_avx       (1ul << 3)
+#define hal_cpu_flags_avx512    (1ul << 4)
+
 typedef struct hal_cpu_Desc {
     u32 x2apic;
     u32 apic;
@@ -24,6 +30,8 @@ typedef struct hal_cpu_Desc {
     intr_Desc *intrDesc[0x40];
     
     u64 curKrlStk;
+
+    u64 flags;
 } __attribute__ ((packed)) hal_cpu_Desc;
 
 extern u32 hal_cpu_bspApicId;

@@ -88,7 +88,7 @@ static __always_inline__ void SafeList_insTail(SafeList *list, ListNode *node) {
 // parameter "list" must be a constant expression
 #define SafeList_enum(list, node_name) \
 	for (ListNode *node_name = (SpinLock_lockMask(&(list)->lck), (list)->head.next) ; \
-		node_name != &(list)->head ? 1 : (SpinLock_unlockMask(&(list)->lck), 0); \
+		(node_name != &(list)->head) ? 1 : (SpinLock_unlockMask(&(list)->lck), 0); \
 		node_name = node_name->next)
 
 #define SafeList_exitEnum(list) \
