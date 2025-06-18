@@ -1,5 +1,6 @@
 #include <init/init.h>
 #include <hardware/pci.h>
+#include <hardware/gpu.h>
 #include <hardware/usb/xhci/api.h>
 #include <screen/screen.h>
 
@@ -13,4 +14,8 @@ void init_init() {
 		printk(RED, BLACK, "init: failed to initialize xhci\n");
 		while (1) ;
 	}
+
+	hw_pci_lstDev();
+
+	hw_gpu_init();
 }

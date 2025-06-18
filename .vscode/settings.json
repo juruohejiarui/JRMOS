@@ -3,5 +3,6 @@
         "*.h": "c",
         "charconv": "c",
         "*.tcc": "c"
-    }
+    },
+    "makefile.makefilePath": "${workspaceFolder}/kernel/"
 }

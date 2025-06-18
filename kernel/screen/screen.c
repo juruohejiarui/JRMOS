@@ -271,7 +271,7 @@ void putchar(unsigned int fcol, unsigned int bcol, char ch) {
     int i;
     if (ch == '\n') {
         position.yPos++, position.xPos = 0;
-        if (position.yPos >= min(96, position.yRes / screen_charHeight)) {
+        if (position.yPos >= position.yRes / screen_charHeight) {
             _scroll();
 			position.yPos--;
         }

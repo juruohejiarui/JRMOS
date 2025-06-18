@@ -33,8 +33,11 @@ static void _chkFunc(u64 baseAddr, u16 bus, u16 dev, u16 func) {
 void hw_pci_lstDev() {
 	SafeList_enum(&hw_pci_devLst, pciDevNd) {
 		hw_pci_Dev *dev = container(pciDevNd, hw_pci_Dev, lst);
-		printk(WHITE, BLACK, "pci:%02x:%02x:%02x: cls=%04x subcls=%04x progIf=%04x %s\n", 
-			dev->busId, dev->devId, dev->funcId, dev->cfg->class, dev->cfg->subclass, dev->cfg->progIf, hw_pci_devName[dev->cfg->class][dev->cfg->subclass]);
+		printk(WHITE, BLACK, "pci:%02x:%02x:%02x: device=%04x vendor=%04x hdrType=%02x cls=%04x subcls=%04x progIf=%04x %s \n", 
+			dev->busId, dev->devId, dev->funcId, 
+			dev->cfg->deviceId, dev->cfg->vendorId, dev->cfg->hdrType, 
+			dev->cfg->class, dev->cfg->subclass, dev->cfg->progIf, hw_pci_devName[dev->cfg->class][dev->cfg->subclass]
+		);
 	}
 }
 
@@ -55,6 +58,5 @@ int hw_pci_init() {
 	// initialize msi management
 	if (hal_hw_pci_initIntr() == res_FAIL) return res_FAIL;
 
-	hw_pci_lstDev();
-    return res_SUCC;
+	return res_SUCC;
 }
