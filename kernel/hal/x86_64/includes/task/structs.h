@@ -17,7 +17,7 @@ typedef struct hal_task_TaskStruct {
 	// user space
 	u64 usrRsp, usrStkTop;
 	// storage of IA32_GS_BASE and IA32_FS_BASE
-	u64 gsBase, fsBase;
+	u64 gsBase, fsBase, gsKrlBase;
 	hal_intr_TSS tss;
 } __attribute__ ((packed)) hal_task_TaskStruct;
 

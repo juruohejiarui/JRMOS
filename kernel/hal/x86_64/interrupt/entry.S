@@ -13,9 +13,18 @@ ENTRY(hal_intr_setTr)
     xorw %ax, %ax
     retq
 
+ENTRY(hal_intr_chkSwapgs)
+    movq $0xffff000000000000, %rax
+    testq %rax, %rdi
+    jnz hal_intr_chkSwapgs_end
+    swapgs
+hal_intr_chkSwapgs_end:
+    retq
+
 ENTRY(hal_intr_restoreAll)
-	// movq %rsp, %rdi
-	// call Task_checkPtRegInStack
+	// conduct swapgs if we should back to user mode
+    movq hal_intr_PtReg_rip(%rsp), %rdi
+    callq hal_intr_chkSwapgs
     popq %r15
     popq %r14
     popq %r13
@@ -39,8 +48,7 @@ ENTRY(hal_intr_restoreAll)
     iretq
 
 retFromException:
-ENTRY(hal_intr_retFromIntr)
-    
+ENTRY(hal_intr_retFromIntr)    
     movq %rsp, %rax
 	andq $-(task_krlStkSize), %rax
     movq task_TaskStruct_signal(%rax), %rax
@@ -97,6 +105,9 @@ errorCode:
     pushq %r13
     pushq %r14
     pushq %r15
+
+    movq hal_intr_PtReg_rip(%rsp), %rdi
+    callq hal_intr_chkSwapgs
 
     movq hal_intr_PtReg_errCode(%rsp), %rsi
     movq hal_intr_PtReg_func(%rsp), %rdx

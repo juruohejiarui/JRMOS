@@ -2,6 +2,7 @@
 #define __HAL_INTERRUPT_H__
 
 #include <hal/interrupt/desc.h>
+#include <hal/interrupt/genasm.h>
 #include <interrupt/desc.h>
 #include <hal/linkage.h>
 #include <lib/string.h>
@@ -10,6 +11,7 @@ extern void hal_intr_retFromIntr();
 
 #define hal_intr_irqName(preffix, num) preffix##num(void)
 
+// save registers and swapgs
 #define hal_intr_saveAll \
     "pushq %rax     \n\t" \
     "pushq %rax     \n\t" \
@@ -36,6 +38,8 @@ extern void hal_intr_retFromIntr();
     "movq %rdx, %ss \n\t" \
     "movq %rdx, %ds \n\t" \
     "movq %rdx, %es \n\t" \
+    "movq 0x98(%rsp), %rdi    \n\t" \
+    "callq hal_intr_chkSwapgs               \n\t" \
 
 #define hal_intr_buildIrq(preffix, num, dispatcher)   \
 __noinline__ void hal_intr_irqName(preffix, num);      \

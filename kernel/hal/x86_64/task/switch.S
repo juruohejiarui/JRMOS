@@ -33,7 +33,6 @@ hal_task_sche_switchCR3_end:
 	movq hal_task_TaskStruct_rip(%rdi), %rax
 	jmp *%rax
 hal_task_sche_switch_back:
-
 	popq %rax
 	popq %rbp
 
@@ -53,6 +52,9 @@ ENTRY(hal_task_syscall_entryKrl)
 	movq $0x10, %rbx
 	movq %rbx, %ds
 	movq %rbx, %es
+
+	swapgs
+
 	
 	// save user stack and get kernel stack from hal_task_curKrlStk
 	movq %gs:hal_cpu_Desc_curKrlStk, %rax
@@ -75,7 +77,7 @@ ENTRY(hal_task_syscall_entryKrl)
 
 	movq hal_intr_PtReg_rdi(%rsi), %rdi
 	movq hal_intr_PtReg_rdx(%rsi), %rdx
-	movq hal_intr_PtReg_rcx(%rsi), %rcx
+	movq hal_intr_PtReg_rcx(%rsi ), %rcx
 	movq hal_intr_PtReg_r8(%rsi), %r8
 	movq hal_intr_PtReg_r9(%rsi), %r9
 	movq hal_intr_PtReg_rsi(%rsi), %rsi
@@ -91,6 +93,9 @@ ENTRY(hal_task_syscall_entryKrl)
 
 ENTRY(hal_task_syscall_backUsr)
 	cli
+
+	swapgs
+
 	// recover user stack pointer, rip and rflags
 	movq %rsp, %rbx
 	andq $-(task_krlStkSize), %rbx

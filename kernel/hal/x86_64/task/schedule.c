@@ -12,8 +12,11 @@
 
 int hal_task_dispatchTask(task_TaskStruct *tsk) {
 	tsk->cpuId = tsk->pid % cpu_num;
+	
 	tsk->hal.gsBase = (u64)&cpu_desc[tsk->cpuId];
 	tsk->hal.fsBase = 0;
+	tsk->hal.gsKrlBase = 0;
+
 	return res_SUCC;
 }
 
@@ -32,6 +35,7 @@ void hal_task_sche_switchTss(task_TaskStruct *prev, task_TaskStruct *next) {
 
 	prev->hal.gsBase = hal_hw_readMsr(hal_msr_IA32_GS_BASE);
 	prev->hal.fsBase = hal_hw_readMsr(hal_msr_IA32_FS_BASE);
+	prev->hal.gsKrlBase = hal_hw_readMsr(hal_msr_IA32_KERNEL_GS_BASE);
 
 	__asm__ volatile ( "movq %%fs, %0" : "=a"(prev->hal.fs));
 	__asm__ volatile ( "movq %%gs, %0" : "=a"(prev->hal.gs));
@@ -41,6 +45,7 @@ void hal_task_sche_switchTss(task_TaskStruct *prev, task_TaskStruct *next) {
 
 	hal_hw_writeMsr(hal_msr_IA32_GS_BASE, next->hal.gsBase);
 	hal_hw_writeMsr(hal_msr_IA32_FS_BASE, next->hal.fsBase);
+	hal_hw_writeMsr(hal_msr_IA32_KERNEL_GS_BASE, next->hal.gsKrlBase);
 
 	// printk(WHITE, BLACK, "cpu %d: prev gsBase %p next gsBase %p\n", task_current->cpuId, prev->hal.gsBase, next->hal.gsBase);
 }
@@ -70,6 +75,7 @@ void hal_task_initIdle() {
 
 	hal_task_current->hal.gsBase = hal_hw_readMsr(hal_msr_IA32_GS_BASE);
 	hal_task_current->hal.fsBase = 0;
+	hal_task_current->hal.gsKrlBase = 0;
     hal_task_current->hal.rsp = (u64)cpu_getvar(hal.initStk) + task_krlStkSize;
 }
 

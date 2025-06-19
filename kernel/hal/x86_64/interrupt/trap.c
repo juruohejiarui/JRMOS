@@ -70,8 +70,8 @@ static void _printRegs(u64 rsp) {
 	for (int i = 0; i < sizeof(hal_intr_PtReg) / sizeof(u64); i++)
 		printk(WHITE, BLACK, "%4s=%p%c", _regName[i], *(u64 *)(rsp + i * 8), ((i + 1) % 8 == 0 || i == sizeof(hal_intr_PtReg) / sizeof(u64) - 1) ? '\n' : ' ');
 	// print msr
-	printk(WHITE, BLACK, "msr: IA32_KERNEL_GS_BASE:%p, IA32_GS_BASE:%p\n",
-		hal_hw_readMsr(hal_msr_IA32_KERNEL_GS_BASE), hal_hw_readMsr(hal_msr_IA32_GS_BASE));
+	printk(WHITE, BLACK, "msr: IA32_KERNEL_GS_BASE:%p, IA32_GS_BASE:%p IA32_FS_BASE:%p\n",
+		hal_hw_readMsr(hal_msr_IA32_KERNEL_GS_BASE), hal_hw_readMsr(hal_msr_IA32_GS_BASE), hal_hw_readMsr(hal_msr_IA32_FS_BASE));
 	printk(WHITE, BLACK, "cr3: %p\n", hal_hw_getCR(3));
 	mm_map_dbg(0);
 	printk(WHITE, BLACK, "\n");

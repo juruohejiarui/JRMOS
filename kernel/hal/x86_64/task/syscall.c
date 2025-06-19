@@ -16,6 +16,7 @@ int hal_task_syscall_toUsr(void (*entry)(u64), u64 param, void *usrStk) {
 	
 	// push r11 and rcx
 	__asm__ volatile (
+		"swapgs				\n\t"
 		"xorq %%r11, %%r11	\n\t"
 		"btsq $9, %%r11		\n\t"
 		"movq %%rax, %%rsp	\n\t"

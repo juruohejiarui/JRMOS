@@ -26,6 +26,7 @@ u64 hal_init_testUsr_recur(u64 dep, u64 lim) {
 	}
 	return 0;
 }
+
 u64 hal_init_testUsr(u64 param) {
 	hal_init_testUsr_recur(0, min(Page_4KSize * param, Page_4KSize * 8));
 	task_syscall1(task_syscall_exit, 0);
@@ -97,6 +98,8 @@ void hal_init_init() {
 	task_freeMgrTsk = task_newSubTask(task_freeMgr, 0, task_attr_Builtin);
 
 	init_init();
+
+	// for (int i = 0; i < cpu_num * 4; i++) task_newTask(hal_init_testUsr, i, task_attr_Builtin | task_attr_Usr);
 
 	while (1) {
 		hal_hw_hlt();
