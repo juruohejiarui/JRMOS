@@ -49,21 +49,21 @@ void hal_hw_pci_intr_dispatcher(u64 rsp, u64 num) {
 	if (intr->ctrl != NULL && intr->ctrl->ack != NULL) intr->ctrl->ack(intr);
 }
 
-static __always_inline__ void hal_hw_pci_Msi_setMsgAddr(hw_pci_MsiCap *cap, u32 cpuId, u32 redirect, u32 destMode) {
+__always_inline__ void hal_hw_pci_Msi_setMsgAddr(hw_pci_MsiCap *cap, u32 cpuId, u32 redirect, u32 destMode) {
 	register u32 val = 0xfee00000u | (cpu_desc[cpuId].hal.apic << 12) | (redirect << 3) | (destMode << 2);
 	if (hw_pci_MsiCap_is64(cap)) cap->cap64.msgAddr = val;
 	else cap->cap32.msgAddr = val;
 }
 
-static __always_inline__ void hal_hw_pci_Msix_setMsgAddr(u64 *msgAddr, u32 cpuId, u32 redirect, u32 destMode) {
+__always_inline__ void hal_hw_pci_Msix_setMsgAddr(u64 *msgAddr, u32 cpuId, u32 redirect, u32 destMode) {
 	*msgAddr = 0xfee00000u | (cpu_desc[cpuId].hal.apic << 12) | (redirect << 3) | (destMode << 2);
 }
 
-static __always_inline__ void hal_hw_pci_setMsgData16(u16 *msgData, u32 vec, u32 deliverMode, u32 level, u32 triggerMode) {
+__always_inline__ void hal_hw_pci_setMsgData16(u16 *msgData, u32 vec, u32 deliverMode, u32 level, u32 triggerMode) {
 	*msgData = vec | (deliverMode << 8) | (level << 14) | (triggerMode << 15);
 }
 
-static __always_inline__ void hal_hw_pci_setMsgData32(u32 *msgData, u32 vec, u32 deliverMode, u32 level, u32 triggerMode) {
+__always_inline__ void hal_hw_pci_setMsgData32(u32 *msgData, u32 vec, u32 deliverMode, u32 level, u32 triggerMode) {
 	*msgData = vec | (deliverMode << 8) | (level << 14) | (triggerMode << 15);
 }
 

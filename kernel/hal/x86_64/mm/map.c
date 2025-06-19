@@ -7,7 +7,7 @@
 #include <task/api.h>
 #include <lib/string.h>
 
-static __always_inline__ u64 _cvtAttr(u64 attr) {
+__always_inline__ u64 _cvtAttr(u64 attr) {
     u64 cvt = 0x1;
     if (attr & mm_Attr_Shared2U)    cvt |= (1ull<< 2);
     if (attr & mm_Attr_Writable)    cvt |= (1ull<< 1);

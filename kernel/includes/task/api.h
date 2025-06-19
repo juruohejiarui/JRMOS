@@ -34,13 +34,13 @@ void task_sche_init();
 
 
 // get idle task of the specific cpu
-static __always_inline__ task_TaskStruct *task_idleTask(int cpuIdx) { return hal_task_idleTask(cpuIdx); }
+__always_inline__ task_TaskStruct *task_idleTask(int cpuIdx) { return hal_task_idleTask(cpuIdx); }
 
-static __always_inline__ void task_sche_syncVRuntime(task_TaskStruct *task) { task->vRuntime = task_idleTask(task->cpuId)->vRuntime; }
+__always_inline__ void task_sche_syncVRuntime(task_TaskStruct *task) { task->vRuntime = task_idleTask(task->cpuId)->vRuntime; }
 
 void task_sche_yield();
 
-static __always_inline__ void task_sche_waitReq() {
+__always_inline__ void task_sche_waitReq() {
 	Atomic_inc(&task_current->reqWait);
 	while (task_current->reqWait.value > 0) task_sche_yield();
 }
@@ -49,9 +49,9 @@ void task_sche_finishReq(task_TaskStruct *tsk);
 
 void task_sche_preempt(task_TaskStruct *task);
 
-static __always_inline__ void task_sche_msk() { Atomic_inc(cpu_getvar(scheMsk)); }
+__always_inline__ void task_sche_msk() { Atomic_inc(cpu_getvar(scheMsk)); }
 
-static __always_inline__ void task_sche_unmsk() { Atomic_dec(cpu_getvar(scheMsk)); }
+__always_inline__ void task_sche_unmsk() { Atomic_dec(cpu_getvar(scheMsk)); }
 
 void task_sche();
 

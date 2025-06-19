@@ -110,19 +110,19 @@ __asm__ ( \
         ); \
     } while(0)
 
-static __always_inline__ void hal_intr_setIntrGate(hal_intr_IdtItem *idtTbl, u64 idtIdx, u8 istIdx, void *codeAddr) {
+__always_inline__ void hal_intr_setIntrGate(hal_intr_IdtItem *idtTbl, u64 idtIdx, u8 istIdx, void *codeAddr) {
     hal_intr_setGate(idtTbl + idtIdx, 0x8E, istIdx, codeAddr);
 }
 
-static __always_inline__ void hal_intr_setTrapGate(hal_intr_IdtItem *idtTbl, u64 idtIdx, u8 istIdx, void *codeAddr) {
+__always_inline__ void hal_intr_setTrapGate(hal_intr_IdtItem *idtTbl, u64 idtIdx, u8 istIdx, void *codeAddr) {
     hal_intr_setGate(idtTbl + idtIdx, 0x8F, istIdx, codeAddr);
 }
 
-static __always_inline__ void hal_intr_setSystemGate(hal_intr_IdtItem *idtTbl, u64 idtIdx, u8 istIdx, void *codeAddr) {
+__always_inline__ void hal_intr_setSystemGate(hal_intr_IdtItem *idtTbl, u64 idtIdx, u8 istIdx, void *codeAddr) {
     hal_intr_setGate(idtTbl + idtIdx, 0xEF, istIdx, codeAddr);
 }
 
-static __always_inline__ void hal_intr_setSysIntrGate(hal_intr_IdtItem *idtTbl, u64 idtIdx, u8 istIdx, void *codeAddr) {
+__always_inline__ void hal_intr_setSysIntrGate(hal_intr_IdtItem *idtTbl, u64 idtIdx, u8 istIdx, void *codeAddr) {
     hal_intr_setGate(idtTbl + idtIdx, 0xEE, istIdx, codeAddr);
 }
 
@@ -142,7 +142,7 @@ void hal_intr_setTssItem(u64 idx, hal_intr_TSS *tss);
 
 void hal_intr_setTr(u16 idx);
 
-static __always_inline__ void hal_intr_cpyTss(hal_intr_TSS *src, u32 *dst) { memcpy(src, dst, sizeof(hal_intr_TSS)); }
+__always_inline__ void hal_intr_cpyTss(hal_intr_TSS *src, u32 *dst) { memcpy(src, dst, sizeof(hal_intr_TSS)); }
 
 int hal_intr_init();
 

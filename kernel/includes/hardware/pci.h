@@ -103,23 +103,23 @@ typedef union hw_pci_MsiCap {
 #define hw_pci_MsiCap_vecNum(cap) ((1ul) << (((cap)->cap32.msgCtrl >> 1) & 0x7))
 #define hw_pci_MsiCap_is64(cap) (((cap)->cap32.msgCtrl >> 7) & 0x1)
 
-static __always_inline__ void hw_pci_MsiCap_setVecNum(hw_pci_MsiCap *cap, u64 vecNum) {
+__always_inline__ void hw_pci_MsiCap_setVecNum(hw_pci_MsiCap *cap, u64 vecNum) {
     // set log2(vecNum) to msgCtrl
     cap->cap32.msgCtrl = (cap->cap32.msgCtrl & ~(0x7u << 4)) | ((bit_ffs32(vecNum) - 1) << 4);
 }
 
-static __always_inline__ u16 *hw_pci_MsiCap_msgCtrl(hw_pci_MsiCap *cap) {
+__always_inline__ u16 *hw_pci_MsiCap_msgCtrl(hw_pci_MsiCap *cap) {
     return hw_pci_MsiCap_is64(cap) ? &cap->cap64.msgCtrl : &cap->cap32.msgCtrl;
 }
-static __always_inline__ u16 *hw_pci_MsiCap_msgData(hw_pci_MsiCap *cap) {
+__always_inline__ u16 *hw_pci_MsiCap_msgData(hw_pci_MsiCap *cap) {
     return hw_pci_MsiCap_is64(cap) ? &cap->cap64.msgData : &cap->cap32.msgData;
 }
 
-static __always_inline__ u32 *hw_pci_MsiCap_msk(hw_pci_MsiCap *cap) {
+__always_inline__ u32 *hw_pci_MsiCap_msk(hw_pci_MsiCap *cap) {
     return hw_pci_MsiCap_is64(cap) ? &cap->cap64.msk : &cap->cap32.msk;
 }
 
-static __always_inline__ u64 hw_pci_Cfg_getBar(u32 *bar) { 
+__always_inline__ u64 hw_pci_Cfg_getBar(u32 *bar) { 
     register u64 val = hal_read32((u64)bar);
     if ((val >> 1) & 0x3)
         return (((u64)hal_read32((u64)bar + 4) << 32) | val) & ~0xful;
@@ -155,7 +155,7 @@ extern SafeList hw_pci_devLst;
 
 extern intr_Ctrl hw_pci_intrCtrl;
 
-static __always_inline__ hw_pci_Cfg *hw_pci_getCfg(u64 baseAddr, u8 bus, u8 dev, u8 func) {
+__always_inline__ hw_pci_Cfg *hw_pci_getCfg(u64 baseAddr, u8 bus, u8 dev, u8 func) {
     return (hw_pci_Cfg *)mm_dmas_phys2Virt(baseAddr | ((u64)bus << 20) | ((u64)dev << 15) | ((u64)func << 12));
 }
 
@@ -172,7 +172,7 @@ int hw_pci_chk();
 
 void hw_pci_initIntr(intr_Desc *desc, void (*handler)(u64), u64 param, char *name);
 
-static __always_inline__ hw_pci_MsixTbl *hw_pci_getMsixTbl(hw_pci_MsixCap *cap, hw_pci_Cfg *cfg) {
+__always_inline__ hw_pci_MsixTbl *hw_pci_getMsixTbl(hw_pci_MsixCap *cap, hw_pci_Cfg *cfg) {
     return mm_dmas_phys2Virt(hw_pci_Cfg_getBar(&cfg->type0.bar[hw_pci_MsixCap_bir(cap)]) + hw_pci_MsixCap_tblOff(cap));
 }
 

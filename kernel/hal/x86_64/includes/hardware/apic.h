@@ -103,22 +103,22 @@ extern u64 hal_hw_apic_supportFlag;
 
 extern intr_Ctrl hal_hw_apic_intrCtrl;
 
-static __always_inline__ void hal_hw_apic_setIcrDest(hal_hw_apic_IcrDesc *icr, u32 apicId, u32 x2ApicId) {
+__always_inline__ void hal_hw_apic_setIcrDest(hal_hw_apic_IcrDesc *icr, u32 apicId, u32 x2ApicId) {
 	(hal_hw_apic_supportFlag & hal_hw_apic_supportFlag_X2Apic) ? (icr->dest.x2Apic = x2ApicId) : (icr->dest.apic = apicId);
 }
 
-static __always_inline__ u32 hal_hw_apic_getApicId() {
+__always_inline__ u32 hal_hw_apic_getApicId() {
 	return (hal_hw_apic_supportFlag & hal_hw_apic_supportFlag_X2Apic) ? (u32)hal_hw_readMsr(0x802) : *(u32 *)mm_dmas_phys2Virt(0xfee00020);
 }
 
 
-static __always_inline__ u64 hal_hw_apic_getApicBase() { return hal_hw_readMsr(0x1b); }
-static __always_inline__ void hal_hw_apic_setApicBase(u64 base) { hal_hw_writeMsr(0x1b, base | (hal_hw_readMsr(0x1b) & ((1ull<< 12) - 1))); }
+__always_inline__ u64 hal_hw_apic_getApicBase() { return hal_hw_readMsr(0x1b); }
+__always_inline__ void hal_hw_apic_setApicBase(u64 base) { hal_hw_writeMsr(0x1b, base | (hal_hw_readMsr(0x1b) & ((1ull<< 12) - 1))); }
 
 void hal_hw_apic_writeRte(u8 idx, u64 val);
 u64 hal_hw_apic_readRte(u8 idx);
 
-static __always_inline__ u32 hal_hw_apic_makeIcr32(u32 vec, u32 shorthand) {
+__always_inline__ u32 hal_hw_apic_makeIcr32(u32 vec, u32 shorthand) {
 	return vec | (hal_hw_apic_Level_Assert << 14) | (shorthand << 18);
 }
 void hal_hw_apic_writeIcr(u64 val);

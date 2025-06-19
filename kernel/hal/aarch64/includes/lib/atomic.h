@@ -14,7 +14,7 @@ typedef struct hal_Atomic {
 
 #define HAL_LIB_ATOMIC_ADD
 
-static __always_inline__ void hal_Atomic_add(hal_Atomic *atomic, i64 value) {
+__always_inline__ void hal_Atomic_add(hal_Atomic *atomic, i64 value) {
 	i64 tmp;
 	__asm__ volatile (
 		"ldadd %x1, %x0, [%2]\n"
@@ -26,7 +26,7 @@ static __always_inline__ void hal_Atomic_add(hal_Atomic *atomic, i64 value) {
 
 #define HAL_LIB_ATOMIC_SUB
 
-static __always_inline__ void hal_Atomic_sub(hal_Atomic *atomic, i64 value) {
+__always_inline__ void hal_Atomic_sub(hal_Atomic *atomic, i64 value) {
 	i64 tmp;
 	__asm__ volatile (
 		"ldadd %x1, %x0, [%2]\n"
@@ -37,7 +37,7 @@ static __always_inline__ void hal_Atomic_sub(hal_Atomic *atomic, i64 value) {
 }
 
 #define HAL_LIB_ATOMIC_INC
-static __always_inline__ void hal_Atomic_inc(hal_Atomic *atomic) {
+__always_inline__ void hal_Atomic_inc(hal_Atomic *atomic) {
 	i64 tmp;
 	 __asm__ volatile (
 		"ldadd xzr, %x0, [%1]	\n\t"
@@ -50,7 +50,7 @@ static __always_inline__ void hal_Atomic_inc(hal_Atomic *atomic) {
 }
 
 #define HAL_LIB_ATOMIC_DEC
-static __always_inline__ void hal_Atomic_dec(hal_Atomic *atomic) {
+__always_inline__ void hal_Atomic_dec(hal_Atomic *atomic) {
 	i64 tmp;
 	__asm__ volatile (
 		"ldadd xzr, %x0, [%1]	\n\t"

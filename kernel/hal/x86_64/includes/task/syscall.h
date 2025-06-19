@@ -13,20 +13,20 @@ __asm__ volatile ( \
 	: "memory" \
 ); 
 
-static __always_inline__ u64 hal_task_syscall_api0(u64 idx) {
+__always_inline__ u64 hal_task_syscall_api0(u64 idx) {
 	hal_intr_PtReg regs; u64 val;
 	_call_syscallInst
 	return val;
 }
 
-static __always_inline__ u64 hal_task_syscall_api1(u64 idx, u64 arg0) {
+__always_inline__ u64 hal_task_syscall_api1(u64 idx, u64 arg0) {
 	hal_intr_PtReg regs; u64 val;
 	regs.rdi = arg0;
 	_call_syscallInst
 	return val;
 }
 
-static __always_inline__ u64 hal_task_syscall_api2(u64 idx, u64 arg0, u64 arg1) {
+__always_inline__ u64 hal_task_syscall_api2(u64 idx, u64 arg0, u64 arg1) {
 	hal_intr_PtReg regs; u64 val;
 	regs.rdi = arg0;
 	regs.rsi = arg1;
@@ -34,7 +34,7 @@ static __always_inline__ u64 hal_task_syscall_api2(u64 idx, u64 arg0, u64 arg1) 
 	return val;
 }
 
-static __always_inline__ u64 hal_task_syscall_api3(u64 idx, u64 arg0, u64 arg1, u64 arg2) {
+__always_inline__ u64 hal_task_syscall_api3(u64 idx, u64 arg0, u64 arg1, u64 arg2) {
 	hal_intr_PtReg regs; u64 val;
 	regs.rdi = arg0;
 	regs.rsi = arg1;
@@ -43,7 +43,7 @@ static __always_inline__ u64 hal_task_syscall_api3(u64 idx, u64 arg0, u64 arg1, 
 	return val;
 }
 
-static __always_inline__ u64 hal_task_syscall_api4(u64 idx, u64 arg0, u64 arg1, u64 arg2, u64 arg3) {
+__always_inline__ u64 hal_task_syscall_api4(u64 idx, u64 arg0, u64 arg1, u64 arg2, u64 arg3) {
 	hal_intr_PtReg regs; u64 val;
 	regs.rdi = arg0;
 	regs.rsi = arg1;
@@ -53,7 +53,7 @@ static __always_inline__ u64 hal_task_syscall_api4(u64 idx, u64 arg0, u64 arg1, 
 	return val;
 }
 
-static __always_inline__ u64 hal_task_syscall_api5(u64 idx, u64 arg0, u64 arg1, u64 arg2, u64 arg3, u64 arg4) {
+__always_inline__ u64 hal_task_syscall_api5(u64 idx, u64 arg0, u64 arg1, u64 arg2, u64 arg3, u64 arg4) {
 	hal_intr_PtReg regs; u64 val;
 	regs.rdi = arg0;
 	regs.rsi = arg1;
@@ -64,7 +64,7 @@ static __always_inline__ u64 hal_task_syscall_api5(u64 idx, u64 arg0, u64 arg1, 
 	return val;
 }
 
-static __always_inline__ u64 hal_task_syscall_api6(u64 idx, u64 arg0, u64 arg1, u64 arg2, u64 arg3, u64 arg4, u64 arg5) {
+__always_inline__ u64 hal_task_syscall_api6(u64 idx, u64 arg0, u64 arg1, u64 arg2, u64 arg3, u64 arg4, u64 arg5) {
 	hal_intr_PtReg regs; u64 val;
 	regs.rdi = arg0;
 	regs.rsi = arg1;

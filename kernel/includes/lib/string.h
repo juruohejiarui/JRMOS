@@ -4,7 +4,7 @@
 #include <hal/lib/string.h>
 
 #ifndef HAL_MEMSET
-static __always_inline__ void *memset(void *addr, u8 dt, i64 size) {
+__always_inline__ void *memset(void *addr, u8 dt, i64 size) {
 	i64 i;
 	u64 dt64 = dt;
 	void *dest = addr;
@@ -24,7 +24,7 @@ static __always_inline__ void *memset(void *addr, u8 dt, i64 size) {
 #endif
 
 #ifndef HAL_MEMCPY
-static __always_inline__ void *memcpy(void *src, void *dst, i64 size) {
+__always_inline__ void *memcpy(void *src, void *dst, i64 size) {
 	void *addr2 = dst;
 	i64 i;
 	while (((u64)src % 8) && ((u64)addr2 % 8) && size) {
@@ -39,7 +39,7 @@ static __always_inline__ void *memcpy(void *src, void *dst, i64 size) {
 #endif
 
 #ifndef HAL_MEMCMP
-static __always_inline__ int memcmp(void *fir, void *sec, i64 size) {
+__always_inline__ int memcmp(void *fir, void *sec, i64 size) {
 	for (i64 i = 0; i < size; i++) {
 		if (*(fir + i) != *(sec + i)) return *(fir + i) < *(sec + i) ? 1 : -1; 
 	}
@@ -48,7 +48,7 @@ static __always_inline__ int memcmp(void *fir, void *sec, i64 size) {
 #endif
 
 #ifndef HAL_STRLEN
-static __always_inline__ int strlen(u8 *str) {
+__always_inline__ int strlen(u8 *str) {
 	i64 res;
 	for (res = 0; str[res] != '\0'; res++) ;
 	return res;

@@ -29,15 +29,15 @@ int hal_cpu_enableAP();
 
 int hal_cpu_initIntr();
 
-static __always_inline__ void hal_cpu_sendIntr_allExcluSelf(u64 irq){
+__always_inline__ void hal_cpu_sendIntr_allExcluSelf(u64 irq){
 	hal_hw_apic_writeIcr32(hal_hw_apic_makeIcr32(irq, hal_hw_apic_DestShorthand_AllExcludingSelf));
 }
 
-static __always_inline__ void hal_cpu_sendIntr_self(u64 irq){
+__always_inline__ void hal_cpu_sendIntr_self(u64 irq){
 	hal_hw_apic_writeIcr32(hal_hw_apic_makeIcr32(irq, hal_hw_apic_DestShorthand_Self));
 }
 
-static __always_inline__ void hal_cpu_sendIntr_all(u64 irq){
+__always_inline__ void hal_cpu_sendIntr_all(u64 irq){
 	hal_hw_apic_writeIcr(hal_hw_apic_makeIcr32(irq, hal_hw_apic_DestShorthand_AllIncludingSelf));
 }
 

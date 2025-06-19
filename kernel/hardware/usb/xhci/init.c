@@ -12,19 +12,19 @@ static int hw_usb_xhci_chk(hw_Device *dev) {
 	hw_pci_Dev *pciDev = container(dev, hw_pci_Dev, device);
 	if (pciDev->cfg->class != 0x0c || pciDev->cfg->subclass != 0x03 || pciDev->cfg->progIf != 0x30) return res_FAIL;
 
-	printk(WHITE, BLACK, "hw: xhci: find controller: %02x:%02x:%02x vendor=%04x,device=%04x\n", 
+	printk(WHITE, BLACK, "hw: xhci: find controller: %02x:%02x:%01x vendor=%04x,device=%04x\n", 
 		pciDev->busId, pciDev->devId, pciDev->funcId, pciDev->cfg->vendorId, pciDev->cfg->deviceId);
 	return res_SUCC;
 }
 
-static __always_inline__ void _disablePartnerCtrl(hw_usb_xhci_Host *host) {
+__always_inline__ void _disablePartnerCtrl(hw_usb_xhci_Host *host) {
 	if (host->pci.cfg->vendorId == 0x8086 && host->pci.cfg->deviceId == 0x1e31 && host->pci.cfg->revisionId == 4) {
 		*(u32 *)((u64)host->pci.cfg + 0xd8) = 0xffffffffu;
 		*(u32 *)((u64)host->pci.cfg + 0xd0) = 0xffffffffu;
 	}
 }
 
-static __always_inline__ int _getRegAddr(hw_usb_xhci_Host *host) {
+__always_inline__ int _getRegAddr(hw_usb_xhci_Host *host) {
 	u64 phyAddr = hw_pci_Cfg_getBar(&host->pci.cfg->type0.bar[0]);
 
 	host->capRegAddr = (u64)mm_dmas_phys2Virt(phyAddr);
@@ -56,7 +56,7 @@ static __always_inline__ int _getRegAddr(hw_usb_xhci_Host *host) {
 	return res_SUCC;
 }
 
-static __always_inline__ int _initHost(hw_usb_xhci_Host *host) {
+__always_inline__ int _initHost(hw_usb_xhci_Host *host) {
 	// check the capability list
 	if (!(host->pci.cfg->status & (1u << 4))) {
 		printk(RED, BLACK, "hw: xhci: pci device %02x:%02x:%02x has no capability list\n", host->pci.busId, host->pci.devId, host->pci.funcId);
@@ -381,7 +381,7 @@ int hw_usb_xhci_init() {
 	return res_SUCC;
 }
 
-static __always_inline__ u32 _EpCtx_getDefaultMxPackSz0(u32 speed) {
+__always_inline__ u32 _EpCtx_getDefaultMxPackSz0(u32 speed) {
 	switch (speed) {
 		case hw_usb_xhci_Speed_Full :
 		case hw_usb_xhci_Speed_High : return 64;

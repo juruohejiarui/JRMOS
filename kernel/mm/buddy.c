@@ -17,20 +17,20 @@ static struct BuddyStruct {
 
 static SpinLock _buddyLck;
 
-static __always_inline__ int _getBit(mm_Page *page) {
+__always_inline__ int _getBit(mm_Page *page) {
     if (page->buddyId == 1) return 1;
     u64 bitId = (mm_getPhyAddr(page) >> (mm_pageShift + page->ord + 1));
     return (_buddy.revBit[page->ord + 1][bitId >> 6] >> (bitId & 63)) & 1;
 }
 
-static __always_inline__ void _revBit(mm_Page *page) {
+__always_inline__ void _revBit(mm_Page *page) {
     if (page->buddyId == 1) return ;
     u64 bitId = (mm_getPhyAddr(page) >> (mm_pageShift + page->ord + 1));
     // printk(WHITE, BLACK, "_revBit(): page:%p ord=%d, bitId=%p\n", mm_getPhyAddr(page), page->ord, bitId);
     bit_rev(&_buddy.revBit[page->ord + 1][bitId >> 6], bitId & 63);
 }
 
-static __always_inline__ mm_Page *_getBuddy(mm_Page *page) {
+__always_inline__ mm_Page *_getBuddy(mm_Page *page) {
     return mm_buddy_isRight(page) ? page - (1ull << page->ord) : page + (1ull << page->ord);
 }
 

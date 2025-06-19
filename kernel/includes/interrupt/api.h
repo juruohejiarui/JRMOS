@@ -36,17 +36,17 @@ int intr_free(intr_Desc *desc, int intrNum);
 
 int intr_init();
 
-static __always_inline__ int intr_enable(intr_Desc *desc) {
+__always_inline__ int intr_enable(intr_Desc *desc) {
 	return desc->ctrl->enable(desc);
 }
-static __always_inline__ int intr_disable(intr_Desc *desc) {
+__always_inline__ int intr_disable(intr_Desc *desc) {
 	return desc->ctrl->disable(desc);
 }
 
-static __always_inline__ int intr_install(intr_Desc *desc, void *installArg) { 
+__always_inline__ int intr_install(intr_Desc *desc, void *installArg) { 
 	return desc->ctrl->install(desc, installArg);
 }
-static __always_inline__ int intr_uninstall(intr_Desc *desc) {
+__always_inline__ int intr_uninstall(intr_Desc *desc) {
 	return desc->ctrl->uninstall(desc);
 }
 

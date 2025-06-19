@@ -43,24 +43,24 @@ static void name(RBTree *tree, RBNode *node, RBNode ***tgr, RBNode **par) { \
 void RBTree_init(RBTree *tree, RBTree_Insert insert, RBTree_Comparator cmp);
 
 void RBTree_ins(RBTree *tree, RBNode *node);
-static __always_inline__ void RBTree_insLck(RBTree *tree, RBNode *node) {
+__always_inline__ void RBTree_insLck(RBTree *tree, RBNode *node) {
 	if (tree == NULL || node == NULL) return ;
 	SpinLock_lock(&tree->lock);
 	RBTree_ins(tree, node);
 	SpinLock_unlock(&tree->lock);
 }
 void RBTree_del(RBTree *tree, RBNode *node);
-static __always_inline__ void RBTree_delLck(RBTree *tree, RBNode *node) {
+__always_inline__ void RBTree_delLck(RBTree *tree, RBNode *node) {
 	if (tree == NULL || node == NULL) return ;
 	SpinLock_lock(&tree->lock);
 	RBTree_del(tree, node);
 	SpinLock_unlock(&tree->lock);
 }
 
-static __always_inline__ RBNode *RBTree_getLeft(RBTree *tree) {
+__always_inline__ RBNode *RBTree_getLeft(RBTree *tree) {
 	return (tree != NULL && tree->left != NULL) ? tree->left : NULL;
 }
-static __always_inline__ RBNode *RBTree_getLeftLck(RBTree *tree) {
+__always_inline__ RBNode *RBTree_getLeftLck(RBTree *tree) {
 	SpinLock_lock(&tree->lock);
 	register RBNode *res = RBTree_getLeft(tree);
 	SpinLock_unlock(&tree->lock);
@@ -68,7 +68,7 @@ static __always_inline__ RBNode *RBTree_getLeftLck(RBTree *tree) {
 }
 RBNode *RBTree_getRight(RBTree *tree);
 
-static __always_inline__ RBNode *RBTree_getRightLck(RBTree *tree) {
+__always_inline__ RBNode *RBTree_getRightLck(RBTree *tree) {
 	SpinLock_lock(&tree->lock);
 	register RBNode *res = RBTree_getRight(tree);
 	SpinLock_unlock(&tree->lock);

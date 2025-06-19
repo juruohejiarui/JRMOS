@@ -6,7 +6,7 @@
 
 #define HAL_TASK_GETLEVEL
 
-static __always_inline__ int hal_task_getLevel() {
+__always_inline__ int hal_task_getLevel() {
     int cs;
     __asm__ volatile (
         "movq %%cs, %%rax   \n\t"
@@ -19,7 +19,7 @@ static __always_inline__ int hal_task_getLevel() {
 
 #define HAL_TASK_CURRENT
 
-static __always_inline__ task_TaskStruct *hal_task_getCurrent() {
+__always_inline__ task_TaskStruct *hal_task_getCurrent() {
     register task_TaskStruct *task;
 	__asm__ volatile ( " andq %%rsp, %0		\n\t" : "=r"(task) : "0"(~(task_krlStkSize - 1)) : "memory");
     return task;
@@ -28,7 +28,7 @@ static __always_inline__ task_TaskStruct *hal_task_getCurrent() {
 #define hal_task_current hal_task_getCurrent()
 
 // get the idle task of the specific cpu
-static __always_inline__ task_TaskStruct *hal_task_idleTask(int cpuIdx) {
+__always_inline__ task_TaskStruct *hal_task_idleTask(int cpuIdx) {
     return &((task_Union *)cpu_desc[cpuIdx].hal.initStk)->task;
 }
 

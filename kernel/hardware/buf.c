@@ -5,13 +5,13 @@
 
 static RBTree hw_buf_bufTree;
 
-static __always_inline__ int hw_buf_getHash(char *iden) {
+__always_inline__ int hw_buf_getHash(char *iden) {
 	u32 crc = crc32_init(); u8 dt;
 	while ((dt = *(iden++)) != '\0') crc = crc32_u8(crc, dt);
 	return crc32_end(crc);
 }
 
-static __always_inline__ int hw_buf_bufTreeCompare(RBNode *a, RBNode *b) {
+__always_inline__ int hw_buf_bufTreeCompare(RBNode *a, RBNode *b) {
 	hw_buf_Desc *da = container(a, hw_buf_Desc, rbNd), *db = container(b, hw_buf_Desc, rbNd);
 	return da->idenHash != db->idenHash ? da->idenHash < db->idenHash : strcmp(da->idenPath, da->idenPath) == -1;
 }

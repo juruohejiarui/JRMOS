@@ -382,8 +382,6 @@ static int _addField(struct hw_hid_Parser *parser, u32 type, u32 flags) {
     }
 
     if (parser->loc.usageIdx == 0) {
-        printk(YELLOW, BLACK, "hw: hid: parser %p: ignore padding field [%d,%d]\n",
-            parser, off, report->sz);
         return res_SUCC;
     }
 

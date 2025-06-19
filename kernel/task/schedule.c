@@ -21,7 +21,7 @@ void task_sche_enable() { task_sche_state = 1; }
 void task_sche_disable() { task_sche_state = 0; }
 int task_sche_getState() { return task_sche_state; }
 
-static __always_inline__ int task_sche_cfsTreeCmp(RBNode *a, RBNode *b) {
+__always_inline__ int task_sche_cfsTreeCmp(RBNode *a, RBNode *b) {
     register task_TaskStruct
         *ta = container(a, task_TaskStruct, rbNd),
         *tb = container(b, task_TaskStruct, rbNd);
@@ -36,7 +36,7 @@ void task_sche_updCurState() {
     task_current->state |= 1;
 }
 
-static __always_inline__ void task_sche_updOtherState() {
+__always_inline__ void task_sche_updOtherState() {
     hal_task_sche_updOtherState();
 }
 
@@ -122,7 +122,7 @@ void task_sche_finishReq(task_TaskStruct *task) {
 }
 
 // state transition for current task when switch to other task
-static __always_inline__ void task_sche_hangCur() {
+__always_inline__ void task_sche_hangCur() {
     // wait for request, then switch to idle task
     if (task_current->reqWait.value > 0) {
         SafeList_insTail(&task_mgr.sleepTsks, &task_current->scheNd);
@@ -261,7 +261,7 @@ void task_initIdle() {
 }
 
 // insert new task to cfs tree
-static __always_inline__ void _insertNewTsk(task_TaskStruct *tsk) {
+__always_inline__ void _insertNewTsk(task_TaskStruct *tsk) {
     task_sche_syncVRuntime(tsk);
 
     SpinLock_lockMask(&task_mgr.scheLck[tsk->cpuId]);

@@ -41,7 +41,7 @@ intr_handlerDeclare(hw_usb_xhci_msiHandler) {
 	hw_usb_xhci_IntrReg_write64(host, intrId, hw_usb_xhci_intrReg_DeqPtr, mm_dmas_virt2Phys(event) | (1ul << 3));
 }
 
-static __always_inline__ void hw_usb_xhci_portConnect(hw_usb_xhci_Host *host, u32 portIdx) {
+__always_inline__ void hw_usb_xhci_portConnect(hw_usb_xhci_Host *host, u32 portIdx) {
 	// make new device management for this port
 	host->portDev[portIdx] = hw_usb_xhci_newDev(host, NULL, portIdx);
 	if (!host->portDev[portIdx]) {
@@ -50,7 +50,7 @@ static __always_inline__ void hw_usb_xhci_portConnect(hw_usb_xhci_Host *host, u3
 	}
 }
 
-static __always_inline__ void hw_usb_xhci_portDisconnect(hw_usb_xhci_Host *host, u32 portIdx) {
+__always_inline__ void hw_usb_xhci_portDisconnect(hw_usb_xhci_Host *host, u32 portIdx) {
 	hw_usb_xhci_Device *dev = host->portDev[portIdx];
 	if (dev == NULL) return ;
 	task_signal_send(dev->mgrTsk, task_Signal_Int);

@@ -72,13 +72,13 @@ typedef struct hw_usb_devdesc_Hid {
 	} __attribute__ ((packed)) desc[1];
 } __attribute__ ((packed)) hw_usb_devdesc_Hid;
 
-static __always_inline__ int hw_usb_devdesc_Ep_epId(hw_usb_devdesc_Ep *ep) {
+__always_inline__ int hw_usb_devdesc_Ep_epId(hw_usb_devdesc_Ep *ep) {
 	return ((ep->bEpAddr & 0xf) << 1) + (ep->bEpAddr >> 7);
 }
 
-static __always_inline__ int hw_usb_devdesc_Ep_epType(hw_usb_devdesc_Ep *ep) { return (ep->bmAttr & 0x3) | ((ep->bEpAddr >> 5) & 0x4); }
+__always_inline__ int hw_usb_devdesc_Ep_epType(hw_usb_devdesc_Ep *ep) { return (ep->bmAttr & 0x3) | ((ep->bEpAddr >> 5) & 0x4); }
 
-static __always_inline__ hw_usb_devdesc_Hdr *hw_usb_devdesc_getNxt(hw_usb_devdesc_Cfg *cfg, hw_usb_devdesc_Hdr *cur) {
+__always_inline__ hw_usb_devdesc_Hdr *hw_usb_devdesc_getNxt(hw_usb_devdesc_Cfg *cfg, hw_usb_devdesc_Hdr *cur) {
 	if (!cur) return (hw_usb_devdesc_Hdr *)((u64)cfg + cfg->hdr.len);
 	if ((u64)cur + cur->len >= (u64)cfg + cfg->wTotLen) return NULL;
 	return (hw_usb_devdesc_Hdr *)((u64)cur + cur->len);

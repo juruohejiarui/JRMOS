@@ -3,8 +3,8 @@
 
 #include <hal/lib/crc32.h>
 
-static __always_inline__ u32 crc32_init() { return 0xffffffff; }
-static __always_inline__ u32 crc32_end(u32 crc) { return ~crc; }
+__always_inline__ u32 crc32_init() { return 0xffffffff; }
+__always_inline__ u32 crc32_end(u32 crc) { return ~crc; }
 
 #ifdef HAL_LIB_CRC32
 

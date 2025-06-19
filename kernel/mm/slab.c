@@ -31,7 +31,7 @@ typedef struct Slab {
 
 static Slab _slab[mm_slab_mxSizeShift - mm_slab_mnSizeShift + 1];
 
-static __always_inline__ int _addRecord(void *addr, u64 size, void (*destructor)(void *)) {
+__always_inline__ int _addRecord(void *addr, u64 size, void (*destructor)(void *)) {
     mm_SlabRecord *record = mm_kmalloc(sizeof(mm_SlabRecord), mm_Attr_Shared, NULL);
     if (!record) return res_FAIL;
     record->destructor = destructor;
@@ -132,7 +132,7 @@ void mm_slab_dbg(int detail) {
 static void *_kmalloc(u64 size);
 static int _kfree(void *addr);
 
-static __always_inline__ int _newSlabBlk(int sizeId) {
+__always_inline__ int _newSlabBlk(int sizeId) {
     mm_Page *pages = alloc2MPage();
     if (pages == NULL) {
         printk(RED, BLACK, "mm: slab: newSlabBlk(): failed to allocate 2M page for a new slab.\n");
@@ -172,7 +172,7 @@ static __always_inline__ int _newSlabBlk(int sizeId) {
     return res_SUCC;
 }
 
-static __always_inline__ int _freeSlabBlk(int sizeId, SlabBlk *blk) {
+__always_inline__ int _freeSlabBlk(int sizeId, SlabBlk *blk) {
     List_del(&blk->list);
     _slab[sizeId].freeCnt -= blk->freeCnt;
     if (0 <= sizeId && sizeId < 5)

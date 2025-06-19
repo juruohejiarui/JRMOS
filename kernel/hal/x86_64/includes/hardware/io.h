@@ -3,7 +3,7 @@
 
 #include <lib/dtypes.h>
 
-static __always_inline__ void hal_hw_io_out8(u16 port, u8 data) {
+__always_inline__ void hal_hw_io_out8(u16 port, u8 data) {
     __asm__ volatile (
         "outb %0, %%dx   \n\t"
         "mfence          \n\t"
@@ -13,7 +13,7 @@ static __always_inline__ void hal_hw_io_out8(u16 port, u8 data) {
     );
 }
 
-static __always_inline__ void hal_hw_io_out16(u16 port, u16 data) {
+__always_inline__ void hal_hw_io_out16(u16 port, u16 data) {
     __asm__ volatile (
         "outw %0, %%dx   \n\t"
         "mfence          \n\t"
@@ -23,7 +23,7 @@ static __always_inline__ void hal_hw_io_out16(u16 port, u16 data) {
     );
 }
 
-static __always_inline__ void hal_hw_io_out32(u16 port, u32 data) {
+__always_inline__ void hal_hw_io_out32(u16 port, u32 data) {
     __asm__ volatile (
         "outl %0, %%dx   \n\t"
         "mfence          \n\t"
@@ -33,7 +33,7 @@ static __always_inline__ void hal_hw_io_out32(u16 port, u32 data) {
     );
 }
 
-static __always_inline__ u8 hal_hw_io_in8(u16 port) {
+__always_inline__ u8 hal_hw_io_in8(u16 port) {
     u8 ret = 0;
     __asm__ volatile (
         "inb %%dx, %0   \n\t"
@@ -45,7 +45,7 @@ static __always_inline__ u8 hal_hw_io_in8(u16 port) {
     return ret;
 }
 
-static __always_inline__ u16 hal_hw_io_in16(u16 port) {
+__always_inline__ u16 hal_hw_io_in16(u16 port) {
     u16 ret = 0;
     __asm__ volatile (
         "inw %%dx, %0   \n\t"
@@ -57,7 +57,7 @@ static __always_inline__ u16 hal_hw_io_in16(u16 port) {
     return ret;
 }
 
-static __always_inline__ u32 hal_hw_io_in32(u16 port) {
+__always_inline__ u32 hal_hw_io_in32(u16 port) {
     u32 ret = 0;
     __asm__ volatile (
         "inl %%dx, %0   \n\t"

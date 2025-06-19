@@ -10,7 +10,7 @@
 #define HAL_STRCMP
 #define HAL_STRNCMP
 
-static __always_inline__ void *memset(void *addr, u8 dt, i64 size) {
+__always_inline__ void *memset(void *addr, u8 dt, i64 size) {
 	int d0, d1;
 	u64 tmp = dt * 0x0101010101010101UL;
 	__asm__ volatile (
@@ -34,7 +34,7 @@ static __always_inline__ void *memset(void *addr, u8 dt, i64 size) {
 	return addr;
 }
 
-static __always_inline__ void *memcpy(void *src, void *dst, i64 num) {
+__always_inline__ void *memcpy(void *src, void *dst, i64 num) {
 	int d0, d1, d2;
 	__asm__ volatile(
 		"cld				\n\t"
@@ -56,7 +56,7 @@ static __always_inline__ void *memcpy(void *src, void *dst, i64 num) {
 	return dst;
 }
 
-static __always_inline__ int memcmp(void *fir, void *sec, i64 size) {
+__always_inline__ int memcmp(void *fir, void *sec, i64 size) {
 	register int res;
 	__asm__ volatile (
 		"cld			\n\t"
@@ -74,7 +74,7 @@ static __always_inline__ int memcmp(void *fir, void *sec, i64 size) {
 	return res;
 }
 
-static __always_inline__ i64 strlen(u8 *str) {
+__always_inline__ i64 strlen(u8 *str) {
 	register i64 res;
 	__asm__ volatile (
 		"cld		\n\t"
@@ -89,7 +89,7 @@ static __always_inline__ i64 strlen(u8 *str) {
 }
 
 
-static __always_inline__ int strcmp(char *a, char *b) {
+__always_inline__ int strcmp(char *a, char *b) {
 	register int _res;
 	__asm__ volatile (
 		"cld				\n\t"
@@ -113,7 +113,7 @@ static __always_inline__ int strcmp(char *a, char *b) {
 	return _res;
 }
 
-static __always_inline__ int strncmp(char *a, char *b, i64 size) {
+__always_inline__ int strncmp(char *a, char *b, i64 size) {
 	register int _res;
 	__asm__ volatile (
 		"cld 				\n\t"

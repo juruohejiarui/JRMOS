@@ -7,10 +7,10 @@
 #define setRed(nd)		do { (nd)->unionParCol &= ~1ull; } while (0)
 #define setBlack(nd)	do { (nd)->unionParCol |= 1ull; } while (0)
 
-static __always_inline__ void _setParent(RBNode *node, RBNode *par) {
+__always_inline__ void _setParent(RBNode *node, RBNode *par) {
 	node->unionParCol = (node->unionParCol & 3) | (u64)par;
 }
-static __always_inline__ void _setCol(RBNode *node, int col) {
+__always_inline__ void _setCol(RBNode *node, int col) {
 	node->unionParCol = (node->unionParCol & ~1ul) | col;
 }
 
@@ -40,7 +40,7 @@ static void _rotRight(RBTree *tree, RBNode *node) {
 	_setParent(node, left);
 }
 
-static __always_inline__ void _linkNode(RBNode **src, RBNode *node, RBNode *par) {
+__always_inline__ void _linkNode(RBNode **src, RBNode *node, RBNode *par) {
 	node->unionParCol = (u64)par;
 	setRed(node);
 	node->left = node->right = NULL;
@@ -53,7 +53,7 @@ void RBTree_init(RBTree *tree, RBTree_Insert insert, RBTree_Comparator cmp) {
 	tree->insert = insert;
 }
 
-static __always_inline__ void _fixAfterIns(RBTree *tree, RBNode *node) {
+__always_inline__ void _fixAfterIns(RBTree *tree, RBNode *node) {
 	RBNode *par, *gPar;
 	while ((par = parent(node)) != NULL && isRed(par)) {
 		gPar = parent(par);
@@ -115,7 +115,7 @@ void RBTree_ins(RBTree *tree, RBNode *node) {
 	_fixAfterIns(tree, node);
 }
 
-static __always_inline__ void _fixAfterDel(RBTree *tree, RBNode *node, RBNode *par) {
+__always_inline__ void _fixAfterDel(RBTree *tree, RBNode *node, RBNode *par) {
 	RBNode *other;
 	while ((node == NULL || isBlack(node)) && node != tree->root) {
 		if (par->left == node) {

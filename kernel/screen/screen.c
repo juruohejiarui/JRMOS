@@ -121,7 +121,7 @@ static char *_number(char *str, i64 num, int base, int size, int precision, int 
     return str;
 }
 // get the string using FMT and ARGS, output to BUF and return the length of the output
-static __always_inline__ int _sprintf(char *buf, const char *fmt, va_list args) {
+__always_inline__ int _sprintf(char *buf, const char *fmt, va_list args) {
     char *str = buf, *s;
     int flags, len, qlf, i, fld_w, prec;
     while (*fmt != '\0') {

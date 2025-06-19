@@ -13,7 +13,7 @@ int timer_init();
 // check and update the flag of soft interrupt
 void timer_updSirq();
 
-static __always_inline__ u64 timer_getJiff() { return timer_jiff.value; }
+__always_inline__ u64 timer_getJiff() { return timer_jiff.value; }
 
 void timer_mdelay(u64 msec);
 

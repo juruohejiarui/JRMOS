@@ -63,27 +63,27 @@ typedef struct hal_hw_hpet_XsdtDesc {
 
 extern hal_hw_hpet_XsdtDesc *hal_hw_hpet_xsdtDesc;
 
-static __always_inline__ void hal_hw_hpet_setReg64(u64 offset, u64 val) {
+__always_inline__ void hal_hw_hpet_setReg64(u64 offset, u64 val) {
 	*(u64 *)mm_dmas_phys2Virt(hal_hw_hpet_xsdtDesc->addr.addr + offset) = val;
 	hal_hw_mfence();
 }
-static __always_inline__ u64 hal_hw_hpet_getReg64(u64 offset) { return *(u64 *)mm_dmas_phys2Virt(hal_hw_hpet_xsdtDesc->addr.addr + offset); }
+__always_inline__ u64 hal_hw_hpet_getReg64(u64 offset) { return *(u64 *)mm_dmas_phys2Virt(hal_hw_hpet_xsdtDesc->addr.addr + offset); }
 
-static __always_inline__ void hal_hw_hpet_setReg32(u64 offset, u32 val) { 
+__always_inline__ void hal_hw_hpet_setReg32(u64 offset, u32 val) { 
 	*(u32 *)mm_dmas_phys2Virt(hal_hw_hpet_xsdtDesc->addr.addr + offset) = val;
 	hal_hw_mfence();
 }
-static __always_inline__ u64 hal_hw_hpet_getReg32(u64 offset) { return *(u32 *)mm_dmas_phys2Virt(hal_hw_hpet_xsdtDesc->addr.addr + offset); }
+__always_inline__ u64 hal_hw_hpet_getReg32(u64 offset) { return *(u32 *)mm_dmas_phys2Virt(hal_hw_hpet_xsdtDesc->addr.addr + offset); }
 
-static __always_inline__ u64 hal_hw_getTimerCfg(u32 id) { return hal_hw_hpet_getReg64(0x20 * id + hal_hw_hpet_timerCfgCap); }
-static __always_inline__ void hal_hw_setTimerCfg(u32 id, u64 cfg) {
+__always_inline__ u64 hal_hw_getTimerCfg(u32 id) { return hal_hw_hpet_getReg64(0x20 * id + hal_hw_hpet_timerCfgCap); }
+__always_inline__ void hal_hw_setTimerCfg(u32 id, u64 cfg) {
 	u64 cap = hal_hw_getTimerCfg(id) & hal_hw_hpet_timerCfgCap_CapPart;
 	hal_hw_hpet_setReg64(0x20 * id + hal_hw_hpet_timerCfgCap, cap | cfg);
 }
 
 #define hal_hw_hpet_intrDesc (&hal_intr_desc[hal_intr_vec_Timer - 0x20])
 
-static __always_inline__ void hal_hw_setTimerCmp(u32 id, u32 comparator) {
+__always_inline__ void hal_hw_setTimerCmp(u32 id, u32 comparator) {
 	hal_hw_hpet_setReg64(0x20 * id + hal_hw_hpet_timerCmpVal, comparator);
 }
 

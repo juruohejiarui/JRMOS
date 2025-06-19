@@ -14,7 +14,8 @@ typedef float f32;
 typedef double f64;
 
 #ifndef __always_inline__
-#define __always_inline__  inline __attribute__ ((always_inline))
+// inline function must be static function
+#define __always_inline__ static inline __attribute__ ((always_inline))
 #endif
 
 #ifndef __noinline__

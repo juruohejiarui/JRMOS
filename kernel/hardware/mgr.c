@@ -25,8 +25,11 @@ void hw_driver_init() {
 int hw_driver_registerBuiltin() {
     // register some built-in drivers
     hw_usb_xhci_init();
+    
     hw_hid_init();
+
     hw_usb_hid_init();
+
     hw_nvme_init();
 }
 
