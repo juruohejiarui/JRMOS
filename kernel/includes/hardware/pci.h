@@ -7,6 +7,7 @@
 #include <mm/dmas.h>
 #include <interrupt/api.h>
 #include <hal/hardware/reg.h>
+#include <hardware/mgr.h>
 
 typedef struct hw_pci_Cfg {
     u16 vendorId, deviceId;
@@ -61,8 +62,11 @@ typedef struct hw_pci_Cfg {
 typedef struct hw_pci_Dev {
     u8 busId, devId, funcId;
     hw_pci_Cfg *cfg;
+    hw_Device device;
+    // list node in hw_pci_devLst
     ListNode lst;
 } hw_pci_Dev;
+
 
 typedef struct hw_pci_CapHdr {
     u8 capId;
@@ -122,6 +126,12 @@ static __always_inline__ u64 hw_pci_Cfg_getBar(u32 *bar) {
     else return (u64)val & ~0xful;
 }
 
+extern hw_Device hw_pci_rootDev;
+
+// used when drivers what to replace the specific element in hw_pci_devLst with the member of driver-specific struct
+// can only execute once for each device
+// can only execute under driver-specific hw_Driver->cfg()
+void hw_pci_extend(hw_pci_Dev *origin, hw_pci_Dev *ext);
 
 typedef struct hw_pci_MsixCap {
     hw_pci_CapHdr hdr;
@@ -156,6 +166,9 @@ void hw_pci_chkBus(u64 baseAddr, u16 bus);
 int hw_pci_init();
 
 void hw_pci_lstDev();
+
+// check suitable driver
+int hw_pci_chk();
 
 void hw_pci_initIntr(intr_Desc *desc, void (*handler)(u64), u64 param, char *name);
 

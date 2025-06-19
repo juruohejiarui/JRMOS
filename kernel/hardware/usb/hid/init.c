@@ -9,8 +9,7 @@ static hw_usb_hid_Driver hw_usb_hid_driver;
 
 int hw_usb_hid_check(hw_Device *dev) {
     // check if the device is a USB device by searching the xhci host list
-    if (hw_usb_xhci_isXhciDev(dev)) goto Found;
-    printk(RED, BLACK, "hw: usb hid: device %p is not a USB HID device\n", dev);
+    if (hw_usb_xhci_isXhciDev(dev) == res_SUCC) goto Found;
     return res_FAIL;
     Found:
     hw_usb_xhci_Device *usbDev = container(dev, hw_usb_xhci_Device, device);

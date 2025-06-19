@@ -5,7 +5,6 @@
 #include <lib/list.h>
 
 typedef struct hw_Device {
-
     struct hw_Device *parent;
     struct hw_Driver *drv;
     ListNode lst;
@@ -23,9 +22,11 @@ typedef struct hw_Driver {
 } hw_Driver;
 
 void hw_driver_initDriver(hw_Driver *drv, char *name, 
-    int (*check)(hw_Device *), int (*init)(hw_Device *), int (*install)(hw_Device *), int (*uninstall)(hw_Device *));
+    int (*check)(hw_Device *), int (*cfg)(hw_Device *), int (*install)(hw_Device *), int (*uninstall)(hw_Device *));
 
 void hw_driver_init();
+
+int hw_driver_registerBuiltin();
 
 // Register a driver, adding it to the driver list
 void hw_driver_register(hw_Driver *drv);
@@ -35,5 +36,9 @@ void hw_driver_register(hw_Driver *drv);
 void hw_driver_unregister(hw_Driver *drv);
 
 extern SafeList hw_drvLst;
+
+extern SafeList hw_rootDevLst;
+
+void hw_registerRootDev(hw_Device *dev);
 
 #endif

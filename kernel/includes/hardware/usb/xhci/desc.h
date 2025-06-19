@@ -259,10 +259,7 @@ typedef struct hw_usb_xhci_Port {
 } hw_usb_xhci_Port;
 
 typedef struct hw_usb_xhci_Host {
-    hw_pci_Dev *pci;
-
-    hw_Device mgr;
-
+    hw_pci_Dev pci;
     union {
         hw_pci_MsiCap *msiCap;
         hw_pci_MsixCap *msixCap;

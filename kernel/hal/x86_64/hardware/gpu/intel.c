@@ -18,7 +18,7 @@ int hal_hw_gpu_intel_init() {
 	hw_pci_Dev *dev;
 	SafeList_enum(&hw_pci_devLst, devNd) {
 		dev = container(devNd, hw_pci_Dev, lst);
-		if (dev->cfg->vendorId == 0x8086 && dev->cfg->class == 0x06 && dev->cfg->subclass == 0x01) {
+		if (dev->cfg->vendorId == 0x8086 && dev->cfg->class == 0x03 && dev->cfg->subclass == 0x80) {
 			SafeList_exitEnum(&hw_pci_devLst);
 		} else dev = NULL;
 	}
@@ -26,8 +26,8 @@ int hal_hw_gpu_intel_init() {
 		printk(YELLOW, BLACK, "hw: gpu: intel GPU not found.\n");
 		return res_FAIL;
 	}
+	if (_analyseGeneration(dev->cfg->deviceId) != res_SUCC) return res_FAIL;
 	printk(GREEN, BLACK, "hw: gpu: find intel GPU: %02x:%02x:%02x %04x:%04x\n",
 		dev->busId, dev->devId, dev->funcId, dev->cfg->vendorId, dev->cfg->deviceId);
-	if (_analyseGeneration(dev->cfg->deviceId) != res_SUCC) return res_FAIL;
 	return res_SUCC;
 }

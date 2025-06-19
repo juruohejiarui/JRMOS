@@ -9,6 +9,14 @@ archName=$(uname -m)
 osName=$(uname -s)
 
 debug(){
+	if [ "$osName" = "Linux" ]; then
+		echo "debug-qemu: under Linux"
+		paramOs="-vga std"
+	else
+		echo "debug-qemu: under MacOS"
+		paramOs="-vga virtio"
+	fi
+	
 	if [ "$archName" = "arm64" -o "$archName" = "aarch64" ]; then
 		echo "debug-qemu: under aarch64"
 		ovmfPath="./OVMF_CODE_4M.fd"
@@ -21,15 +29,10 @@ debug(){
 		ovmfPath="/usr/share/OVMF/OVMF_CODE_4M.fd"
 		paramArch="-cpu host \
 			-accel kvm"
+		# use integrated GPU
 	fi
 
-	if [ "$osName" = "Linux" ]; then
-		echo "debug-qemu: under Linux"
-		paramOs="-vga std"
-	else
-		echo "debug-qemu: under MacOS"
-		paramOs="-vga virtio"
-	fi
+	
 
 	usbVendor=0x21c4
 	usbProduct=0x0cd1

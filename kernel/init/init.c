@@ -10,12 +10,12 @@ void init_init() {
 		printk(RED, BLACK, "init: failed to initialize pci.\n");
 		while (1) ;
 	}
-	if (hw_usb_xhci_init() == res_FAIL) {
-		printk(RED, BLACK, "init: failed to initialize xhci\n");
+	if (hw_driver_registerBuiltin() == res_FAIL) {
+		printk(RED, BLACK, "init: failed to register builtin drivers.\n");
 		while (1) ;
 	}
 
 	hw_pci_lstDev();
 
-	hw_gpu_init();
+	hw_pci_chk();
 }

@@ -283,7 +283,7 @@ hw_usb_xhci_Device *hw_usb_xhci_newDev(hw_usb_xhci_Host *host, hw_usb_xhci_Devic
     dev->host = host;
 
     dev->device.drv = NULL;
-    dev->device.parent = &host->mgr;
+    dev->device.parent = &host->pci.device;
 
     // make new task for the device
     dev->mgrTsk = task_newTask(hw_usb_xhci_devMgrTsk, (u64)dev, task_attr_Builtin);
@@ -302,10 +302,14 @@ int hw_usb_xhci_freeDev(hw_usb_xhci_Device *dev) {
 }
 
 int hw_usb_xhci_isXhciDev(hw_Device *dev) {
+    int res = res_FAIL;
     SafeList_enum(&hw_usb_xhci_hostLst, hostNd) {
-        if (dev->parent == container(hostNd, hw_Device, lst)) return res_SUCC;
+        if (dev->parent == &container(hostNd, hw_usb_xhci_Host, lst)->pci.device) {
+            res = res_SUCC;
+            SafeList_exitEnum(&hw_usb_xhci_hostLst);
+        }
     }
-    return res_FAIL;
+    return res;
 }
 
 int hw_usb_xhci_EpCtx_calcInterval(hw_usb_xhci_Device *dev, int epType, u32 bInterval) {

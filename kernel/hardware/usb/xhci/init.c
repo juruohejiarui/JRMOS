@@ -5,52 +5,31 @@
 #include <screen/screen.h>
 
 SafeList hw_usb_xhci_hostLst;
+hw_Driver hw_usb_xhci_drv;
 
-// search xhci device in pci list
-static int _searchInPci() {
-	SafeList_init(&hw_usb_xhci_hostLst);
-	SafeList_enum(&hw_pci_devLst, pciDevNd) {
-		hw_pci_Dev *dev = container(pciDevNd, hw_pci_Dev, lst);
-		if (dev->cfg->class == 0x0c && dev->cfg->subclass == 0x03 && dev->cfg->progIf == 0x30) {
-			hw_usb_xhci_Host *host = mm_kmalloc(sizeof(hw_usb_xhci_Host), mm_Attr_Shared, NULL);
-			if (host == NULL) {
-				printk(RED, BLACK, "xhci: failed to allocate xhci manager structure.\n");
-				return res_FAIL;
-			}
-			memset(host, 0, sizeof(hw_usb_xhci_Host));
-			host->pci = dev;
-			host->intrNum = 0;
-			host->flag = 0;
+static int hw_usb_xhci_chk(hw_Device *dev) {
+	if (dev->parent != &hw_pci_rootDev) return res_FAIL;
+	hw_pci_Dev *pciDev = container(dev, hw_pci_Dev, device);
+	if (pciDev->cfg->class != 0x0c || pciDev->cfg->subclass != 0x03 || pciDev->cfg->progIf != 0x30) return res_FAIL;
 
-			SafeList_insTail(&hw_usb_xhci_hostLst, &host->lst);
-			
-			SafeList_init(&host->devLst);
-			SafeList_init(&host->ringLst);
-		}
-	}
-
-	// list xhci controller
-	SafeList_enum(&hw_usb_xhci_hostLst, xhciDevNd) {
-		hw_usb_xhci_Host *mgr = container(xhciDevNd, hw_usb_xhci_Host, lst);
-		printk(WHITE, BLACK, "hw: xhci: find controller: %p pci: %02x:%02x:%02x\n", mgr, mgr->pci->busId, mgr->pci->devId, mgr->pci->funcId);
-	}
-
+	printk(WHITE, BLACK, "hw: xhci: find controller: %02x:%02x:%02x vendor=%04x,device=%04x\n", 
+		pciDev->busId, pciDev->devId, pciDev->funcId, pciDev->cfg->vendorId, pciDev->cfg->deviceId);
 	return res_SUCC;
 }
 
 static __always_inline__ void _disablePartnerCtrl(hw_usb_xhci_Host *host) {
-	if (host->pci->cfg->vendorId == 0x8086 && host->pci->cfg->deviceId == 0x1e31 && host->pci->cfg->revisionId == 4) {
-		*(u32 *)((u64)host->pci->cfg + 0xd8) = 0xffffffffu;
-		*(u32 *)((u64)host->pci->cfg + 0xd0) = 0xffffffffu;
+	if (host->pci.cfg->vendorId == 0x8086 && host->pci.cfg->deviceId == 0x1e31 && host->pci.cfg->revisionId == 4) {
+		*(u32 *)((u64)host->pci.cfg + 0xd8) = 0xffffffffu;
+		*(u32 *)((u64)host->pci.cfg + 0xd0) = 0xffffffffu;
 	}
 }
 
 static __always_inline__ int _getRegAddr(hw_usb_xhci_Host *host) {
-	u64 phyAddr = hw_pci_Cfg_getBar(&host->pci->cfg->type0.bar[0]);
+	u64 phyAddr = hw_pci_Cfg_getBar(&host->pci.cfg->type0.bar[0]);
 
 	host->capRegAddr = (u64)mm_dmas_phys2Virt(phyAddr);
 
-	printk(WHITE, BLACK, "hw: xhci: host %p: %08x %08x capRegAddr:%p\n", host, host->pci->cfg->type0.bar[0], host->pci->cfg->type0.bar[1], host->capRegAddr);
+	printk(WHITE, BLACK, "hw: xhci: host %p: %08x %08x capRegAddr:%p\n", host, host->pci.cfg->type0.bar[0], host->pci.cfg->type0.bar[1], host->capRegAddr);
 	
 	// map this address in dmas
 	if (mm_dmas_map(phyAddr) == res_FAIL) {
@@ -77,17 +56,17 @@ static __always_inline__ int _getRegAddr(hw_usb_xhci_Host *host) {
 	return res_SUCC;
 }
 
-static int _initHost(hw_usb_xhci_Host *host) {
+static __always_inline__ int _initHost(hw_usb_xhci_Host *host) {
 	// check the capability list
-	if (!(host->pci->cfg->status & (1u << 4))) {
-		printk(RED, BLACK, "hw: xhci: pci device %02x:%02x:%02x has no capability list\n", host->pci->busId, host->pci->devId, host->pci->funcId);
+	if (!(host->pci.cfg->status & (1u << 4))) {
+		printk(RED, BLACK, "hw: xhci: pci device %02x:%02x:%02x has no capability list\n", host->pci.busId, host->pci.devId, host->pci.funcId);
 		return res_FAIL;
 	}
 
 	hw_pci_MsixCap *msix = NULL;
 	hw_pci_MsiCap *msi = NULL;
 	// search for msi/msix capability descriptor
-	for (hw_pci_CapHdr *hdr = hw_pci_getNxtCap(host->pci->cfg, NULL); hdr; hdr = hw_pci_getNxtCap(host->pci->cfg, hdr)) {
+	for (hw_pci_CapHdr *hdr = hw_pci_getNxtCap(host->pci.cfg, NULL); hdr; hdr = hw_pci_getNxtCap(host->pci.cfg, hdr)) {
 		switch (hdr->capId) {
 			case hw_pci_CapHdr_capId_MSI:
 				msi = container(container(hdr, hw_pci_MsiCap32, hdr), hw_pci_MsiCap, cap32);
@@ -106,7 +85,7 @@ static int _initHost(hw_usb_xhci_Host *host) {
 	if (msix) host->flag |= hw_usb_xhci_Host_flag_Msix;
 
 	printk(WHITE, BLACK, "hw: xhci: initialize device %p: vendor:%04x device:%04x revision:%04x\n",
-		host, host->pci->cfg->vendorId, host->pci->cfg->deviceId, host->pci->cfg->revisionId);
+		host, host->pci.cfg->vendorId, host->pci.cfg->deviceId, host->pci.cfg->revisionId);
 
 	_disablePartnerCtrl(host);
 
@@ -192,14 +171,14 @@ static int _initHost(hw_usb_xhci_Host *host) {
 		int vecNum = hw_pci_MsixCap_vecNum(host->msixCap);
 		vecNum = host->intrNum = min(vecNum, host->intrNum);
 
-		hw_pci_MsixTbl *tbl = hw_pci_getMsixTbl(msix, host->pci->cfg);
+		hw_pci_MsixTbl *tbl = hw_pci_getMsixTbl(msix, host->pci.cfg);
 		
 		printk(WHITE, BLACK, "hw: xhci: host %p msixtbl:%p vecNum:%d msgCtrl:%#010x\n", host, tbl, vecNum, msix->msgCtrl);
 
 		for (int i = 0; i < host->intrNum; i++) {
 			hw_pci_initIntr(host->intr + i, hw_usb_xhci_msiHandler, (u64)host | i, "xhci msix");
 		}
-		if (hw_pci_allocMsix(host->msixCap, host->pci->cfg, host->intr, host->intrNum) == res_FAIL) {
+		if (hw_pci_allocMsix(host->msixCap, host->pci.cfg, host->intr, host->intrNum) == res_FAIL) {
 			printk(RED, BLACK, "hw: xhci: host %p failed to allocate msix interrupt\n", host);
 			return res_FAIL;
 		}
@@ -220,13 +199,13 @@ static int _initHost(hw_usb_xhci_Host *host) {
 			return res_FAIL;
 		}
 	}
-	hw_pci_disableIntx(host->pci->cfg);
+	hw_pci_disableIntx(host->pci.cfg);
 	printk(GREEN, BLACK, "hw: xhci: host %p msi/msix set\n", host);
 
 	{
 		int res;
 		// enable interrupt
-		if (host->flag & hw_usb_xhci_Host_flag_Msix) res = hw_pci_enableMsixAll(host->msixCap, host->pci->cfg, host->intr, host->intrNum);
+		if (host->flag & hw_usb_xhci_Host_flag_Msix) res = hw_pci_enableMsixAll(host->msixCap, host->pci.cfg, host->intr, host->intrNum);
 		else res = hw_pci_enableMsiAll(host->msiCap, host->intr, host->intrNum);
 
 		if (res == res_SUCC) printk(GREEN, BLACK, "hw: xhci: host %p msi/msix enabled\n", host);
@@ -370,19 +349,8 @@ static int _initHost(hw_usb_xhci_Host *host) {
 	printk(GREEN, BLACK, "hw: xhci: host %p initialized. cmd:%#010x state:%#010x\n", host, 
 		hw_usb_xhci_OpReg_read32(host, hw_usb_xhci_Host_opReg_cmd), hw_usb_xhci_OpReg_read32(host, hw_usb_xhci_Host_opReg_status));
 
-	// set empty command to test
-	// {
-	// 	hw_usb_xhci_Request *req = hw_usb_xhci_makeRequest(1, hw_usb_xhci_Request_flags_Command);
-	// 	hw_usb_xhci_TRB_setType(&req->input[0], hw_usb_xhci_TRB_Type_NoOpCmd);	
-	// 	for (int i = 0; i < 10; i++) {
-	// 		printk(WHITE, BLACK, "[%d]", i);
-	// 		hw_usb_xhci_request(host, host->cmdRing, req, 0, 0);
-	// 	}
-	// 	hw_usb_xhci_freeRequest(req);
-	// }
-
 	// for qemu xhci, call portChange manually
-	if (host->pci->cfg->vendorId == 0x1b36 && host->pci->cfg->deviceId == 0x000d) {
+	if (host->pci.cfg->vendorId == 0x1b36 && host->pci.cfg->deviceId == 0x000d) {
 		for (int i = hw_usb_xhci_mxPort(host); i > 0; i--)
 			if (hw_usb_xhci_PortReg_read(host, i, hw_usb_xhci_Host_portReg_sc) & 1)
 				hw_usb_xhci_portChange(host, i);
@@ -391,11 +359,25 @@ static int _initHost(hw_usb_xhci_Host *host) {
 	return res_SUCC;
 }
 
+static int hw_usb_xhci_cfg(hw_Device *dev) {
+	hw_usb_xhci_Host *host = mm_kmalloc(sizeof(hw_usb_xhci_Host), mm_Attr_Shared, NULL);
+	memset(host, 0, sizeof(hw_usb_xhci_Host));
+
+	hw_pci_extend(container(dev, hw_pci_Dev, device), &host->pci);
+
+	SafeList_init(&host->devLst);
+	SafeList_init(&host->ringLst);
+
+	SafeList_insTail(&hw_usb_xhci_hostLst, &host->lst);
+
+	return _initHost(host);
+}
+
 int hw_usb_xhci_init() {
-	if (_searchInPci() == res_FAIL) return res_FAIL;
-	SafeList_enum(&hw_usb_xhci_hostLst, xhciDevNd) {
-		if (_initHost(container(xhciDevNd, hw_usb_xhci_Host, lst)) == res_FAIL) return res_FAIL;
-	}
+	SafeList_init(&hw_usb_xhci_hostLst);
+
+	hw_driver_initDriver(&hw_usb_xhci_drv, "hw: usb: xhci", hw_usb_xhci_chk, hw_usb_xhci_cfg, NULL, NULL);
+	hw_driver_register(&hw_usb_xhci_drv);
 	return res_SUCC;
 }
 

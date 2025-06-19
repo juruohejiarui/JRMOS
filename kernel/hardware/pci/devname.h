@@ -26,6 +26,7 @@ char *hw_pci_devName[256][256] = {
 	[0x03][0x1] = "XGA Controller",
 	[0x03][0x2] = "3D Controller",
 	[0x03][0x80] = "Other Display Controller",
+	
 	[0x04][0x0] = "Multimedia Video Controller",
 	[0x04][0x1] = "Multimedia Audio Controller",
 	[0x04][0x2] = "Computer Telephony Device",
