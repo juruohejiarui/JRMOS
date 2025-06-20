@@ -113,17 +113,30 @@ __always_inline__ int hw_nvme_initIntr(hw_nvme_Host *host) {
 	return res_SUCC;
 }
 
-
-
 __always_inline__ int hw_nvme_initAdQue(hw_nvme_Host *host) {
-	host->adSubQue = hw_nvme_allocSubQue(host, hw_nvme_subQueSz);
 	host->adCmplQue = hw_nvme_allocCmplQue(host, hw_nvme_cmplQueSz);
+	host->adSubQue = hw_nvme_allocSubQue(host, hw_nvme_subQueSz, host->adCmplQue);
 
 	if (host->adSubQue == NULL || host->adCmplQue == NULL) {
 		printk(RED, BLACK, "hw: nvme: %p: failed to allocate admin queue\n");
 		return res_FAIL;
 	}
+
+	{
+		u32 ada = hw_nvme_subQueSz | (hw_nvme_cmplQueSz << 16);
+		hw_nvme_write32(host, hw_nvme_Host_adQueAttr, ada);
+	}
+
+	hw_nvme_write64(host, hw_nvme_Host_asQueAddr, mm_dmas_virt2Phys(host->adSubQue->entries));
+	hw_nvme_write64(host, hw_nvme_Host_acQueAddr, mm_dmas_virt2Phys(host->adCmplQue->entries));
+	
 	return res_SUCC;
+}
+
+__always_inline__ int hw_nvme_initNsp(hw_nvme_Host *host) {
+	u32 *nspLst = mm_kmalloc(sizeof(u32) * 1024, mm_Attr_Shared, NULL);
+	hw_nvme_Request *req = hw_nvme_makeReq(1);
+	hw_nvme_initReq_identify(req, hw_nvme_Request_Identify_type_NspLst, 0, nspLst);
 }
 
 __always_inline__ int _initHost(hw_nvme_Host *host) {
@@ -167,6 +180,7 @@ __always_inline__ int _initHost(hw_nvme_Host *host) {
 	
 	hw_nvme_write32(host, hw_nvme_Host_ctrlCfg, cfg);
 
+	host->subQueIdenCnt = host->cmplQueIdenCnt = 0;
 	host->intrNum = 4;
 
 	printk(WHITE, BLACK, "hw: nvme: %p: capAddr:%p cap:%#018lx version:%x dbStride:%d\n", 
@@ -175,6 +189,24 @@ __always_inline__ int _initHost(hw_nvme_Host *host) {
 	if (hw_nvme_initIntr(host) == res_FAIL) return res_FAIL;
 
 	if (hw_nvme_initAdQue(host) == res_FAIL) return res_FAIL;
+
+	// launch nvme and get namespace information
+	hw_nvme_write32(host, hw_nvme_Host_ctrlCfg, hw_nvme_read32(host, hw_nvme_Host_ctrlCfg) | 1);
+	int timeout = 30;
+	while (timeout > 30) {
+		if (~hw_nvme_read32(host, hw_nvme_Host_ctrlStatus) & 1) {
+			timeout--;
+			timer_mdelay(1);
+		} else break;
+	}
+	if (hw_nvme_read32(host, hw_nvme_Host_ctrlStatus) & 1) {
+		printk(GREEN, BLACK, "hw: nvme %p: succ to enable, status=%08x\n", host, hw_nvme_read32(host, hw_nvme_Host_ctrlStatus));
+	} else {
+		printk(RED, BLACK, "hw: nvme: %p: failed to enable, status=%08x\n", host, hw_nvme_read32(host, hw_nvme_Host_ctrlStatus));
+		return res_FAIL;
+	}
+
+	if (hw_nvme_initNsp(host) == res_FAIL) return res_FAIL;
 	
 	return res_SUCC;
 }
