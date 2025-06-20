@@ -77,6 +77,8 @@ typedef struct hw_nvme_CmplQue {
 	u32 size, pos;
 	u32 phase, iden;
 
+	
+
 	hw_nvme_CmplQueEntry *entries;
 } hw_nvme_CmplQue;
 

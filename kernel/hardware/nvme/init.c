@@ -7,7 +7,9 @@
 hw_Driver hw_nvme_drv;
 
 intr_handlerDeclare(hw_nvme_msiHandler) {
-
+	hw_nvme_Host *host = (void *)(param & ~0xful);
+	int intrId = param & 0xf;
+	
 }
 
 int hw_nvme_chk(hw_Device *dev) {
@@ -110,12 +112,26 @@ __always_inline__ int hw_nvme_initIntr(hw_nvme_Host *host) {
 
 	hw_pci_disableIntx(host->pci.cfg);
 	printk(GREEN, BLACK, "hw: nvme: %p msi/msix set\n", host);
+
+	// enable msi/msix
+	int res;
+	if (host->flags & hw_nvme_Host_flags_msix) 
+		res = hw_pci_enableMsixAll(host->msix, host->pci.cfg, host->intr, host->intrNum);
+	else
+		res = hw_pci_enableMsiAll(host->msi, host->intr, host->intrNum);
+	if (res == res_FAIL) {
+		printk(RED, BLACK, "hw: nvme: %p: failed to enable msi/msix\n", host);
+		return res_FAIL;
+	}
+	printk(GREEN, BLACK, "hw: nvme: %p: enable msi/msix\n", host);
 	return res_SUCC;
 }
 
 __always_inline__ int hw_nvme_initAdQue(hw_nvme_Host *host) {
 	host->adCmplQue = hw_nvme_allocCmplQue(host, hw_nvme_cmplQueSz);
 	host->adSubQue = hw_nvme_allocSubQue(host, hw_nvme_subQueSz, host->adCmplQue);
+
+	printk(WHITE, BLACK, "hw: nvme: %p: admin queue: submission:%p completion:%p\n", host, host->adSubQue, host->adCmplQue);
 
 	if (host->adSubQue == NULL || host->adCmplQue == NULL) {
 		printk(RED, BLACK, "hw: nvme: %p: failed to allocate admin queue\n");
@@ -137,6 +153,7 @@ __always_inline__ int hw_nvme_initNsp(hw_nvme_Host *host) {
 	u32 *nspLst = mm_kmalloc(sizeof(u32) * 1024, mm_Attr_Shared, NULL);
 	hw_nvme_Request *req = hw_nvme_makeReq(1);
 	hw_nvme_initReq_identify(req, hw_nvme_Request_Identify_type_NspLst, 0, nspLst);
+
 }
 
 __always_inline__ int _initHost(hw_nvme_Host *host) {
