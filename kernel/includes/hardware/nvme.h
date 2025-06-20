@@ -21,6 +21,51 @@
 // max number of io submission queue for each disk
 #define hw_nvme_mxIoSubQueNum	0x2
 
+typedef struct hw_nvme_SubQueEntry {
+	// opcode
+	u8 opc;
+	u8 attr;
+	u16 cmdIden;
+
+	// namesapce identifier (NSID)
+	u32 nspIden;
+
+	u32 dw2;
+	u32 dw3;
+
+	// metadata pointer(MPTR)
+	union {
+		u32 metaPtr32[2];
+		u64 metaPtr;
+	};
+
+	// data pointer(DPTR)
+	union {
+		u32 dtPtr32[4];
+		u64 prp[2];
+		struct {
+
+		} sgl;
+	};
+	
+	u32 spec[6];
+} __attribute__ ((packed)) hw_nvme_SubQueEntry;
+
+typedef struct hw_nvme_cmplQueEntry {
+	u32 spec[2];
+	u16 subQueHdrPtr;
+	u16 subQueIden;
+	u16 cmdIden;
+	u16 status;
+} __attribute__ ((packed)) hw_nvme_cmplQueEntry;
+
+typedef struct hw_nvme_SubQue {
+	u32 size;
+	u32 head, tail;
+	
+	hw_nvme_SubQueEntry *entries;
+} hw_nvme_SubQue;
+
 typedef struct hw_nvme_Host {
 	hw_pci_Dev pci;
 	

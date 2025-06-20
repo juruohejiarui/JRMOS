@@ -1,4 +1,5 @@
 #include <hardware/nvme.h>
+#include <timer/api.h>
 #include <screen/screen.h>
 #include <mm/mm.h>
 
@@ -20,13 +21,32 @@ __always_inline__ int _getRegAddr(hw_nvme_Host *host) {
 	return mm_dmas_map(mm_dmas_virt2Phys(host->capRegAddr));
 }
 
+__always_inline__ int hw_nvme_reset(hw_nvme_Host *host) {
+	// write 0 to ctrlCfg[0]
+	hw_nvme_write32(host, hw_nvme_Host_ctrlCfg, 0);
+
+	int timeout = 30;
+	while (timeout > 0) {
+		if (hw_nvme_read32(host, hw_nvme_Host_ctrlStatus) & 1) {
+			timeout--;
+			timer_mdelay(1);
+		} else break;
+	}
+	if (hw_nvme_read32(host, hw_nvme_Host_ctrlStatus) & 1) {
+		printk(RED, BLACK, "hw: nvme: %p: failed to reset.\n", host);
+		return res_FAIL;
+	}
+	printk(GREEN, BLACK, "hw: nvme %p: succ reset.\n", host);
+	return res_SUCC;
+}
+
 __always_inline__ int _initHost(hw_nvme_Host *host) {
 	if (_getRegAddr(host) == res_FAIL) return res_FAIL;
 
 	printk(WHITE, BLACK, "hw: nvme: %p: capAddr:%p cap:%#018lx version:%x\n", 
 		host, host->capRegAddr, hw_nvme_read64(host, hw_nvme_Host_ctrlCap), hw_nvme_read32(host, hw_nvme_Host_version));
 
-	
+	if (hw_nvme_reset(host) == res_FAIL) return res_FAIL;
 	
 	return res_SUCC;
 }

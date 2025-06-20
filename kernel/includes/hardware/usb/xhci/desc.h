@@ -206,15 +206,15 @@ typedef struct hw_usb_xhci_Ring {
     u32 curIdx, size;
     u32 cycBit, load;
     ListNode lst;
-    hw_usb_xhci_Request **reqs;
     hw_usb_xhci_TRB *trbs;
+    hw_usb_xhci_Request *reqs[0];
 } __attribute__ ((packed)) hw_usb_xhci_Ring;
 
 typedef struct hw_usb_xhci_EveRing {
-    hw_usb_xhci_TRB **rings;
     u16 curRingIdx, ringNum; 
     u32 curIdx, ringSz;
     u32 cycBit;
+    hw_usb_xhci_TRB *rings[0];
 } __attribute__ ((packed)) hw_usb_xhci_EveRing;
 
 #define hw_usb_xhci_Ring_mxSz (Page_4KSize * 16 / sizeof(hw_usb_xhci_TRB))
