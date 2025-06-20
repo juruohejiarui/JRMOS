@@ -23,7 +23,7 @@ int hw_usb_hid_keyboard(hw_usb_xhci_Device *dev, hw_hid_Parser *parser, int inEp
     hw_usb_hid_setReport(dev, rawReport, parser->reportEnum[hw_hid_ReportType_Output].report[0]->sz / 8, 0, dev->inter->bIntrNum);
 
     while (1) {
-        hw_usb_xhci_request(dev->host, dev->epRing[inEp], req, dev->slotId, hw_usb_xhci_DbReq_make(inEp, 0));
+        hw_usb_xhci_request(dev->host, dev->epRing[inEp], req, dev, hw_usb_xhci_DbReq_make(inEp, 0));
         if (hw_usb_xhci_TRB_getCmplCode(&req->res) != hw_usb_xhci_TRB_CmplCode_Succ) {
             printk(RED, BLACK, "hw: usb hid: device %p failed to get input, code=%d\n", dev, hw_usb_xhci_TRB_getCmplCode(&req->res));
             while (1) hal_hw_hlt();

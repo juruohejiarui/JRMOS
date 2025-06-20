@@ -406,7 +406,7 @@ int hw_usb_xhci_devInit(hw_usb_xhci_Device *dev) {
 		dev->speed = (hw_usb_xhci_PortReg_read(host, dev->portId, hw_usb_xhci_Host_portReg_sc) >> 10) & ((1u << 4) - 1);
 	} else hw_usb_xhci_TRB_setSlotType(&req->input[0], 0), dev->speed = 0;
 
-	hw_usb_xhci_request(host, host->cmdRing, req, 0, 0);
+	hw_usb_xhci_request(host, host->cmdRing, req, NULL, 0);
 	if (hw_usb_xhci_TRB_getCmplCode(&req->res) != hw_usb_xhci_TRB_CmplCode_Succ) {
 		printk(RED, BLACK, "hw: xhci: dev %p failed to enable slot\n", dev);
 		hw_usb_xhci_freeRequest(req);
@@ -441,6 +441,11 @@ int hw_usb_xhci_devInit(hw_usb_xhci_Device *dev) {
 		hw_usb_xhci_writeCtx(slotCtx, 0, hw_usb_xhci_SlotCtx_ctxEntries, 1);
 		hw_usb_xhci_writeCtx(slotCtx, 0, hw_usb_xhci_SlotCtx_speed, dev->speed);
 		hw_usb_xhci_writeCtx(slotCtx, 1, hw_usb_xhci_SlotCtx_rootPortNum, dev->portId);
+
+		// set interrupt target to slotId % host->intrNum
+		dev->intrTrg = dev->slotId % host->intrNum;
+		hw_usb_xhci_writeCtx(slotCtx, 2, hw_usb_xhci_SlotCtx_intrTarget, dev->intrTrg);
+		printk(WHITE, BLACK, "hw: xhci: dev %p interrupt target=%d\n", dev, dev->intrTrg);
 	}
 
 	{
@@ -461,7 +466,7 @@ int hw_usb_xhci_devInit(hw_usb_xhci_Device *dev) {
 		hw_usb_xhci_writeCtx(ep0, 4, hw_usb_xhci_EpCtx_aveTrbLen, 8);
 	}
 
-	hw_usb_xhci_request(host, host->cmdRing, req, 0, 0);
+	hw_usb_xhci_request(host, host->cmdRing, req, NULL, 0);
 	if (hw_usb_xhci_TRB_getCmplCode(&req->res) != hw_usb_xhci_TRB_CmplCode_Succ) {
 		printk(RED, BLACK, "hw: xhci: dev %p failed to address device\n", dev);
 		goto Fail_To_Initialize;
@@ -474,7 +479,7 @@ int hw_usb_xhci_devInit(hw_usb_xhci_Device *dev) {
 	// make data ctrl request
 	hw_usb_xhci_mkCtrlDataReq(req2, hw_usb_xhci_mkCtrlReqSetup(0x80, 0x6, 0x0100, 0x0, 0x8), hw_usb_xhci_TRB_ctrl_dir_in, dev->devDesc, 8);
 
-	hw_usb_xhci_request(host, dev->epRing[hw_usb_xhci_DevCtx_CtrlEp], req2, dev->slotId, hw_usb_xhci_DbReq_make(hw_usb_xhci_DevCtx_CtrlEp, 0));
+	hw_usb_xhci_request(host, dev->epRing[hw_usb_xhci_DevCtx_CtrlEp], req2, dev, hw_usb_xhci_DbReq_make(hw_usb_xhci_DevCtx_CtrlEp, 0));
 	if (hw_usb_xhci_TRB_getCmplCode(&req->res) != hw_usb_xhci_TRB_CmplCode_Succ) {
 		printk(RED, BLACK, "hw: xhci: dev %p failed to get first 8 bytes of device descriptor, code=%d\n", dev, hw_usb_xhci_TRB_getCmplCode(&req->res));
 		goto Fail_To_Initialize;
@@ -493,7 +498,7 @@ int hw_usb_xhci_devInit(hw_usb_xhci_Device *dev) {
 		goto Fail_To_Initialize;
 	}
 	hw_usb_xhci_mkCtrlDataReq(req2, hw_usb_xhci_mkCtrlReqSetup(0x80, 0x6, 0x0100, 0x0, 0xff), hw_usb_xhci_TRB_ctrl_dir_in, dev->devDesc, 0xff);
-	hw_usb_xhci_request(host, dev->epRing[hw_usb_xhci_DevCtx_CtrlEp], req2, dev->slotId, hw_usb_xhci_DbReq_make(hw_usb_xhci_DevCtx_CtrlEp, 0));
+	hw_usb_xhci_request(host, dev->epRing[hw_usb_xhci_DevCtx_CtrlEp], req2, dev, hw_usb_xhci_DbReq_make(hw_usb_xhci_DevCtx_CtrlEp, 0));
 	if (hw_usb_xhci_TRB_getCmplCode(&req2->res) != hw_usb_xhci_TRB_CmplCode_Succ) {
 		printk(RED, BLACK, "hw: xhci: dev %p failed to get device description, code=%d\n", dev, hw_usb_xhci_TRB_getCmplCode(&req->res));
 		goto Fail_To_Initialize;
@@ -504,7 +509,7 @@ int hw_usb_xhci_devInit(hw_usb_xhci_Device *dev) {
 	for (int i = 0; i < dev->devDesc->bNumCfg; i++) {
 		dev->cfgDesc[i] = mm_kmalloc(0xff, 0, NULL);
 		hw_usb_xhci_mkCtrlDataReq(req2, hw_usb_xhci_mkCtrlReqSetup(0x80, 0x6, 0x0200 | i, 0x0, 0xff), hw_usb_xhci_TRB_ctrl_dir_in, dev->cfgDesc[i], 0xff);
-		hw_usb_xhci_request(host, dev->epRing[hw_usb_xhci_DevCtx_CtrlEp], req2, dev->slotId, hw_usb_xhci_DbReq_make(hw_usb_xhci_DevCtx_CtrlEp, 0));
+		hw_usb_xhci_request(host, dev->epRing[hw_usb_xhci_DevCtx_CtrlEp], req2, dev, hw_usb_xhci_DbReq_make(hw_usb_xhci_DevCtx_CtrlEp, 0));
 		if (hw_usb_xhci_TRB_getCmplCode(&req2->res) != hw_usb_xhci_TRB_CmplCode_Succ) {
 			printk(RED, BLACK, "hw: xhci: dev %p failed to get configuration description #%d, code=%d\n",
 				dev, i, hw_usb_xhci_TRB_getCmplCode(&req->res));

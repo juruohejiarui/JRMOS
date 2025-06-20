@@ -90,7 +90,7 @@ void hw_usb_xhci_uninstallDev(hw_usb_xhci_Device *dev) {
 		hw_usb_xhci_Request *req = hw_usb_xhci_makeRequest(1, hw_usb_xhci_Request_flags_Command);
 		hw_usb_xhci_TRB_setType(&req->input[0], hw_usb_xhci_TRB_Type_DisblSlot);
 		hw_usb_xhci_TRB_setSlot(&req->input[0], dev->slotId);
-		hw_usb_xhci_request(dev->host, dev->host->cmdRing, req, 0, 0);
+		hw_usb_xhci_request(dev->host, dev->host->cmdRing, req, NULL, 0);
 		if (hw_usb_xhci_TRB_getCmplCode(&req->res) != hw_usb_xhci_TRB_CmplCode_Succ) {
 			printk(RED, BLACK, "hw: xhci: device %p failed to disable slot\n", dev);
 			return;

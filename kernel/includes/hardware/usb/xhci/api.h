@@ -53,7 +53,7 @@ __always_inline__ u32 hw_usb_xhci_TRB_getIntrTarget(hw_usb_xhci_TRB *trb) {
 	return hw_usb_xhci_TRB_getCmplCode(trb);
 }
 __always_inline__ void hw_usb_xhci_TRB_setIntrTarget(hw_usb_xhci_TRB *trb, u32 val) {
-	hal_write32((u64)&trb->status, (hal_read32((u64)&trb->status) & 0xffffffu) | (val << 24));
+	hal_write32((u64)&trb->status, (hal_read32((u64)&trb->status) & ((1u << 22) - 1)) | (val << 22));
 }
 __always_inline__ u64 hw_usb_xhci_TRB_setStatus(hw_usb_xhci_TRB *trb, u32 val) {
 	hal_write32((u64)&trb->status, val);
@@ -203,7 +203,7 @@ int hw_usb_xhci_freeRing(hw_usb_xhci_Host *host, hw_usb_xhci_Ring *ring);
 
 void hw_usb_xhci_InsReq(hw_usb_xhci_Host *host, hw_usb_xhci_Ring *ring, hw_usb_xhci_Request *req);
 
-void hw_usb_xhci_request(hw_usb_xhci_Host *host, hw_usb_xhci_Ring *ring, hw_usb_xhci_Request *req, u32 slot, u32 doorbell);
+void hw_usb_xhci_request(hw_usb_xhci_Host *host, hw_usb_xhci_Ring *ring, hw_usb_xhci_Request *req, hw_usb_xhci_Device *dev, u32 doorbell);
 
 hw_usb_xhci_Request *hw_usb_xhci_response(hw_usb_xhci_Ring *ring, hw_usb_xhci_TRB *result, u64 trbAddr);
 

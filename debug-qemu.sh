@@ -54,7 +54,7 @@ debug(){
 			-D b.log \
 			-d \
 				int,trace:usb_xhci_run,guest_errors \
-			-smp 1"
+			-smp 4"
 
 
 	$sudoFlag qemu-system-x86_64 \

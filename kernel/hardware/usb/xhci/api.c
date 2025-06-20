@@ -71,7 +71,7 @@ hw_usb_xhci_Ring *hw_usb_xhci_allocRing(hw_usb_xhci_Host *host, u32 size) {
     }
  
     memset(trbs, 0, size * sizeof(hw_usb_xhci_TRB));
-    
+
     hw_usb_xhci_Ring *ring = (void *)(trbs + size);
 
     ring->curIdx = ring->load = 0;
@@ -103,11 +103,7 @@ int hw_usb_xhci_freeRing(hw_usb_xhci_Host *host, hw_usb_xhci_Ring *ring) {
     if (!ring || ring->load) return res_FAIL;
 
     SafeList_del(&host->ringLst, &ring->lst);
-    if (mm_kfree(ring->reqs, mm_Attr_Shared) == res_FAIL) {
-        printk(RED, BLACK, "hw: xhci: free ring request pointer failed\n");
-        return res_FAIL;
-    }
-    if (mm_kfree(ring, mm_Attr_Shared) == res_FAIL) {
+    if (mm_kfree(ring->trbs, mm_Attr_Shared) == res_FAIL) {
         printk(RED, BLACK, "hw: xhci: free ring failed\n");
         return res_FAIL;
     }
@@ -151,10 +147,15 @@ void hw_usb_xhci_InsReq(hw_usb_xhci_Host *host, hw_usb_xhci_Ring *ring, hw_usb_x
 }
 
 // insert the request, write the doorbell register, then wait for the reply
-void hw_usb_xhci_request(hw_usb_xhci_Host *host, hw_usb_xhci_Ring *ring, hw_usb_xhci_Request *req, u32 slot, u32 doorbell) {
+void hw_usb_xhci_request(hw_usb_xhci_Host *host, hw_usb_xhci_Ring *ring, hw_usb_xhci_Request *req, hw_usb_xhci_Device *dev, u32 doorbell) {
     req->flags &= ~hw_Request_Flag_Finish;
+    
+    if (dev != NULL) {
+        for (int i = 0; i < req->inputSz; i++)
+            hw_usb_xhci_TRB_setIntrTarget(&req->input[i], dev->intrTrg);
+    }
     hw_usb_xhci_InsReq(host, ring, req);
-    hw_usb_xhci_DbReg_write(host, slot, doorbell);
+    hw_usb_xhci_DbReg_write(host, (dev != NULL ? dev->slotId : 0), doorbell);
     // wait for the request to be finished
     task_Request_send(&req->req);
 }

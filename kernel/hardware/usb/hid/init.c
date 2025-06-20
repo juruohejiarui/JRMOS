@@ -113,7 +113,7 @@ int hw_usb_hid_config(hw_Device *dev) {
     hw_usb_xhci_TRB_setSlot(&req->input[0], usbDev->slotId);
     hw_usb_xhci_TRB_setType(&req->input[0], hw_usb_xhci_TRB_Type_CfgEp);
 
-    hw_usb_xhci_request(usbDev->host, usbDev->host->cmdRing, req, 0, 0);
+    hw_usb_xhci_request(usbDev->host, usbDev->host->cmdRing, req, NULL, 0);
     if (hw_usb_xhci_TRB_getCmplCode(&req->res) != hw_usb_xhci_TRB_CmplCode_Succ) {
         printk(RED, BLACK, "hw: usb hid: device %p failed to configure endpoint\n", dev);
         goto Fail;
@@ -121,7 +121,7 @@ int hw_usb_hid_config(hw_Device *dev) {
     printk(GREEN, BLACK, "hw: usb hid: device %p configured endpoint\n", dev);
 
     hw_usb_xhci_mkCtrlReq(req2, hw_usb_xhci_mkCtrlReqSetup(0x00, 0x09, usbDev->cfgDesc[0]->bCfgVal, 0, 0), hw_usb_xhci_TRB_ctrl_dir_out);
-    hw_usb_xhci_request(usbDev->host, usbDev->epRing[hw_usb_xhci_DevCtx_CtrlEp], req2, usbDev->slotId, hw_usb_xhci_DbReq_make(hw_usb_xhci_DevCtx_CtrlEp, 0));
+    hw_usb_xhci_request(usbDev->host, usbDev->epRing[hw_usb_xhci_DevCtx_CtrlEp], req2, usbDev, hw_usb_xhci_DbReq_make(hw_usb_xhci_DevCtx_CtrlEp, 0));
     if (hw_usb_xhci_TRB_getCmplCode(&req2->res) != hw_usb_xhci_TRB_CmplCode_Succ) {
         printk(RED, BLACK, "hw: usb hid: device %p failed to set configuration\n", dev);
         goto Fail;
@@ -146,7 +146,7 @@ int hw_usb_hid_config(hw_Device *dev) {
                 hw_usb_xhci_mkCtrlReqSetup(0x81, 0x06, 0x2200, interDesc->bIntrNum, reportSz), 
                 hw_usb_xhci_TRB_ctrl_dir_in, 
                 report, reportSz);
-            hw_usb_xhci_request(usbDev->host, usbDev->epRing[hw_usb_xhci_DevCtx_CtrlEp], req2, usbDev->slotId, hw_usb_xhci_DbReq_make(hw_usb_xhci_DevCtx_CtrlEp, 0));
+            hw_usb_xhci_request(usbDev->host, usbDev->epRing[hw_usb_xhci_DevCtx_CtrlEp], req2, usbDev, hw_usb_xhci_DbReq_make(hw_usb_xhci_DevCtx_CtrlEp, 0));
             if (hw_usb_xhci_TRB_getCmplCode(&req2->res) != hw_usb_xhci_TRB_CmplCode_Succ) {
                 printk(RED, BLACK, "hw: usb hid: device %p failed to read report descriptor\n", dev);
                 goto Fail;
@@ -204,14 +204,14 @@ int hw_usb_hid_install(hw_Device *dev) {
     // set_protocol & set_idle
     hw_usb_xhci_Request *req = hw_usb_xhci_makeRequest(2, 0);
     hw_usb_xhci_mkCtrlReq(req, hw_usb_xhci_mkCtrlReqSetup(0x21, 0x0b, 1, usbDev->inter->bIntrNum, 0), hw_usb_xhci_TRB_ctrl_dir_out);
-    hw_usb_xhci_request(usbDev->host, usbDev->epRing[hw_usb_xhci_DevCtx_CtrlEp], req, usbDev->slotId, hw_usb_xhci_DbReq_make(hw_usb_xhci_DevCtx_CtrlEp, 0));
+    hw_usb_xhci_request(usbDev->host, usbDev->epRing[hw_usb_xhci_DevCtx_CtrlEp], req, usbDev, hw_usb_xhci_DbReq_make(hw_usb_xhci_DevCtx_CtrlEp, 0));
     if (hw_usb_xhci_TRB_getCmplCode(&req->res) != hw_usb_xhci_TRB_CmplCode_Succ) {
         printk(RED, BLACK, "hw: usb hid: device %p failed on SET_PROTOCOL request\n", usbDev);
         return res_FAIL;
     }
     
     hw_usb_xhci_mkCtrlReq(req, hw_usb_xhci_mkCtrlReqSetup(0x21, 0x0a, 1, usbDev->inter->bIntrNum, 0), hw_usb_xhci_TRB_ctrl_dir_out);
-    hw_usb_xhci_request(usbDev->host, usbDev->epRing[hw_usb_xhci_DevCtx_CtrlEp], req, usbDev->slotId, hw_usb_xhci_DbReq_make(hw_usb_xhci_DevCtx_CtrlEp, 0));
+    hw_usb_xhci_request(usbDev->host, usbDev->epRing[hw_usb_xhci_DevCtx_CtrlEp], req, usbDev, hw_usb_xhci_DbReq_make(hw_usb_xhci_DevCtx_CtrlEp, 0));
     if (hw_usb_xhci_TRB_getCmplCode(&req->res) != hw_usb_xhci_TRB_CmplCode_Succ) {
         printk(RED, BLACK, "hw: usb hid: device %p failed on SET_IDLE request\n", usbDev);
         return res_FAIL;

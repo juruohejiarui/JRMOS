@@ -228,6 +228,7 @@ typedef struct hw_usb_xhci_Device {
     u32 slotId;
     u16 portId, speed;
     u32 flag;
+    u32 intrTrg;
 
     #define hw_usb_xhci_Device_flag_Enbl    (1ul << 0)
     // whether the device is directly connected to the host
@@ -267,9 +268,9 @@ typedef struct hw_usb_xhci_Host {
 
     intr_Desc *intr;
 
-    u64 intrNum;
+    u32 intrNum;
 
-    u64 flag;
+    u32 flag;
 
     #define hw_usb_xhci_Host_flag_Msix   (1ul << 0)
     #define hw_usb_xhci_Host_flag_Ctx64  (1ul << 1)
