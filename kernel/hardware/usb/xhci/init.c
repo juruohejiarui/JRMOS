@@ -25,11 +25,11 @@ __always_inline__ void _disablePartnerCtrl(hw_usb_xhci_Host *host) {
 }
 
 __always_inline__ int _getRegAddr(hw_usb_xhci_Host *host) {
-	u64 phyAddr = hw_pci_Cfg_getBar(&host->pci.cfg->type0.bar[0]);
+	u64 phyAddr = hw_pci_Cfg_getBar(&host->pci.cfg->tp0.bar[0]);
 
 	host->capRegAddr = (u64)mm_dmas_phys2Virt(phyAddr);
 
-	printk(WHITE, BLACK, "hw: xhci: host %p: %08x %08x capRegAddr:%p\n", host, host->pci.cfg->type0.bar[0], host->pci.cfg->type0.bar[1], host->capRegAddr);
+	printk(WHITE, BLACK, "hw: xhci: host %p: %08x %08x capRegAddr:%p\n", host, host->pci.cfg->tp0.bar[0], host->pci.cfg->tp0.bar[1], host->capRegAddr);
 	
 	// map this address in dmas
 	if (mm_dmas_map(phyAddr) == res_FAIL) {
@@ -396,15 +396,15 @@ int hw_usb_xhci_devInit(hw_usb_xhci_Device *dev) {
 	hw_usb_xhci_Host *host = dev->host;
 
 	hw_usb_xhci_Request *req = hw_usb_xhci_makeRequest(1, hw_usb_xhci_Request_flags_Command), *req2 = hw_usb_xhci_makeRequest(3, 0);
-	hw_usb_xhci_TRB_setType(&req->input[0], hw_usb_xhci_TRB_Type_EnblSlot);
+	hw_usb_xhci_TRB_setTp(&req->input[0], hw_usb_xhci_TRB_Tp_EnblSlot);
 	
 	// get slot Type
 	if (dev->flag & hw_usb_xhci_Device_flag_Direct) {
 		// read supported protocol capability
-		printk(WHITE, BLACK, "hw: xhci: dev %p slot type:%d\n", dev, hw_usb_xhci_getSlotType(host, dev->portId));
-		hw_usb_xhci_TRB_setSlotType(&req->input[0], hw_usb_xhci_getSlotType(host, dev->portId));
+		printk(WHITE, BLACK, "hw: xhci: dev %p slot tp:%d\n", dev, hw_usb_xhci_getSlotTp(host, dev->portId));
+		hw_usb_xhci_TRB_setSlotTp(&req->input[0], hw_usb_xhci_getSlotTp(host, dev->portId));
 		dev->speed = (hw_usb_xhci_PortReg_read(host, dev->portId, hw_usb_xhci_Host_portReg_sc) >> 10) & ((1u << 4) - 1);
-	} else hw_usb_xhci_TRB_setSlotType(&req->input[0], 0), dev->speed = 0;
+	} else hw_usb_xhci_TRB_setSlotTp(&req->input[0], 0), dev->speed = 0;
 
 	hw_usb_xhci_request(host, host->cmdRing, req, NULL, 0);
 	if (hw_usb_xhci_TRB_getCmplCode(&req->res) != hw_usb_xhci_TRB_CmplCode_Succ) {
@@ -427,7 +427,7 @@ int hw_usb_xhci_devInit(hw_usb_xhci_Device *dev) {
 	}
 
 	memset(&req->input[0], 0, sizeof(hw_usb_xhci_TRB));
-	hw_usb_xhci_TRB_setType(&req->input[0], hw_usb_xhci_TRB_Type_AddrDev);
+	hw_usb_xhci_TRB_setTp(&req->input[0], hw_usb_xhci_TRB_Tp_AddrDev);
 	hw_usb_xhci_TRB_setSlot(&req->input[0], dev->slotId);
 	hw_usb_xhci_TRB_setData(&req->input[0], mm_dmas_virt2Phys(dev->inCtx));
 
@@ -450,7 +450,7 @@ int hw_usb_xhci_devInit(hw_usb_xhci_Device *dev) {
 
 	{
 		void *ep0 = hw_usb_xhci_getCtxEntry(host, dev->inCtx, hw_usb_xhci_InCtx_CtrlEp);
-		hw_usb_xhci_writeCtx(ep0, 1, hw_usb_xhci_EpCtx_epType, hw_usb_xhci_EpCtx_epType_Ctrl);
+		hw_usb_xhci_writeCtx(ep0, 1, hw_usb_xhci_EpCtx_epTp, hw_usb_xhci_EpCtx_epTp_Ctrl);
 		hw_usb_xhci_writeCtx(ep0, 1, hw_usb_xhci_EpCtx_CErr, 3);
 		hw_usb_xhci_writeCtx(ep0, 1, hw_usb_xhci_EpCtx_mxPackSize, _EpCtx_getDefaultMxPackSz0(dev->speed));
 		
@@ -491,7 +491,7 @@ int hw_usb_xhci_devInit(hw_usb_xhci_Device *dev) {
 		hw_usb_xhci_writeCtx(hw_usb_xhci_getCtxEntry(host, dev->inCtx, hw_usb_xhci_InCtx_CtrlEp), 1, hw_usb_xhci_EpCtx_mxPackSize, mxPkgSz0);
 	}
 
-	hw_usb_xhci_TRB_setType(&req->input[0], hw_usb_xhci_TRB_Type_EvalCtx);
+	hw_usb_xhci_TRB_setTp(&req->input[0], hw_usb_xhci_TRB_Tp_EvalCtx);
 	hw_usb_xhci_request(host, host->cmdRing, req, 0, 0);
 	if (hw_usb_xhci_TRB_getCmplCode(&req->res) != hw_usb_xhci_TRB_CmplCode_Succ) {
 		printk(RED, BLACK, "hw: xhci: dev %p failed to evaluate context, code=%d\n", dev, hw_usb_xhci_TRB_getCmplCode(&req->res));

@@ -46,16 +46,16 @@ typedef struct hw_usb_xhci_Request {
 #define hw_usb_xhci_TRB_trt_Out 2
 #define hw_usb_xhci_TRB_trt_In  3
 
-typedef enum hw_usb_xhci_TRB_Type {
-	hw_usb_xhci_TRB_Type_Normal = 1, 	hw_usb_xhci_TRB_Type_SetupStage, 	hw_usb_xhci_TRB_Type_DataStage,	    hw_usb_xhci_TRB_Type_StatusStage,
-	hw_usb_xhci_TRB_Type_Isoch, 		hw_usb_xhci_TRB_Type_Link, 		    hw_usb_xhci_TRB_Type_EventData,	    hw_usb_xhci_TRB_Type_NoOp,
-	hw_usb_xhci_TRB_Type_EnblSlot,		hw_usb_xhci_TRB_Type_DisblSlot,	    hw_usb_xhci_TRB_Type_AddrDev,		hw_usb_xhci_TRB_Type_CfgEp,
-	hw_usb_xhci_TRB_Type_EvalCtx,		hw_usb_xhci_TRB_Type_ResetEp,		hw_usb_xhci_TRB_Type_StopEp,		hw_usb_xhci_TRB_Type_SetTrDeq,
-	hw_usb_xhci_TRB_Type_ResetDev,		hw_usb_xhci_TRB_Type_ForceEvent,	hw_usb_xhci_TRB_Type_DegBand,		hw_usb_xhci_TRB_Type_SetLatToler,
-	hw_usb_xhci_TRB_Type_GetPortBand,	hw_usb_xhci_TRB_Type_ForceHdr,		hw_usb_xhci_TRB_Type_NoOpCmd,
-	hw_usb_xhci_TRB_Type_TransEve = 32, hw_usb_xhci_TRB_Type_CmdCmpl,		hw_usb_xhci_TRB_Type_PortStChg,	    hw_usb_xhci_TRB_Type_BandReq,
-	hw_usb_xhci_TRB_Type_DbEve,		    hw_usb_xhci_TRB_Type_HostCtrlEve,	hw_usb_xhci_TRB_Type_DevNotfi,		hw_usb_xhci_TRB_Type_MfidxWrap
-} hw_usb_xhci_TRB_Type;
+typedef enum hw_usb_xhci_TRB_Tp {
+	hw_usb_xhci_TRB_Tp_Normal = 1, 	    hw_usb_xhci_TRB_Tp_SetupStage, 	hw_usb_xhci_TRB_Tp_DataStage,	hw_usb_xhci_TRB_Tp_StatusStage,
+	hw_usb_xhci_TRB_Tp_Isoch, 		    hw_usb_xhci_TRB_Tp_Link, 		hw_usb_xhci_TRB_Tp_EventData,	hw_usb_xhci_TRB_Tp_NoOp,
+	hw_usb_xhci_TRB_Tp_EnblSlot,		hw_usb_xhci_TRB_Tp_DisblSlot,	hw_usb_xhci_TRB_Tp_AddrDev,		hw_usb_xhci_TRB_Tp_CfgEp,
+	hw_usb_xhci_TRB_Tp_EvalCtx,		    hw_usb_xhci_TRB_Tp_ResetEp,		hw_usb_xhci_TRB_Tp_StopEp,		hw_usb_xhci_TRB_Tp_SetTrDeq,
+	hw_usb_xhci_TRB_Tp_ResetDev,		hw_usb_xhci_TRB_Tp_ForceEvent,	hw_usb_xhci_TRB_Tp_DegBand,		hw_usb_xhci_TRB_Tp_SetLatToler,
+	hw_usb_xhci_TRB_Tp_GetPortBand,	    hw_usb_xhci_TRB_Tp_ForceHdr,    hw_usb_xhci_TRB_Tp_NoOpCmd,
+	hw_usb_xhci_TRB_Tp_TransEve = 32,   hw_usb_xhci_TRB_Tp_CmdCmpl,		hw_usb_xhci_TRB_Tp_PortStChg,	hw_usb_xhci_TRB_Tp_BandReq,
+	hw_usb_xhci_TRB_Tp_DbEve,		    hw_usb_xhci_TRB_Tp_HostCtrlEve,	hw_usb_xhci_TRB_Tp_DevNotfi,    hw_usb_xhci_TRB_Tp_MfidxWrap
+} hw_usb_xhci_TRB_Tp;
 
 typedef enum hw_usb_xhci_TRB_CmplCode {
     hw_usb_xhci_TRB_CmplCode_Succ = 1,			hw_usb_xhci_TRB_CmplCode_DtBufErr,			hw_usb_xhci_TRB_CmplCode_BadDetect,	    hw_usb_xhci_TRB_CmplCode_TransErr,
@@ -110,7 +110,7 @@ typedef struct hw_usb_xhci_EpCtx32 {
 	#define hw_usb_xhci_EpCtx_mxESITPayH	0xff000000u
 
     #define hw_usb_xhci_EpCtx_CErr			0x00000006u
-	#define hw_usb_xhci_EpCtx_epType		0x00000038u
+	#define hw_usb_xhci_EpCtx_epTp		    0x00000038u
 	#define hw_usb_xhci_EpCtx_hid			0x00000080u
 	#define hw_usb_xhci_EpCtx_mxBurstSize	0x0000ff00u
 	#define hw_usb_xhci_EpCtx_mxPackSize	0xffff0000u
@@ -138,13 +138,13 @@ typedef struct hw_usb_xhci_EpCtx64 {
     u32 reserved[11];
 } __attribute__ ((packed)) hw_usb_xhci_EpCtx64;
 
-#define hw_usb_xhci_EpCtx_epType_IsochOut   1
-#define hw_usb_xhci_EpCtx_epType_BulkOut    2
-#define hw_usb_xhci_EpCtx_epType_IntrOut    3
-#define hw_usb_xhci_EpCtx_epType_Ctrl       4
-#define hw_usb_xhci_EpCtx_epType_IsochIn    5
-#define hw_usb_xhci_EpCtx_epType_BulkIn     6
-#define hw_usb_xhci_EpCtx_epType_IntrIn     7
+#define hw_usb_xhci_EpCtx_epTp_IsochOut   1
+#define hw_usb_xhci_EpCtx_epTp_BulkOut    2
+#define hw_usb_xhci_EpCtx_epTp_IntrOut    3
+#define hw_usb_xhci_EpCtx_epTp_Ctrl       4
+#define hw_usb_xhci_EpCtx_epTp_IsochIn    5
+#define hw_usb_xhci_EpCtx_epTp_BulkIn     6
+#define hw_usb_xhci_EpCtx_epTp_IntrIn     7
 
 typedef struct hw_usb_xhci_DevCtx32 {
     hw_usb_xhci_SlotCtx32 slot;

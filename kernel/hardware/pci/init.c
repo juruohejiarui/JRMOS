@@ -22,7 +22,7 @@ void hw_pci_extend(hw_pci_Dev *origin, hw_pci_Dev *ext) {
 
 hw_pci_CapHdr *hw_pci_getNxtCap(hw_pci_Cfg *cfg, hw_pci_CapHdr *cur) {
 	if (cur) return cur->nxtPtr ? (hw_pci_CapHdr *)((u64)cfg + cur->nxtPtr) : NULL;
-	return (hw_pci_CapHdr *)((u64)cfg + cfg->type0.capPtr);
+	return (hw_pci_CapHdr *)((u64)cfg + cfg->tp0.capPtr);
 }
 static void _chkFunc(u64 baseAddr, u16 bus, u16 dev, u16 func) {
 	hw_pci_Cfg *cfg = hw_pci_getCfg(baseAddr, bus, dev, func);
@@ -45,9 +45,9 @@ static void _chkFunc(u64 baseAddr, u16 bus, u16 dev, u16 func) {
 void hw_pci_lstDev() {
 	SafeList_enum(&hw_pci_devLst, pciDevNd) {
 		hw_pci_Dev *dev = container(pciDevNd, hw_pci_Dev, lst);
-		printk(WHITE, BLACK, "pci:%02x:%02x:%01x: device=%04x vendor=%04x hdrType=%02x cls=%04x subcls=%04x progIf=%04x %s \n", 
+		printk(WHITE, BLACK, "pci:%02x:%02x:%01x: device=%04x vendor=%04x hdrTp=%02x cls=%04x subcls=%04x progIf=%04x %s \n", 
 			dev->busId, dev->devId, dev->funcId, 
-			dev->cfg->deviceId, dev->cfg->vendorId, dev->cfg->hdrType, 
+			dev->cfg->deviceId, dev->cfg->vendorId, dev->cfg->hdrTp, 
 			dev->cfg->class, dev->cfg->subclass, dev->cfg->progIf, hw_pci_devName[dev->cfg->class][dev->cfg->subclass]
 		);
 	}
@@ -86,7 +86,7 @@ int hw_pci_chk() {
 
 static void _chkDev(u64 baseAddr, u16 bus, u16 dev) {
 	if (hw_pci_getCfg(baseAddr, bus, dev, 0)->vendorId == 0xffff) return ;
-	if (hw_pci_getCfg(baseAddr, bus, dev, 0)->hdrType == 0) _chkFunc(baseAddr, bus, dev, 0);
+	if (hw_pci_getCfg(baseAddr, bus, dev, 0)->hdrTp == 0) _chkFunc(baseAddr, bus, dev, 0);
 	else for (int i = 0; i < 8; i++) _chkFunc(baseAddr, bus, dev, i);
 }
 

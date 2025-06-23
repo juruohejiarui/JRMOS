@@ -5,15 +5,15 @@
 #include <lib/list.h>
 #include <lib/spinlock.h>
 
-#define hw_Buf_Type_Byte    0x1
-#define hw_Buf_Type_List    0x2
+#define hw_Buf_Tp_Byte    0x1
+#define hw_Buf_Tp_List    0x2
 
 typedef struct hw_buf_Desc {
     RBNode rbNd;
     char *idenPath;
     int idenHash;
 
-    int bufType;
+    int bufTp;
 
 } hw_buf_Desc;
 

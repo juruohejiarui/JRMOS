@@ -6,14 +6,14 @@
 
 extern SafeList hw_usb_xhci_hostLst;
 
-__always_inline__ u32 hw_usb_xhci_TRB_getType(hw_usb_xhci_TRB *trb) {
+__always_inline__ u32 hw_usb_xhci_TRB_getTp(hw_usb_xhci_TRB *trb) {
 	return (hal_read32((u64)&trb->ctrl) >> 10) & ((1 << 6) - 1);
 }
-__always_inline__ void hw_usb_xhci_TRB_setType(hw_usb_xhci_TRB *trb, u32 type) {
-	hal_write32((u64)&trb->ctrl, (hal_read32((u64)&trb->ctrl) & (0xffff03ffu)) | (type << 10));
+__always_inline__ void hw_usb_xhci_TRB_setTp(hw_usb_xhci_TRB *trb, u32 tp) {
+	hal_write32((u64)&trb->ctrl, (hal_read32((u64)&trb->ctrl) & (0xffff03ffu)) | (tp << 10));
 }
-__always_inline__ void hw_usb_xhci_TRB_setSlotType(hw_usb_xhci_TRB *trb, u32 type) {
-	hal_write32((u64)&trb->ctrl, (hal_read32((u64)&trb->ctrl) & (0xfff0ffffu)) | (type << 16));
+__always_inline__ void hw_usb_xhci_TRB_setSlotTp(hw_usb_xhci_TRB *trb, u32 tp) {
+	hal_write32((u64)&trb->ctrl, (hal_read32((u64)&trb->ctrl) & (0xfff0ffffu)) | (tp << 16));
 }
 __always_inline__ u32 hw_usb_xhci_TRB_getCmplCode(hw_usb_xhci_TRB *trb) {
 	return (hal_read32((u64)&trb->status) >> 24) & 0xff;
@@ -167,9 +167,9 @@ __always_inline__ u8 hw_usb_xhci_Ext_Protocol_contain(void *extCap, u32 port) {
 	return (port >= st && port < st + cnt);
 }
 
-__always_inline__ u8 hw_usb_xhci_Ext_Protocol_slotType(void *extCap) { return hal_read8((u64)extCap + 12); }
+__always_inline__ u8 hw_usb_xhci_Ext_Protocol_slotTp(void *extCap) { return hal_read8((u64)extCap + 12); }
 
-u8 hw_usb_xhci_getSlotType(hw_usb_xhci_Host *host, u32 portIdx);
+u8 hw_usb_xhci_getSlotTp(hw_usb_xhci_Host *host, u32 portIdx);
 
 hw_usb_xhci_InCtx *hw_usb_xhci_allocInCtx(hw_usb_xhci_Host *host);
 
@@ -191,7 +191,7 @@ __always_inline__ void hw_usb_xhci_writeCtx64(void *ctx, int dwIdx, u64 val) {
 	hal_write64(addr, val);
 }
 
-int hw_usb_xhci_EpCtx_calcInterval(hw_usb_xhci_Device *dev, int epType, u32 bInterval);
+int hw_usb_xhci_EpCtx_calcInterval(hw_usb_xhci_Device *dev, int epTp, u32 bInterval);
 
 void hw_usb_xhci_EpCtx_writeESITPay(void *ctx, u64 val);
 

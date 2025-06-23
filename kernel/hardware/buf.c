@@ -46,11 +46,11 @@ int hw_buf_delBuf(hw_buf_Desc *desc) {
 	return mm_kfree(desc, mm_Attr_Shared);
 }
 
-static void hw_buf_setDesc(hw_buf_Desc *desc, char *iden, int type) {
+static void hw_buf_setDesc(hw_buf_Desc *desc, char *iden, int tp) {
 	desc->idenHash = hw_buf_getHash(iden);
 	desc->idenPath = iden;
 
-	desc->bufType = type;
+	desc->bufTp = tp;
 }
 
 hw_buf_ByteBuf *hw_buf_ByteBuf_create(char *iden, int size) {
@@ -59,7 +59,7 @@ hw_buf_ByteBuf *hw_buf_ByteBuf_create(char *iden, int size) {
 	buf->size = size;
 	SpinLock_init(&buf->lck);
 
-	hw_buf_setDesc(&buf->desc, iden, hw_Buf_Type_Byte);
+	hw_buf_setDesc(&buf->desc, iden, hw_Buf_Tp_Byte);
 	return buf;
 }
 
@@ -67,7 +67,7 @@ hw_buf_ListBuf *hw_buf_ListBuf_create(char *iden) {
 	hw_buf_ListBuf *buf = mm_kmalloc(sizeof(hw_buf_ListBuf), mm_Attr_Shared, NULL);
 	SafeList_init(&buf->list);
 
-	hw_buf_setDesc(&buf->desc, iden, hw_Buf_Type_List);
+	hw_buf_setDesc(&buf->desc, iden, hw_Buf_Tp_List);
 	return buf;
 }
 

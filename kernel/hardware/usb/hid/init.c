@@ -15,7 +15,7 @@ int hw_usb_hid_check(hw_Device *dev) {
     hw_usb_xhci_Device *usbDev = container(dev, hw_usb_xhci_Device, device);
     for (hw_usb_devdesc_Hdr *hdr = &usbDev->cfgDesc[0]->hdr; hdr; hdr = hw_usb_devdesc_getNxt(usbDev->cfgDesc[0], hdr)) {
         // check interface descriptor
-        if (hdr->type == hw_usb_devdesc_Type_Inter) {
+        if (hdr->tp == hw_usb_devdesc_Tp_Inter) {
             hw_usb_devdesc_Inter *inter = container(hdr, hw_usb_devdesc_Inter, hdr);
             if (inter->bInterCls == 0x03) {
                 printk(GREEN, BLACK, "hw: usb hid: device %p is a USB HID device\n", dev);
@@ -34,7 +34,7 @@ int hw_usb_hid_config(hw_Device *dev) {
     // find the most suitable interface descriptor
     for (hw_usb_devdesc_Hdr *hdr = &usbDev->cfgDesc[0]->hdr; hdr; hdr = hw_usb_devdesc_getNxt(usbDev->cfgDesc[0], hdr)) {
         // check interface descriptor
-        if (hdr->type == hw_usb_devdesc_Type_Inter) {
+        if (hdr->tp == hw_usb_devdesc_Tp_Inter) {
             hw_usb_devdesc_Inter *inter = container(hdr, hw_usb_devdesc_Inter, hdr);
             if (inter->bInterCls == 0x03) {
                 if (interDesc == NULL || interDesc->bInterSubCls != 0x01) interDesc = inter;
@@ -51,11 +51,11 @@ int hw_usb_hid_config(hw_Device *dev) {
     {
         int epDescIdx = 0;
         for (hw_usb_devdesc_Hdr *hdr = hw_usb_devdesc_getNxt(usbDev->cfgDesc[0], &interDesc->hdr); 
-                hdr && hdr->type != hw_usb_devdesc_Type_Inter; 
+                hdr && hdr->tp != hw_usb_devdesc_Tp_Inter; 
                 hdr = hw_usb_devdesc_getNxt(usbDev->cfgDesc[0], hdr)) {
-            switch (hdr->type) {
-                case hw_usb_devdesc_Type_HID: hidDesc = container(hdr, hw_usb_devdesc_Hid, hdr); break;
-                case hw_usb_devdesc_Type_Ep: 
+            switch (hdr->tp) {
+                case hw_usb_devdesc_Tp_HID: hidDesc = container(hdr, hw_usb_devdesc_Hid, hdr); break;
+                case hw_usb_devdesc_Tp_Ep: 
                     epDesc[epDescIdx++] = container(hdr, hw_usb_devdesc_Ep, hdr);
                     break;
             }
@@ -66,8 +66,8 @@ int hw_usb_hid_config(hw_Device *dev) {
         void *slotCtx = hw_usb_xhci_getCtxEntry(usbDev->host, inCtx, hw_usb_xhci_InCtx_Slot);
         hw_usb_xhci_writeCtx(inCtx, 1, ~0x0u, 1);
         for (int i = 0; i < interDesc->bNumEp; i++) {
-            int epId = hw_usb_devdesc_Ep_epId(epDesc[i]), epType = hw_usb_devdesc_Ep_epType(epDesc[i]);
-            // printk(WHITE, BLACK, "hw: usb hid: device %p ep %d: id:%d type:%d\n", usbDev, i, epId, epType);
+            int epId = hw_usb_devdesc_Ep_epId(epDesc[i]), epTp = hw_usb_devdesc_Ep_epTp(epDesc[i]);
+            // printk(WHITE, BLACK, "hw: usb hid: device %p ep %d: id:%d tp:%d\n", usbDev, i, epId, epTp);
             // write addflags of ctrl context
             hw_usb_xhci_writeCtx(inCtx, 1, (1u << epId), 1);
 
@@ -76,8 +76,8 @@ int hw_usb_hid_config(hw_Device *dev) {
                 max(hw_usb_xhci_readCtx(slotCtx, 0, hw_usb_xhci_SlotCtx_ctxEntries), epId));
 
             void *epCtx = hw_usb_xhci_getCtxEntry(usbDev->host, inCtx, epId + 1);
-            hw_usb_xhci_writeCtx(epCtx, 0, hw_usb_xhci_EpCtx_interval, hw_usb_xhci_EpCtx_calcInterval(usbDev, epType, epDesc[i]->bInterval));
-            hw_usb_xhci_writeCtx(epCtx, 1, hw_usb_xhci_EpCtx_epType, epType);
+            hw_usb_xhci_writeCtx(epCtx, 0, hw_usb_xhci_EpCtx_interval, hw_usb_xhci_EpCtx_calcInterval(usbDev, epTp, epDesc[i]->bInterval));
+            hw_usb_xhci_writeCtx(epCtx, 1, hw_usb_xhci_EpCtx_epTp, epTp);
             hw_usb_xhci_writeCtx(epCtx, 1, hw_usb_xhci_EpCtx_CErr, 3);
             hw_usb_xhci_writeCtx(epCtx, 1, hw_usb_xhci_EpCtx_mxPackSize, epDesc[i]->wMxPktSz & 0x07ff);
             hw_usb_xhci_writeCtx(epCtx, 1, hw_usb_xhci_EpCtx_mxBurstSize, (epDesc[i]->wMxPktSz & 0x1800) >> 11);
@@ -89,10 +89,10 @@ int hw_usb_hid_config(hw_Device *dev) {
             
             hw_usb_xhci_EpCtx_writeESITPay(epCtx, hw_usb_xhci_readCtx(epCtx, 1, hw_usb_xhci_EpCtx_mxPackSize) * (hw_usb_xhci_readCtx(epCtx, 1, hw_usb_xhci_EpCtx_mxBurstSize) + 1));
 
-            printk(WHITE, BLACK, "hw: usb hid: device %p ep %d : interval=%d epType=%d CErr=%d mxPkSz=%d mxBurstSz=%d mxESITPay=%ld\n", 
+            printk(WHITE, BLACK, "hw: usb hid: device %p ep %d : interval=%d epTp=%d CErr=%d mxPkSz=%d mxBurstSz=%d mxESITPay=%ld\n", 
                    usbDev, epId, 
                    hw_usb_xhci_readCtx(epCtx, 0, hw_usb_xhci_EpCtx_interval), 
-                   hw_usb_xhci_readCtx(epCtx, 1, hw_usb_xhci_EpCtx_epType), 
+                   hw_usb_xhci_readCtx(epCtx, 1, hw_usb_xhci_EpCtx_epTp), 
                    hw_usb_xhci_readCtx(epCtx, 1, hw_usb_xhci_EpCtx_CErr), 
                    hw_usb_xhci_readCtx(epCtx, 1, hw_usb_xhci_EpCtx_mxPackSize), 
                    hw_usb_xhci_readCtx(epCtx, 1, hw_usb_xhci_EpCtx_mxBurstSize),
@@ -111,7 +111,7 @@ int hw_usb_hid_config(hw_Device *dev) {
     }
     hw_usb_xhci_TRB_setData(&req->input[0], mm_dmas_virt2Phys(usbDev->inCtx));
     hw_usb_xhci_TRB_setSlot(&req->input[0], usbDev->slotId);
-    hw_usb_xhci_TRB_setType(&req->input[0], hw_usb_xhci_TRB_Type_CfgEp);
+    hw_usb_xhci_TRB_setTp(&req->input[0], hw_usb_xhci_TRB_Tp_CfgEp);
 
     hw_usb_xhci_request(usbDev->host, usbDev->host->cmdRing, req, NULL, 0);
     if (hw_usb_xhci_TRB_getCmplCode(&req->res) != hw_usb_xhci_TRB_CmplCode_Succ) {
@@ -134,7 +134,7 @@ int hw_usb_hid_config(hw_Device *dev) {
     u8 *report = NULL; u32 reportSz = 0;
     // get the first report descriptor
     for (int i = 0; i < hidDesc->bNumDesc; i++) {
-        if (hidDesc->desc[i].bDescType == hw_usb_devdesc_Type_Report) {
+        if (hidDesc->desc[i].bDescTp == hw_usb_devdesc_Tp_Report) {
             reportSz = hidDesc->desc[i].wDescLen;
             report = mm_kmalloc(reportSz, mm_Attr_Shared, NULL);
             if (report == NULL) {
@@ -178,7 +178,7 @@ int hw_usb_hid_config(hw_Device *dev) {
 
     // decide parser type
     if (interDesc->bInterSubCls == 0x01)
-        parser->type = interDesc->bInterProtocol;
+        parser->tp = interDesc->bInterProtocol;
     else {
         printk(RED, BLACK, "hw: usb hid: device %p unsupported custom device.\n", dev);
         hw_hid_delParser(parser);
@@ -219,9 +219,9 @@ int hw_usb_hid_install(hw_Device *dev) {
     // get endpoints
     int inEp = -1, outEp = -1;
     for (hw_usb_devdesc_Hdr *hdr = hw_usb_devdesc_getNxt(usbDev->cfgDesc[0], &usbDev->inter->hdr);
-            hdr != NULL && hdr->type != hw_usb_devdesc_Type_Inter;
+            hdr != NULL && hdr->tp != hw_usb_devdesc_Tp_Inter;
             hdr = hw_usb_devdesc_getNxt(usbDev->cfgDesc[0], hdr)) {
-        if (hdr->type == hw_usb_devdesc_Type_Ep) {
+        if (hdr->tp == hw_usb_devdesc_Tp_Ep) {
             hw_usb_devdesc_Ep *ep = container(hdr, hw_usb_devdesc_Ep, hdr);
             int epId = hw_usb_devdesc_Ep_epId(ep);
             if (epId & 1) inEp = epId;
@@ -230,7 +230,7 @@ int hw_usb_hid_install(hw_Device *dev) {
     }
     printk(WHITE, BLACK, "hw: usb hid: device %p inEp:%d outEp:%d\n", usbDev, inEp, outEp);
     hw_usb_xhci_freeRequest(req);
-    switch (parser->type) {
+    switch (parser->tp) {
         case hw_hid_Parser_type_Keyboard :
             hw_usb_hid_keyboard(usbDev, parser, inEp, outEp);
             break;

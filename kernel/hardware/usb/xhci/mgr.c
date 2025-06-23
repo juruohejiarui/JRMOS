@@ -17,18 +17,18 @@ intr_handlerDeclare(hw_usb_xhci_msiHandler) {
 				eveRing->curRingIdx = 0, eveRing->cycBit ^= 1;
 			eveRing->curIdx = 0;
 		}
-		switch (hw_usb_xhci_TRB_getType(event)) {
-			case hw_usb_xhci_TRB_Type_CmdCmpl : {
+		switch (hw_usb_xhci_TRB_getTp(event)) {
+			case hw_usb_xhci_TRB_Tp_CmdCmpl : {
 				hw_usb_xhci_Request *req = hw_usb_xhci_response(host->cmdRing, event, *(u64 *)&event->dt1);
 				// printk(YELLOW, BLACK, "response to command request %p with code:%d\n", req, hw_usb_xhci_TRB_getCmplCode(event));
 				break;
 			}
-			case hw_usb_xhci_TRB_Type_PortStChg :
+			case hw_usb_xhci_TRB_Tp_PortStChg :
 				hw_usb_xhci_OpReg_write32(host, hw_usb_xhci_Host_opReg_status, (1u << 4));
 				hw_usb_xhci_portChange(host, event->dt1 >> 24);
 				// printk(YELLOW, BLACK, "response to port status change.\n");
 				break;
-			case hw_usb_xhci_TRB_Type_TransEve : {
+			case hw_usb_xhci_TRB_Tp_TransEve : {
 				hw_usb_xhci_Device *dev = host->dev[hw_usb_xhci_TRB_getSlot(event)];
 				hw_usb_xhci_Ring *epRing = dev->epRing[hw_usb_xhci_TRB_getEp(event)];
 				hw_usb_xhci_Request *req = hw_usb_xhci_response(epRing, event, *(u64 *)&event->dt1);
@@ -88,7 +88,7 @@ void hw_usb_xhci_uninstallDev(hw_usb_xhci_Device *dev) {
 	}
 	if (dev->slotId) {
 		hw_usb_xhci_Request *req = hw_usb_xhci_makeRequest(1, hw_usb_xhci_Request_flags_Command);
-		hw_usb_xhci_TRB_setType(&req->input[0], hw_usb_xhci_TRB_Type_DisblSlot);
+		hw_usb_xhci_TRB_setTp(&req->input[0], hw_usb_xhci_TRB_Tp_DisblSlot);
 		hw_usb_xhci_TRB_setSlot(&req->input[0], dev->slotId);
 		hw_usb_xhci_request(dev->host, dev->host->cmdRing, req, NULL, 0);
 		if (hw_usb_xhci_TRB_getCmplCode(&req->res) != hw_usb_xhci_TRB_CmplCode_Succ) {

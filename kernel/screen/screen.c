@@ -82,25 +82,25 @@ static int _skipAtoI(const char **fmt) {
     __res; \
 })
 
-static char *_number(char *str, i64 num, int base, int size, int precision, int type) {
+static char *_number(char *str, i64 num, int base, int size, int precision, int tp) {
     char c, sign, tmp[66];
     const char *digits = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     int i;
-    if (type & flag_left) type &= ~flag_fill_zero;
+    if (tp & flag_left) tp &= ~flag_fill_zero;
     if (base < 2 || base > 36) return 0;
-    c = (type & flag_fill_zero) ? '0' : ' ';
+    c = (tp & flag_fill_zero) ? '0' : ' ';
     sign = 0;
-    if (type & flag_sign) {
+    if (tp & flag_sign) {
         if (num < 0) {
             sign = '-';
             num = -num;
             size--;
-        } else if (type & flag_space) {
+        } else if (tp & flag_space) {
             sign = ' ';
             size--;
         }
     }
-    if (type & flag_special) {
+    if (tp & flag_special) {
         if (base == 16) {
             *str++ = '0';
             *str++ = 'x';
@@ -112,9 +112,9 @@ static char *_number(char *str, i64 num, int base, int size, int precision, int 
     else while (num != 0) tmp[i++] = digits[do_div(num, base)];
     if (i > precision) precision = i;
     size -= precision;
-    if (!(type & (flag_left | flag_fill_zero))) while (size-- > 0) *str++ = ' ';
+    if (!(tp & (flag_left | flag_fill_zero))) while (size-- > 0) *str++ = ' ';
     if (sign) *str++ = sign;
-    if (!(type & flag_left)) while (size-- > 0) *str++ = c;
+    if (!(tp & flag_left)) while (size-- > 0) *str++ = c;
     while (i < precision--) *str++ = '0';
     while (i-- > 0) *str++ = tmp[i];
     while (size-- > 0) *str++ = ' ';
@@ -271,7 +271,7 @@ void putchar(unsigned int fcol, unsigned int bcol, char ch) {
     int i;
     if (ch == '\n') {
         position.yPos++, position.xPos = 0;
-        if (position.yPos >= min(64, position.yRes / screen_charHeight)) {
+        if (position.yPos >= min(1000, position.yRes / screen_charHeight)) {
             _scroll();
 			position.yPos--;
         }

@@ -13,7 +13,7 @@ typedef struct hw_pci_Cfg {
     u16 vendorId, deviceId;
     u16 command, status;
     u8 revisionId, progIf, subclass, class;
-    u8 cacheLineSz, latencyTimer, hdrType, bist;
+    u8 cacheLineSz, latencyTimer, hdrTp, bist;
     union {
         struct {
             u32 bar[6];
@@ -23,7 +23,7 @@ typedef struct hw_pci_Cfg {
             u8 capPtr;
             u8 reserved1[7];
             u8 intrLine, intrPin, minGrant, mxMatency;
-        } __attribute__ ((packed)) type0;
+        } __attribute__ ((packed)) tp0;
         struct {
             u32 bar[2];
             u8 primBusNum, secBusNum, subBusNum, secLatencyTimer;
@@ -37,7 +37,7 @@ typedef struct hw_pci_Cfg {
             u32 expRomBaseAddr;
             u8 intrLine, intrPin;
             u16 bridgeCtrl;
-        } __attribute__ ((packed)) type1;
+        } __attribute__ ((packed)) tp1;
         struct {
             u32 cardBusBaseAddr;
             u8 offCapLst, reserved1;
@@ -55,7 +55,7 @@ typedef struct hw_pci_Cfg {
             u16 bridgeCtrl;
             u16 subsysDevId, subsysVendorId;
             u32 cardLegacyBaseAddr;
-        } __attribute__ ((packed)) type2;
+        } __attribute__ ((packed)) tp2;
     };
 } __attribute__ ((packed)) hw_pci_Cfg;
 
@@ -173,7 +173,7 @@ int hw_pci_chk();
 void hw_pci_initIntr(intr_Desc *desc, void (*handler)(u64), u64 param, char *name);
 
 __always_inline__ hw_pci_MsixTbl *hw_pci_getMsixTbl(hw_pci_MsixCap *cap, hw_pci_Cfg *cfg) {
-    return mm_dmas_phys2Virt(hw_pci_Cfg_getBar(&cfg->type0.bar[hw_pci_MsixCap_bir(cap)]) + hw_pci_MsixCap_tblOff(cap));
+    return mm_dmas_phys2Virt(hw_pci_Cfg_getBar(&cfg->tp0.bar[hw_pci_MsixCap_bir(cap)]) + hw_pci_MsixCap_tblOff(cap));
 }
 
 int hw_pci_setMsix(hw_pci_MsixCap *cap, hw_pci_Cfg *cfg, intr_Desc *desc, u64 intrNum);

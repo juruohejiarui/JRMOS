@@ -69,17 +69,17 @@ __always_inline__ u32 hal_hw_io_in32(u16 port) {
     return ret;
 }
 
-#define hal_hw_write(addr, val, type) \
+#define hal_hw_write(addr, val, tp) \
     __asm__ volatile ( \
         "mov %1, (%0)   \n\t" \
         "mfence         \n\t" \
         : \
-        : "r"(addr), "r"((type)(val)) \
+        : "r"(addr), "r"((tp)(val)) \
         : "memory" \
     );
 
-#define hal_hw_read(addr, type) ({\
-    type val; \
+#define hal_hw_read(addr, tp) ({\
+    tp val; \
     __asm__ volatile ( \
         "mov (%0), %1   \n\t" \
         : \

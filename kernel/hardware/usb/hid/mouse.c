@@ -8,13 +8,13 @@ int hw_usb_hid_mouse(hw_usb_xhci_Device *dev, hw_hid_Parser *parser, int inEp) {
 
     hw_usb_xhci_Request *req = hw_usb_xhci_makeRequest(1, 0);
 
-    u32 sz = parser->reportEnum[hw_hid_ReportType_Input].report[0]->sz / 8;
+    u32 sz = parser->reportEnum[hw_hid_ReportTp_Input].report[0]->sz / 8;
 
     u8 *rawReport = mm_kmalloc(sz, 0, NULL);
 
     hw_usb_xhci_TRB_setData(&req->input[0], mm_dmas_virt2Phys(rawReport));
     hw_usb_xhci_TRB_setStatus(&req->input[0], hw_usb_xhci_TRB_mkStatus(sz, 0x0, 0));
-    hw_usb_xhci_TRB_setType(&req->input[0], hw_usb_xhci_TRB_Type_Normal);
+    hw_usb_xhci_TRB_setTp(&req->input[0], hw_usb_xhci_TRB_Tp_Normal);
     hw_usb_xhci_TRB_setCtrlBit(&req->input[0], hw_usb_xhci_TRB_ctrl_ioc | hw_usb_xhci_TRB_ctrl_isp);
 
     hw_hid_MouseInput input;

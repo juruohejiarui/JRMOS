@@ -15,7 +15,7 @@ void hw_hid_init() {
 
 static void _initParser(hw_hid_Parser *parser, hw_Device *dev) {
     memset(parser, 0, sizeof(hw_hid_Parser));
-    for (int i = 0; i < hw_hid_Parser_ReportTypes; i++) {
+    for (int i = 0; i < hw_hid_Parser_ReportTps; i++) {
         List_init(&parser->reportEnum[i].reportLst);
     }
     parser->colCap = hw_hid_Parser_DefaultColCap;
@@ -78,7 +78,7 @@ static u8 *_fetchItem(u8 *st, u8 *ed, struct hw_hid_Item *item) {
     if ((ed - st) <= 0) return NULL;
     u8 b = *st++;
 
-    item->type = (b >> 2) & 0x3, item->tag = (b >> 4) & 0xf;
+    item->tp = (b >> 2) & 0x3, item->tag = (b >> 4) & 0xf;
 
     if (item->tag == hw_hid_Item_tag_Long) {
         item->format = hw_hid_Item_format_Long;
@@ -254,7 +254,7 @@ static int _parseLocal(struct hw_hid_Parser *parser, struct hw_hid_Item *item) {
     }
 }
 
-static int _collection(struct hw_hid_Parser *parser, u32 type) {
+static int _collection(struct hw_hid_Parser *parser, u32 tp ) {
     struct hw_hid_Collection *coll;
     u32 usage = parser->loc.usage[0];
 
@@ -279,11 +279,11 @@ static int _collection(struct hw_hid_Parser *parser, u32 type) {
     parser->colStk[parser->colStkPtr++] = parser->colSz;
 
     coll = parser->col + parser->colSz++;
-    coll->type = type;
+    coll->tp = tp;
     coll->usage = usage;
     coll->lvl = parser->colStkPtr - 1;
 
-    if (type == hw_hid_Collection_Application) parser->mxApp++;
+    if (tp == hw_hid_Collection_Application) parser->mxApp++;
 
     return res_SUCC;
 }
@@ -297,17 +297,17 @@ static int _endCollection(struct hw_hid_Parser *parser) {
     return res_SUCC;
 }
 
-static u32 _lookupCol(struct hw_hid_Parser *parser, u32 type) {
+static u32 _lookupCol(struct hw_hid_Parser *parser, u32 tp ) {
     struct hw_hid_Collection *col = parser->col;
     for (int i = parser->colStkPtr - 1; i >= 0; i--) {
         u32 idx = parser->colStk[i];
-        if (col[idx].type == type) return col[idx].usage;
+        if (col[idx].tp == tp) return col[idx].usage;
     }
     return 0;
 }
 
-static struct hw_hid_Report *_registerReport(struct hw_hid_Parser *parser, u32 type, u32 id, u32 app) {
-    struct hw_hid_ReportEnum *repEnum = parser->reportEnum + type;
+static struct hw_hid_Report *_registerReport(struct hw_hid_Parser *parser, u32 tp , u32 id, u32 app) {
+    struct hw_hid_ReportEnum *repEnum = parser->reportEnum + tp ;
     if (id >= hw_hid_ReportEnum_MxReports) {
         printk(RED, BLACK, "hw: hid: parser %p: report id %d too high\n", parser, id);
         return NULL;
@@ -321,14 +321,14 @@ static struct hw_hid_Report *_registerReport(struct hw_hid_Parser *parser, u32 t
     memset(report, 0, sizeof(struct hw_hid_Report));
     if (id) repEnum->numbered = 1;
     report->id = id;
-    report->type = type;
+    report->tp = tp;
     report->sz = 0;
     report->app = app;
     repEnum->report[id] = report;
     List_insTail(&repEnum->reportLst, &report->lst);
     List_init(&report->fieldLst);
 
-    printk(WHITE, BLACK, "hw: hid: parser %p: new report %p, type=%d id=%d\n", parser, report, type, id);
+    printk(WHITE, BLACK, "hw: hid: parser %p: new report %p, tp=%d id=%d\n", parser, report, tp , id);
 
     return report;
 }
@@ -352,7 +352,7 @@ static struct hw_hid_Field *_registerField(struct hw_hid_Report *report, u32 usa
     return field;
 }
 
-static int _addField(struct hw_hid_Parser *parser, u32 type, u32 flags) {
+static int _addField(struct hw_hid_Parser *parser, u32 tp , u32 flags) {
     struct hw_hid_Report *report;
     struct hw_hid_Field *field;
 
@@ -360,7 +360,7 @@ static int _addField(struct hw_hid_Parser *parser, u32 type, u32 flags) {
 
     u32 app = _lookupCol(parser, hw_hid_Collection_Application);
 
-    report = _registerReport(parser, type, parser->glo.reportId, app);
+    report = _registerReport(parser, tp , parser->glo.reportId, app);
 
     if (!report) {
         printk(RED, BLACK, "hw: hid: parser %p: failed to register report\n", parser);
@@ -409,7 +409,7 @@ static int _addField(struct hw_hid_Parser *parser, u32 type, u32 flags) {
     field->mxUsage = usages;
     field->flag = flags;
     field->reportOff = off;
-    field->reportType = type;
+    field->reportTp = tp;
     field->reportSz = parser->glo.reportSz;
     field->reportCnt = parser->glo.reportCnt;
     field->logicalMin = parser->glo.logicalMin;
@@ -433,13 +433,13 @@ static int _parseMain(struct hw_hid_Parser *parser, struct hw_hid_Item *item) {
             ret = _endCollection(parser);
             break;
         case hw_hid_Item_tag_Input :
-            ret = _addField(parser, hw_hid_ReportType_Input, data);
+            ret = _addField(parser, hw_hid_ReportTp_Input, data);
             break;
         case hw_hid_Item_tag_Output :
-            ret = _addField(parser, hw_hid_ReportType_Output, data);
+            ret = _addField(parser, hw_hid_ReportTp_Output, data);
             break;
         case hw_hid_Item_tag_Feature :
-            ret = _addField(parser, hw_hid_ReportType_Feature, data);
+            ret = _addField(parser, hw_hid_ReportTp_Feature, data);
             break;
         default :
             printk(RED, BLACK, "hw: hid: parser %p: unknown main item tag: %d\n", parser, item->tag);
@@ -462,9 +462,9 @@ int hw_hid_parse(u8 *report, u32 reportLen, hw_hid_Parser *parser) {
             printk(RED, BLACK, "hw: hid: parser %p: no support for long item.\n", parser);
             goto Fail;
         }
-        if (tsk[item.type](parser, &item) != res_SUCC) {
+        if (tsk[item.tp](parser, &item) != res_SUCC) {
             printk(RED, BLACK, "hw: hid: parser %p: item %u %u %u %u\n", 
-                parser, item.format, (u32)item.type, (u32)item.size, (u32)item.tag);
+                parser, item.format, (u32)item.tp , (u32)item.size, (u32)item.tag);
             goto Fail;
         }
     }
@@ -493,11 +493,11 @@ static void _printReportEnum(struct hw_hid_ReportEnum *repEnum) {
 void hw_hid_printParser(hw_hid_Parser *parser) {
     SpinLock_lock(&_printLck);
     printk(WHITE, BLACK, "parser %p:\nInput:\n", parser);
-    struct hw_hid_ReportEnum *repEnum = &parser->reportEnum[hw_hid_ReportType_Input];
+    struct hw_hid_ReportEnum *repEnum = &parser->reportEnum[hw_hid_ReportTp_Input];
     _printReportEnum(repEnum);
 
     printk(WHITE, BLACK, "Output:\n", parser);
-    repEnum = &parser->reportEnum[hw_hid_ReportType_Output];
+    repEnum = &parser->reportEnum[hw_hid_ReportTp_Output];
     _printReportEnum(repEnum);
     SpinLock_unlock(&_printLck);
 }
@@ -519,7 +519,7 @@ i32 _getReportSData(u8 *report, struct hw_hid_Field *field, int idx) {
 }
 
 int hw_hid_parseKeyboardInput(hw_hid_Parser *parser, u8 *report, hw_hid_KeyboardInput *input) {
-    struct hw_hid_ReportEnum *repEnum = &parser->reportEnum[hw_hid_ReportType_Input];
+    struct hw_hid_ReportEnum *repEnum = &parser->reportEnum[hw_hid_ReportTp_Input];
     struct hw_hid_Report *rep = repEnum->report[0];
     // get modify key status
     input->modifier = 0;
@@ -529,7 +529,7 @@ int hw_hid_parseKeyboardInput(hw_hid_Parser *parser, u8 *report, hw_hid_Keyboard
 }
 
 int hw_hid_parseMouseInput(hw_hid_Parser *parser, u8 *report, hw_hid_MouseInput *input) {
-    struct hw_hid_ReportEnum *repEnum = &parser->reportEnum[hw_hid_ReportType_Input];
+    struct hw_hid_ReportEnum *repEnum = &parser->reportEnum[hw_hid_ReportTp_Input];
     struct hw_hid_Report *rep = repEnum->report[0];
     input->buttons = 0;
     for (int i = 0; i < rep->field[0]->reportCnt; i++) input->buttons |= (_getReportUData(report, rep->field[0], i) << i);

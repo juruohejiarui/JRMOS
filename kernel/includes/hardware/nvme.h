@@ -2,7 +2,7 @@
 #define __HARDWARE_NVME_H__
 
 #include <hardware/pci.h>
-#include <hardware/mgr.h>
+#include <hardware/diskdev.h>
 #include <task/request.h>
 
 #define hw_nvme_Host_ctrlCap	0x0
@@ -96,9 +96,107 @@ typedef struct hw_nvme_SubQue {
 } hw_nvme_SubQue;
 
 typedef struct hw_nvme_Nsp {
+	u64 nspSz;
+	u64 nspCap;
+	u64 nspUtil;
+	u8 nspFeature;
+	u8 numOfLbaFormat;
+	// formatted lba size
+	u8 formattedLbaSz;
+	// metadata capabilities
+	u8 metaCap;
+	// end-to-end data protection capabilites
+	u8 dtProtectCap;
+	// end-to-end data protection tp settings
+	u8 dtProtectTpSet;
+
+	// unecessary properties
+	// namespace multi-path i/o and namespace sharing capabilities
+	u8 nmic;
+	// reservation capability
+	u8 rescap;
+	// format progress indicator
+	u8 fpi;
+	// dealocate logical block features
+	u8 dlfeat;
+	// namespace atomic write unit normal
+	u16 nawun;
+	// namespace atomic write unit power fail
+	u16 nawupf;
+	// namespace atomic compare & write unit
+	u16 nacwu;
+	// namespace atomic boundary size normal
+	u16 nabsn;
+	// namespace atomic boundary offset
+	u16 nabo;
+	// namespace atomic boundary size power fail
+	u16 nabspf;
+	// namespace optimal i/o boundary
+	u16 noiob;
+	
+	// NVM capacity
+	u64 nvmcap[2];
+
+	// namespace preferred write granularity
+	u16 npwg;
+	// namespace preferred write alignment
+	u16 npwa;
+	// namespace preferred dealocate granularity
+	u16 npdg;
+	// namespace preferred deallocate alignment
+	u16 npda;
+	// namespace optimal write size
+	u16 nows;
+	// maximum single source range length (used for Copy command)
+	u16 mssrl;
+	// maximum copy length
+	u32 mcl;
+	// maximum source range count
+	u8 msrc;
+	// key per i/o status
+	u8 kpios;
+	// number of unique attribute lba formats
+	u8 nulbaf;
+	
+	u8 reserved;
+	// key pre i/o data access alignment and granularity
+	u32 kpiodaag;
+	
+	u32 reserved2;
+	// anagroup identifier
+	u32 anagrpid;
+	
+	u8 reserved3[3];
+	
+	// namespace attributes
+	u8 nsattr;
+	// NVM set identifier
+	u16 nvmsetid;
+	// endurance group identifier
+	u16 endgid;
+	// namespace globally unique identifier
+	u64 nguid[2];
+	// ieee extended unique identifier
+	u64 eui64;
+	// support lba format, this structure use bit field to reduce function (doge)
+	struct {
+		// metadata size 
+		u16 metaSz;
+		// lba data size
+		u8 lbaDtSz;
+		// relative performance
+		u8 rp : 2;
+		u32 reserved : 6;
+	} __attribute__ ((packed)) lbaFormat[64];
+	u8 vendorSpec[Page_4KSize - 384];
+} __attribute__ ((packed)) hw_nvme_Nsp;
+
+typedef struct hw_nvme_Dev {
 	int nspId;
-	hw_nvme_SubQue *subQue[hw_nvme_mxIoSubQueNum];
-} hw_nvme_Nsp;
+	u64 size;
+
+	hw_DiskDev diskDev;
+} hw_nvme_Dev;
 
 typedef struct hw_nvme_Host {
 	hw_pci_Dev pci;
@@ -108,6 +206,8 @@ typedef struct hw_nvme_Host {
 	u16 mxQueSz;
 
 	u16 intrNum;
+
+	u16 devNum;
 
 	u64 capRegAddr;
 
@@ -127,9 +227,7 @@ typedef struct hw_nvme_Host {
 	// cmplQue[0]: admin completion queue
 	hw_nvme_CmplQue **cmplQue;
 
-	u32 nspNum;
-
-	hw_nvme_Nsp *nsp;
+	hw_nvme_Dev *dev;
 	
 } hw_nvme_Host;
 
@@ -163,7 +261,7 @@ int hw_nvme_respone(hw_nvme_Request *req, hw_nvme_CmplQueEntry *entry);
 #define hw_nvme_Request_Identify_type_Nsp		0x0
 #define hw_nvme_Request_Identify_type_Ctrl		0x1
 #define hw_nvme_Request_Identify_type_NspLst	0x2
-int hw_nvme_initReq_identify(hw_nvme_Request *req, u32 type, u32 nspIden, void *buf);
+int hw_nvme_initReq_identify(hw_nvme_Request *req, u32 tp , u32 nspIden, void *buf);
 
 hw_nvme_SubQue *hw_nvme_allocSubQue(hw_nvme_Host *host, u32 iden, u32 queSz);
 

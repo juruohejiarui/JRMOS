@@ -75,8 +75,8 @@ int _parseMadt() {
 	// first scan the table for type9 (x2apic)
 	for (u64 off = sizeof(hal_hw_uefi_MadtDesc); off < madt->hdr.length; ) {
 		hal_hw_uefi_MadtEntry *curEntry = (hal_hw_uefi_MadtEntry *)((u64)madt + off);
-		if (curEntry->type == 9 && _canEnableProc(curEntry->type9.flags)) {
-			if (_registerCPU(curEntry->type9.x2apicId, curEntry->type9.apicId) == res_FAIL)
+		if (curEntry->tp == 9 && _canEnableProc(curEntry->tp9.flags)) {
+			if (_registerCPU(curEntry->tp9.x2apicId, curEntry->tp9.apicId) == res_FAIL)
 				return res_FAIL;
 		}
 		off += curEntry->len;
@@ -85,13 +85,13 @@ int _parseMadt() {
 	// then scan the table for type0 (apic) use apicId for x2apicId
 	for (u64 off = sizeof(hal_hw_uefi_MadtDesc); off < madt->hdr.length; ) {
 		hal_hw_uefi_MadtEntry *curEntry = (hal_hw_uefi_MadtEntry *)((u64)madt + off);
-		if (curEntry->type == 0 && _canEnableProc(curEntry->type0.flags)) {
+		if (curEntry->tp == 0 && _canEnableProc(curEntry->tp0.flags)) {
 			int exist = 0;
-			for (u32 i = 0; i < cpu_num; i++) if (cpu_desc[i].hal.apic == curEntry->type0.apicId) {
+			for (u32 i = 0; i < cpu_num; i++) if (cpu_desc[i].hal.apic == curEntry->tp0.apicId) {
 				exist = 1;
 				break;
 			}
-			if (!exist && _registerCPU(curEntry->type0.apicId, curEntry->type0.apicId) == res_FAIL)
+			if (!exist && _registerCPU(curEntry->tp0.apicId, curEntry->tp0.apicId) == res_FAIL)
 				return res_FAIL;
 		}
 		off += curEntry->len;

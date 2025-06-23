@@ -8,19 +8,19 @@ void hw_usb_xhci_mkCtrlDataReq(hw_usb_xhci_Request *req, u64 setup, int dir, voi
 	hw_usb_xhci_TRB *trb = &req->input[0];
 	hw_usb_xhci_TRB_setData(trb, setup);
 	hw_usb_xhci_TRB_setStatus(trb, hw_usb_xhci_TRB_mkStatus(0x08, 0, 0));
-	hw_usb_xhci_TRB_setType(trb, hw_usb_xhci_TRB_Type_SetupStage);
+	hw_usb_xhci_TRB_setTp(trb, hw_usb_xhci_TRB_Tp_SetupStage);
 	hw_usb_xhci_TRB_setCtrlBit(trb, hw_usb_xhci_TRB_ctrl_idt);
 	hw_usb_xhci_TRB_setTRT(trb, dir == hw_usb_xhci_TRB_ctrl_dir_in ? hw_usb_xhci_TRB_trt_In : hw_usb_xhci_TRB_trt_Out);
 
 	trb++;
 	hw_usb_xhci_TRB_setData(trb, mm_dmas_virt2Phys(data));
 	hw_usb_xhci_TRB_setStatus(trb, hw_usb_xhci_TRB_mkStatus(len, 0, 0));
-	hw_usb_xhci_TRB_setType(trb, hw_usb_xhci_TRB_Type_DataStage);
+	hw_usb_xhci_TRB_setTp(trb, hw_usb_xhci_TRB_Tp_DataStage);
 	hw_usb_xhci_TRB_setDir(trb, dir);
 
 	trb++;
 	hw_usb_xhci_TRB_setDir(trb, ((~dir) & 1));
-	hw_usb_xhci_TRB_setType(trb, hw_usb_xhci_TRB_Type_StatusStage);
+	hw_usb_xhci_TRB_setTp(trb, hw_usb_xhci_TRB_Tp_StatusStage);
 	hw_usb_xhci_TRB_setCtrlBit(trb, hw_usb_xhci_TRB_ctrl_ioc);
 }
 
@@ -28,13 +28,13 @@ void hw_usb_xhci_mkCtrlReq(hw_usb_xhci_Request *req, u64 setup, int dir) {
     hw_usb_xhci_TRB *trb = &req->input[0];
     hw_usb_xhci_TRB_setData(trb, setup);
     hw_usb_xhci_TRB_setStatus(trb, hw_usb_xhci_TRB_mkStatus(0x08, 0, 0));
-    hw_usb_xhci_TRB_setType(trb, hw_usb_xhci_TRB_Type_SetupStage);
+    hw_usb_xhci_TRB_setTp(trb, hw_usb_xhci_TRB_Tp_SetupStage);
     hw_usb_xhci_TRB_setCtrlBit(trb, hw_usb_xhci_TRB_ctrl_idt);
     hw_usb_xhci_TRB_setTRT(trb, hw_usb_xhci_TRB_trt_No);
 
     trb++;
     hw_usb_xhci_TRB_setDir(trb, ((~dir) & 1));
-    hw_usb_xhci_TRB_setType(trb, hw_usb_xhci_TRB_Type_StatusStage);
+    hw_usb_xhci_TRB_setTp(trb, hw_usb_xhci_TRB_Tp_StatusStage);
     hw_usb_xhci_TRB_setCtrlBit(trb, hw_usb_xhci_TRB_ctrl_ioc);
 }
 
@@ -44,10 +44,10 @@ void *hw_usb_xhci_nxtExtCap(hw_usb_xhci_Host *host, void *cur) {
     return off ? (void *)((u64)cur + off * 4) : NULL;
 }
 
-u8 hw_usb_xhci_getSlotType(hw_usb_xhci_Host * host, u32 portIdx) {
+u8 hw_usb_xhci_getSlotTp(hw_usb_xhci_Host * host, u32 portIdx) {
 	for (void *expCap = hw_usb_xhci_nxtExtCap(host, NULL); expCap; expCap = hw_usb_xhci_nxtExtCap(host, expCap)) {
         if (hw_usb_xhci_xhci_getExtCapId(expCap) == hw_usb_xhci_Ext_Id_Protocol) {
-            if (hw_usb_xhci_Ext_Protocol_contain(expCap, portIdx)) return hw_usb_xhci_Ext_Protocol_slotType(expCap);
+            if (hw_usb_xhci_Ext_Protocol_contain(expCap, portIdx)) return hw_usb_xhci_Ext_Protocol_slotTp(expCap);
         }
     }
     return 0;
@@ -89,7 +89,7 @@ hw_usb_xhci_Ring *hw_usb_xhci_allocRing(hw_usb_xhci_Host *host, u32 size) {
         // point to the first TRB
         hw_usb_xhci_TRB_setData(lkTrb, mm_dmas_virt2Phys(ring->trbs));
         
-        hw_usb_xhci_TRB_setType(lkTrb, hw_usb_xhci_TRB_Type_Link);
+        hw_usb_xhci_TRB_setTp(lkTrb, hw_usb_xhci_TRB_Tp_Link);
         hw_usb_xhci_TRB_setToggle(lkTrb, 1);
     }
 
@@ -293,12 +293,12 @@ int hw_usb_xhci_isXhciDev(hw_Device *dev) {
     return res;
 }
 
-int hw_usb_xhci_EpCtx_calcInterval(hw_usb_xhci_Device *dev, int epType, u32 bInterval) {
+int hw_usb_xhci_EpCtx_calcInterval(hw_usb_xhci_Device *dev, int epTp, u32 bInterval) {
     int speed = hw_usb_xhci_readCtx(hw_usb_xhci_getCtxEntry(dev->host, dev->inCtx, hw_usb_xhci_InCtx_Slot), 0, hw_usb_xhci_SlotCtx_speed);
     switch (speed) {
         case hw_usb_xhci_Speed_Full:
         case hw_usb_xhci_Speed_Low :
-            if ((epType & 0x3) == 0x3) {
+            if ((epTp & 0x3) == 0x3) {
                 u8 interval = 0;
                 for (int i = 3; i <= 10; i++)
                     if (abs((1 << i) - 8 * bInterval) < (abs((1 << interval) - 8 * bInterval)))

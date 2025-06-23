@@ -43,9 +43,9 @@
 #define hw_hid_Item_format_Long    0x3
 #define hw_hid_Item_format_Short   0x2
 
-#define hw_hid_ReportType_Input     0x0
-#define hw_hid_ReportType_Output    0x1
-#define hw_hid_ReportType_Feature   0x2
+#define hw_hid_ReportTp_Input     0x0
+#define hw_hid_ReportTp_Output    0x1
+#define hw_hid_ReportTp_Feature   0x2
 
 #define hw_hid_Collection_Physical     0x0
 #define hw_hid_Collection_Application  0x1
@@ -56,7 +56,7 @@
 #define hw_hid_Collection_UsageModifier 0x6
 
 struct hw_hid_Item {
-    u8 type;
+    u8 tp;
     u8 tag;
     u8 format;
     u8 size;
@@ -90,7 +90,7 @@ struct hw_hid_ParserLocal {
 };
 
 struct hw_hid_Collection {
-    u32 type;
+    u32 tp;
     u32 usage;
     u32 lvl; // level in the collection stack
 };
@@ -98,7 +98,7 @@ struct hw_hid_Collection {
 #define hw_hid_Parser_MxFields 256
 #define hw_hid_Parser_CollectStkSz 256
 #define hw_hid_Parser_MxBufSz 16384
-#define hw_hid_Parser_ReportTypes 3
+#define hw_hid_Parser_ReportTps 3
 #define hw_hid_Parser_DefaultColCap 1
 
 #define hw_hid_Parser_type_Keyboard 1
@@ -119,7 +119,7 @@ struct hw_hid_Field {
     u32 reportOff;
     u32 reportSz;
     u32 reportCnt;
-    u32 reportType;
+    u32 reportTp;
     i32 logicalMin, logicalMax;
     i32 physicalMin, physicalMax;
     i32 unitExponent;
@@ -131,7 +131,7 @@ struct hw_hid_Field {
 
 struct hw_hid_Report {
     ListNode lst, fieldLst;
-    u32 id, type;
+    u32 id, tp;
     struct hw_hid_Field *field[256];
     u32 fieldCnt;
     u32 sz;
@@ -148,14 +148,14 @@ struct hw_hid_ReportEnum {
 
 struct hw_hid_Parser {
     struct hw_hid_ParserGlobal gloStk[hw_hid_ParserGlobal_StkSize], glo;
-    struct hw_hid_ReportEnum reportEnum[hw_hid_Parser_ReportTypes];
+    struct hw_hid_ReportEnum reportEnum[hw_hid_Parser_ReportTps];
     int gloStkPtr;
     struct hw_hid_ParserLocal loc;
     u32 colCap, colSz, colStkPtr;
     u32 colStk[hw_hid_Parser_CollectStkSz];
     struct hw_hid_Collection *col;
     u32 mxApp;
-    u32 type;
+    u32 tp;
     ListNode lst;
     hw_Device *dev;
 };
