@@ -8,8 +8,29 @@ hw_Driver hw_nvme_drv;
 
 intr_handlerDeclare(hw_nvme_msiHandler) {
 	hw_nvme_Host *host = (void *)(param & ~0xful);
-	int intrId = param & 0xf;
+	hw_nvme_CmplQue *cmplQue = host->cmplQue[param & 0xf];
 	
+	while (hw_nvme_CmplQueEntry_phaseTag(&cmplQue->entries[cmplQue->pos]) == cmplQue->phase) {
+		hw_nvme_CmplQueEntry *entry = &cmplQue->entries[cmplQue->pos++];
+		if (cmplQue->pos == cmplQue->size) cmplQue->phase ^= 1, cmplQue->pos = 0;
+
+		hw_nvme_SubQue *subQue = host->subQue[entry->subQueIden];
+
+		// get request and 
+		SpinLock_lockMask(&subQue->lck);
+		hw_nvme_Request *req = subQue->req[entry->cmdIden];
+		if (subQue->head != entry->subQueHdrPtr) {
+			if (subQue->head > entry->subQueHdrPtr)
+				subQue->load -= subQue->size - subQue->head + entry->subQueHdrPtr;
+			else 
+				subQue->load -= entry->subQueHdrPtr - subQue->head;
+			subQue->head = entry->subQueHdrPtr;
+		}
+		SpinLock_unlockMask(&subQue->lck);
+
+		hw_nvme_respone(req, entry);
+	}
+	hw_nvme_writeCmplDb(host, cmplQue);
 }
 
 int hw_nvme_chk(hw_Device *dev) {
@@ -25,7 +46,11 @@ __always_inline__ int _getRegAddr(hw_nvme_Host *host) {
 	host->capRegAddr = (u64)mm_dmas_phys2Virt(hw_pci_Cfg_getBar(&host->pci.cfg->type0.bar[0]));
 
 	// map regsters
-	return mm_dmas_map(mm_dmas_virt2Phys(host->capRegAddr));
+	int res = mm_dmas_map(mm_dmas_virt2Phys(host->capRegAddr));
+
+	if (mm_dmas_mapSize <= Page_4KSize) res |= mm_dmas_map(mm_dmas_virt2Phys(host->capRegAddr + Page_4KSize));
+
+	return res;
 }
 
 __always_inline__ int hw_nvme_reset(hw_nvme_Host *host) {
@@ -42,6 +67,11 @@ __always_inline__ int hw_nvme_reset(hw_nvme_Host *host) {
 	if (hw_nvme_read32(host, hw_nvme_Host_ctrlStatus) & 1) {
 		printk(RED, BLACK, "hw: nvme: %p: failed to reset.\n", host);
 		return res_FAIL;
+	}
+	
+	// reset subsystem if necessary
+	if (hw_nvme_read32(host, hw_nvme_Host_ctrlCfg) & (1ul << 36)) {
+		hw_nvme_write32(host, hw_nvme_Host_subsReset, 0x4e564d65); // 'NVMe'
 	}
 	printk(GREEN, BLACK, "hw: nvme %p: succ reset.\n", host);
 	return res_SUCC;
@@ -127,24 +157,37 @@ __always_inline__ int hw_nvme_initIntr(hw_nvme_Host *host) {
 	return res_SUCC;
 }
 
-__always_inline__ int hw_nvme_initAdQue(hw_nvme_Host *host) {
-	host->adCmplQue = hw_nvme_allocCmplQue(host, hw_nvme_cmplQueSz);
-	host->adSubQue = hw_nvme_allocSubQue(host, hw_nvme_subQueSz, host->adCmplQue);
-
-	printk(WHITE, BLACK, "hw: nvme: %p: admin queue: submission:%p completion:%p\n", host, host->adSubQue, host->adCmplQue);
-
-	if (host->adSubQue == NULL || host->adCmplQue == NULL) {
-		printk(RED, BLACK, "hw: nvme: %p: failed to allocate admin queue\n");
+// initialize completion queue and admin submission queue
+__always_inline__ int hw_nvme_initQue(hw_nvme_Host *host) {
+	host->cmplQue = mm_kmalloc(sizeof(hw_nvme_CmplQue *) * host->intrNum, mm_Attr_Shared, NULL);
+	host->subQue = mm_kmalloc(sizeof(hw_nvme_SubQue *) * host->intrNum, mm_Attr_Shared, NULL);
+	if (host->cmplQue == NULL || host->subQue == NULL) {
+		printk(RED, BLACK, "hw: nvme: %p: failed to allocate completion queue / submission queue array\n", host);
 		return res_FAIL;
 	}
-
-	{
-		u32 ada = hw_nvme_subQueSz | (hw_nvme_cmplQueSz << 16);
-		hw_nvme_write32(host, hw_nvme_Host_adQueAttr, ada);
+	for (int i = 0; i < host->intrNum; i++) {
+		host->cmplQue[i] = hw_nvme_allocCmplQue(host, i, hw_nvme_cmplQueSz);
+		if (host->cmplQue[i] == NULL) {
+			printk(RED, BLACK, "hw: nvme: %p: failed to allocate completion queue %d\n", host, i);
+			return res_FAIL;
+		}
+	}
+	for (int i = 0; i < host->intrNum; i++) {
+		host->subQue[i] = hw_nvme_allocSubQue(host, i, hw_nvme_subQueSz);
+		if (host->subQue[i] == NULL) {
+			printk(RED, BLACK, "hw: nvme: %p: failed to allocate submission queue %d\n", host, i);
+			return res_FAIL;
+		}
 	}
 
-	hw_nvme_write64(host, hw_nvme_Host_asQueAddr, mm_dmas_virt2Phys(host->adSubQue->entries));
-	hw_nvme_write64(host, hw_nvme_Host_acQueAddr, mm_dmas_virt2Phys(host->adCmplQue->entries));
+
+	hw_nvme_write64(host, hw_nvme_Host_asQueAddr, mm_dmas_virt2Phys(host->subQue[0]->entries));
+	hw_nvme_write64(host, hw_nvme_Host_acQueAddr, mm_dmas_virt2Phys(host->cmplQue[0]->entries));
+
+	{
+		u32 ada = (host->subQue[0]->size - 1) | ((host->cmplQue[0]->size - 1) << 16);
+		hw_nvme_write32(host, hw_nvme_Host_adQueAttr, ada);
+	}
 	
 	return res_SUCC;
 }
@@ -154,6 +197,13 @@ __always_inline__ int hw_nvme_initNsp(hw_nvme_Host *host) {
 	hw_nvme_Request *req = hw_nvme_makeReq(1);
 	hw_nvme_initReq_identify(req, hw_nvme_Request_Identify_type_NspLst, 0, nspLst);
 
+	hw_nvme_request(host, host->subQue[0], req);
+
+	for (int i = 0; nspLst[i]; i++) {
+		printk(WHITE, BLACK, "hw: nvme: %p: nspIden:%d\n", host, nspLst[i]);
+	}
+
+	return res_SUCC;
 }
 
 __always_inline__ int _initHost(hw_nvme_Host *host) {
@@ -162,9 +212,9 @@ __always_inline__ int _initHost(hw_nvme_Host *host) {
 	if (hw_nvme_reset(host) == res_FAIL) return res_FAIL;
 
 	// read doorbell stride
-	host->dbStride = 1 << (2 + ((hw_nvme_read64(host, hw_nvme_Host_ctrlCap) >> 32) & 0xf));
-
 	u64 cap = hw_nvme_read64(host, hw_nvme_Host_ctrlCap);
+	host->dbStride = 1 << (2 + ((cap >> 32) & 0xf));
+
 	// set page size to 4K, set correct io command set
 	{
 		u32 mxPgSz, mnPgSz;
@@ -197,7 +247,6 @@ __always_inline__ int _initHost(hw_nvme_Host *host) {
 	
 	hw_nvme_write32(host, hw_nvme_Host_ctrlCfg, cfg);
 
-	host->subQueIdenCnt = host->cmplQueIdenCnt = 0;
 	host->intrNum = 4;
 
 	printk(WHITE, BLACK, "hw: nvme: %p: capAddr:%p cap:%#018lx version:%x dbStride:%d\n", 
@@ -205,7 +254,7 @@ __always_inline__ int _initHost(hw_nvme_Host *host) {
 
 	if (hw_nvme_initIntr(host) == res_FAIL) return res_FAIL;
 
-	if (hw_nvme_initAdQue(host) == res_FAIL) return res_FAIL;
+	if (hw_nvme_initQue(host) == res_FAIL) return res_FAIL;
 
 	// launch nvme and get namespace information
 	hw_nvme_write32(host, hw_nvme_Host_ctrlCfg, hw_nvme_read32(host, hw_nvme_Host_ctrlCfg) | 1);

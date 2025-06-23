@@ -74,26 +74,23 @@ typedef struct hw_nvme_Request {
 } hw_nvme_Request;
 
 typedef struct hw_nvme_CmplQue {
-	u32 size, pos;
-	u32 phase, iden;
-
-	
+	u16 size, pos;
+	u16 phase, iden;
 
 	hw_nvme_CmplQueEntry *entries;
 } hw_nvme_CmplQue;
 
 typedef struct hw_nvme_SubQue {
-	u32 size, load;
+	u16 size, load;
 	// since that controller can not guarantee the process order of command in ring,
 	// we need to update the load by checking whether the head of queue has been handled.
-	u32 tail, head;
+	u16 tail, head;
 
-	u32 iden;
+	u16 iden;
 
 	SpinLock lck;
 	
 	hw_nvme_SubQueEntry *entries;
-	hw_nvme_CmplQue *trgQue;
 
 	hw_nvme_Request *req[0];
 } hw_nvme_SubQue;
@@ -101,7 +98,6 @@ typedef struct hw_nvme_SubQue {
 typedef struct hw_nvme_Nsp {
 	int nspId;
 	hw_nvme_SubQue *subQue[hw_nvme_mxIoSubQueNum];
-	hw_nvme_CmplQue *cmplQue;
 } hw_nvme_Nsp;
 
 typedef struct hw_nvme_Host {
@@ -123,13 +119,13 @@ typedef struct hw_nvme_Host {
 	intr_Desc *intr;
 
 	u64 flags;
-
-	u32 subQueIdenCnt;
-	u32 cmplQueIdenCnt;
 #define hw_nvme_Host_flags_msix	0x1
 
-	hw_nvme_SubQue *adSubQue;
-	hw_nvme_CmplQue *adCmplQue;
+	// subQue[0]: admin submission queue
+	hw_nvme_SubQue **subQue;
+
+	// cmplQue[0]: admin completion queue
+	hw_nvme_CmplQue **cmplQue;
 
 	u32 nspNum;
 
@@ -145,7 +141,7 @@ __always_inline__ void hw_nvme_write32(hw_nvme_Host *host, u32 off, u32 val) { h
 
 __always_inline__ void hw_nvme_write64(hw_nvme_Host *host, u32 off, u64 val) { hal_write64(host->capRegAddr + off, val); }
 
-__always_inline__ int hw_nvme_CmplQue_phaseTag(hw_nvme_CmplQueEntry *entry) { return hal_read16((u64)&entry->status) & 1; }
+__always_inline__ int hw_nvme_CmplQueEntry_phaseTag(hw_nvme_CmplQueEntry *entry) { return hal_read16((u64)&entry->status) & 1; }
 
 __always_inline__ void hw_nvme_writeSubDb(hw_nvme_Host *host, hw_nvme_SubQue *subQue) {
 	hw_nvme_write32(host, 0x1000 + (subQue->iden << 1) * host->dbStride, subQue->tail);
@@ -162,16 +158,16 @@ int hw_nvme_freeReq(hw_nvme_Request *req);
 
 int hw_nvme_request(hw_nvme_Host *host, hw_nvme_SubQue *subQue, hw_nvme_Request *req);
 
+int hw_nvme_respone(hw_nvme_Request *req, hw_nvme_CmplQueEntry *entry);
+
 #define hw_nvme_Request_Identify_type_Nsp		0x0
 #define hw_nvme_Request_Identify_type_Ctrl		0x1
 #define hw_nvme_Request_Identify_type_NspLst	0x2
 int hw_nvme_initReq_identify(hw_nvme_Request *req, u32 type, u32 nspIden, void *buf);
 
-hw_nvme_SubQue *hw_nvme_getSubQue(hw_nvme_Host *host, int nspId, int queIdx);
+hw_nvme_SubQue *hw_nvme_allocSubQue(hw_nvme_Host *host, u32 iden, u32 queSz);
 
-hw_nvme_SubQue *hw_nvme_allocSubQue(hw_nvme_Host *host, u32 queSz, hw_nvme_CmplQue *trgQue);
-
-hw_nvme_CmplQue *hw_nvme_allocCmplQue(hw_nvme_Host *host, u32 queSz);
+hw_nvme_CmplQue *hw_nvme_allocCmplQue(hw_nvme_Host *host, u32 iden, u32 queSz);
 
 void hw_nvme_init();
 #endif

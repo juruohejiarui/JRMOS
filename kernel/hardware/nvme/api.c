@@ -2,11 +2,7 @@
 #include <mm/mm.h>
 #include <screen/screen.h>
 
-hw_nvme_SubQue *hw_nvme_getSubQue(hw_nvme_Host *host, int nspId, int queIdx) {
-	
-}
-
-hw_nvme_SubQue *hw_nvme_allocSubQue(hw_nvme_Host *host, u32 size, hw_nvme_CmplQue *trgQue) {
+hw_nvme_SubQue *hw_nvme_allocSubQue(hw_nvme_Host *host, u32 iden, u32 size) {
 	hw_nvme_SubQueEntry *entry = mm_kmalloc(sizeof(hw_nvme_SubQue) + size * sizeof(hw_nvme_SubQueEntry) + size * sizeof(hw_nvme_Request *), mm_Attr_Shared, NULL);
 	if (entry == NULL) {
 		printk(RED, BLACK, "hw: nvme: %p: failed to allocate submission queue size=%d\n", host, size);
@@ -14,19 +10,17 @@ hw_nvme_SubQue *hw_nvme_allocSubQue(hw_nvme_Host *host, u32 size, hw_nvme_CmplQu
 	}
 	hw_nvme_SubQue *que = (void *)(entry + size);
 	que->entries = entry;
-	que->iden = host->subQueIdenCnt++;
+	que->iden = iden;
 
-	que->tail = 0;
+	que->tail = que->head = 0;
 	que->size = size;
 	que->load = 0;
-
-	que->trgQue = trgQue;
 
 	SpinLock_init(&que->lck);
 	return que;
 }
 
-hw_nvme_CmplQue *hw_nvme_allocCmplQue(hw_nvme_Host *host, u32 size) {
+hw_nvme_CmplQue *hw_nvme_allocCmplQue(hw_nvme_Host *host, u32 iden, u32 size) {
 	hw_nvme_CmplQueEntry *entry = mm_kmalloc(sizeof(hw_nvme_CmplQue) + size * sizeof(hw_nvme_CmplQueEntry), mm_Attr_Shared, NULL);
 	if (entry == NULL) {
 		printk(RED, BLACK, "hw: nvme: %p: failed to allocate completion queue size=%d\n", host, size);
@@ -34,8 +28,8 @@ hw_nvme_CmplQue *hw_nvme_allocCmplQue(hw_nvme_Host *host, u32 size) {
 	}
 	hw_nvme_CmplQue *que = (void *)(entry + size);
 	que->entries = entry;
-	que->iden = host->cmplQueIdenCnt++;
-	que->phase = 0;
+	que->iden = iden;
+	que->phase = 1;
 
 	que->pos = 0;
 	que->size = size;
@@ -88,4 +82,14 @@ int hw_nvme_request(hw_nvme_Host *host, hw_nvme_SubQue *subQue, hw_nvme_Request 
 	while (hw_nvme_tryInsReq(subQue, req) == res_FAIL) ;
 	hw_nvme_writeSubDb(host, subQue);
 	task_Request_send(&req->req);
+
+	printk(WHITE, BLACK, "hw: nvme: %p: request %p: response: status:%02x\n", host, req, req->res.status);
+}
+
+int hw_nvme_respone(hw_nvme_Request *req, hw_nvme_CmplQueEntry *entry) {
+	// copy the response to request
+	memcpy(entry, &req->res, sizeof(hw_nvme_CmplQueEntry));
+	// send the request
+	task_Request_response(&req->req);
+	return res_SUCC;
 }
