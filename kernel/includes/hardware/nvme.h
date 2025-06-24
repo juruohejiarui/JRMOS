@@ -36,12 +36,14 @@ typedef struct hw_nvme_SubQueEntry {
 	u32 dw2;
 	u32 dw3;
 
+	// dword 4 ~ 5
 	// metadata pointer(MPTR)
 	union {
 		u32 metaPtr32[2];
 		u64 metaPtr;
 	};
 
+	// dword 6 ~ 7
 	// data pointer(DPTR)
 	union {
 		u32 dtPtr32[4];
@@ -91,6 +93,7 @@ typedef struct hw_nvme_SubQue {
 	SpinLock lck;
 	
 	hw_nvme_SubQueEntry *entries;
+	hw_nvme_CmplQue *trg;
 
 	hw_nvme_Request *req[0];
 } hw_nvme_SubQue;
@@ -195,7 +198,13 @@ typedef struct hw_nvme_Dev {
 	int nspId;
 	u64 size;
 
+	struct hw_nvme_Host *host;
+
 	hw_DiskDev diskDev;
+
+	SpinLock lck;
+	u64 reqBitmap;
+	hw_nvme_Request *reqs[64]; 
 } hw_nvme_Dev;
 
 typedef struct hw_nvme_Host {
@@ -205,6 +214,7 @@ typedef struct hw_nvme_Host {
 
 	u16 mxQueSz;
 
+#define hw_nvme_Host_mxIntrNum 4
 	u16 intrNum;
 
 	u16 devNum;
@@ -263,9 +273,30 @@ int hw_nvme_respone(hw_nvme_Request *req, hw_nvme_CmplQueEntry *entry);
 #define hw_nvme_Request_Identify_type_NspLst	0x2
 int hw_nvme_initReq_identify(hw_nvme_Request *req, u32 tp , u32 nspIden, void *buf);
 
-hw_nvme_SubQue *hw_nvme_allocSubQue(hw_nvme_Host *host, u32 iden, u32 queSz);
+int hw_nvme_initReq_createSubQue(hw_nvme_Request *req, hw_nvme_SubQue *subQue);
+
+int hw_nvme_initReq_createCmplQue(hw_nvme_Request *req, hw_nvme_CmplQue *cmplQue);
+
+hw_nvme_SubQue *hw_nvme_allocSubQue(hw_nvme_Host *host, u32 iden, u32 queSz, hw_nvme_CmplQue *trg);
 
 hw_nvme_CmplQue *hw_nvme_allocCmplQue(hw_nvme_Host *host, u32 iden, u32 queSz);
+
+// no chk() for nvme device driver, always return res_FAIL
+int hw_nvme_devChk(hw_Device *dev);
+
+// configure device, register file system etc
+int hw_nvme_devCfg(hw_Device *dev);
+
+// install device, enable file system etc
+int hw_nvme_devInstall(hw_Device *dev);
+
+int hw_nvme_devUninstall(hw_Device *dev);
+
+u64 hw_nvme_devSize(hw_DiskDev *dev);
+
+u64 hw_nvme_devRead(hw_DiskDev *dev, u64 offset, u64 size, void *buf);
+
+u64 hw_nvme_devWrite(hw_DiskDev *dev, u64 offset, u64 size, void *buf);
 
 void hw_nvme_init();
 #endif

@@ -268,6 +268,7 @@ typedef struct hw_usb_xhci_Host {
 
     intr_Desc *intr;
 
+    #define hw_usb_xhci_Host_mxIntrNum 8
     u32 intrNum;
 
     u32 flag;

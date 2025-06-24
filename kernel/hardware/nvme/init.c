@@ -4,7 +4,7 @@
 #include <mm/mm.h>
 #include <lib/algorithm.h>
 
-hw_Driver hw_nvme_drv;
+hw_Driver hw_nvme_drv, hw_nvme_devDrv;
 
 intr_handlerDeclare(hw_nvme_msiHandler) {
 	hw_nvme_Host *host = (void *)(param & ~0xful);
@@ -173,8 +173,8 @@ __always_inline__ int hw_nvme_initQue(hw_nvme_Host *host) {
 	u32 cmplQueSz, subQueSz;
 	{
 		u64 cap = hw_nvme_read64(host, hw_nvme_Host_ctrlCap);
-		cmplQueSz = min(hw_nvme_cmplQueSz, cap & 0xffff);
-		subQueSz = min(hw_nvme_subQueSz, cap & 0xffff);
+		cmplQueSz = min(hw_nvme_cmplQueSz, (cap & 0xffff) + 1);
+		subQueSz = min(hw_nvme_subQueSz, (cap & 0xffff) + 1);
 	}
 	for (int i = 0; i < host->intrNum; i++) {
 		host->cmplQue[i] = hw_nvme_allocCmplQue(host, i, cmplQueSz);
@@ -184,7 +184,7 @@ __always_inline__ int hw_nvme_initQue(hw_nvme_Host *host) {
 		}
 	}
 	for (int i = 0; i < host->intrNum; i++) {
-		host->subQue[i] = hw_nvme_allocSubQue(host, i, subQueSz);
+		host->subQue[i] = hw_nvme_allocSubQue(host, i, subQueSz, host->cmplQue[i]);
 		if (host->subQue[i] == NULL) {
 			printk(RED, BLACK, "hw: nvme: %p: failed to allocate submission queue %d\n", host, i);
 			return res_FAIL;
@@ -202,6 +202,28 @@ __always_inline__ int hw_nvme_initQue(hw_nvme_Host *host) {
 		hw_nvme_write32(host, hw_nvme_Host_adQueAttr, ada);
 	}
 	
+	return res_SUCC;
+}
+
+__always_inline__ int hw_nvme_registerQue(hw_nvme_Host *host) {
+	hw_nvme_Request *req = hw_nvme_makeReq(1);
+	for (int i = 1; i < host->intrNum; i++) {
+		hw_nvme_initReq_createCmplQue(req, host->cmplQue[i]);
+		hw_nvme_request(host, host->subQue[0], req);
+		if (req->res.status != 0x01) {
+			printk(RED, BLACK, "hw: nvme: %p: failed to register io completion queue #%d\n", host, i);
+			return res_FAIL;
+		}
+
+		hw_nvme_initReq_createSubQue(req, host->subQue[i]);
+		hw_nvme_request(host, host->subQue[0], req);
+		if (req->res.status != 0x01) {
+			printk(RED, BLACK, "hw: nvme: %p: failed to register io submission queue #%d\n", host, i);
+			return res_FAIL;
+		}
+	}
+
+	hw_nvme_freeReq(req);
 	return res_SUCC;
 }
 
@@ -225,11 +247,25 @@ __always_inline__ int hw_nvme_initNsp(hw_nvme_Host *host) {
 
 		hw_nvme_request(host, host->subQue[0], req);
 
-		printk(WHITE, BLACK, "hw: nvme: %p: nsp #%d: nspSz:%ld nspCap:%ld nspUtil:%ld lbaSupport: \n", host, nspLst[i], nsp->nspSz, nsp->nspCap, nsp->nspUtil);
+		printk(WHITE, BLACK, "hw: nvme: %p: nsp #%d: nspSz:%ld nspCap:%ld nspUtil:%ld\n", host, nspLst[i], nsp->nspSz, nsp->nspCap, nsp->nspUtil);
 
-		for (int j = 0; j <= nsp->numOfLbaFormat; j++)
-			printk(WHITE, BLACK, "\t[%d]: metaSz:%d dtSz:2^%d=%d\n", j, nsp->lbaFormat[j].metaSz, nsp->lbaFormat[j].lbaDtSz, (1ul << nsp->lbaFormat[j].lbaDtSz));
+		hw_nvme_Dev *dev = &host->dev[i];
+
+		dev->size = nsp->nspUtil;
+		dev->host = host;
+
+		dev->nspId = nspLst[i];
+
+		dev->diskDev.device.parent = &host->pci.device;
+		dev->diskDev.device.drv = &hw_nvme_devDrv;
+
+		dev->diskDev.device.drv->cfg(&dev->diskDev.device);
+
+		// install device
+		hw_DiskDev_install(&dev->diskDev);
 	}
+
+	hw_nvme_freeReq(req);
 
 	mm_kfree(nspLst, mm_Attr_Shared);
 	mm_kfree(nsp, mm_Attr_Shared);
@@ -279,7 +315,8 @@ __always_inline__ int _initHost(hw_nvme_Host *host) {
 	
 	hw_nvme_write32(host, hw_nvme_Host_ctrlCfg, cfg);
 
-	host->intrNum = 4;
+	// there must be at least 2 interrupt, one for admin completion queue, the other for io completion queue
+	host->intrNum = min(max(2, cpu_num), hw_nvme_Host_mxIntrNum);
 
 	printk(WHITE, BLACK, "hw: nvme: %p: capAddr:%p cap:%#018lx version:%x dbStride:%d\n", 
 		host, host->capRegAddr, hw_nvme_read64(host, hw_nvme_Host_ctrlCap), hw_nvme_read32(host, hw_nvme_Host_version), host->dbStride);
@@ -312,6 +349,8 @@ __always_inline__ int _initHost(hw_nvme_Host *host) {
 	// unmask interrupts
 	hw_nvme_write32(host, hw_nvme_Host_intrMskClr, (1u << host->intrNum) - 1);
 
+	if (hw_nvme_registerQue(host) == res_FAIL) return res_FAIL;
+
 	if (hw_nvme_initNsp(host) == res_FAIL) return res_FAIL;
 	
 	return res_SUCC;
@@ -330,5 +369,9 @@ int hw_nvme_cfg(hw_Device *dev) {
 void hw_nvme_init() {
 	hw_driver_initDriver(&hw_nvme_drv, "hw: nvme", hw_nvme_chk, hw_nvme_cfg, NULL, NULL);
 
+	hw_driver_initDriver(&hw_nvme_devDrv, "hw: nvme: dev", hw_nvme_devChk, hw_nvme_devCfg, hw_nvme_devInstall, hw_nvme_devUninstall);
+
 	hw_driver_register(&hw_nvme_drv);
+
+	hw_driver_register(&hw_nvme_devDrv);
 }

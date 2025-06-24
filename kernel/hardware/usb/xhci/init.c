@@ -156,7 +156,7 @@ __always_inline__ int _initHost(hw_usb_xhci_Host *host) {
 		(hw_usb_xhci_OpReg_read32(host, hw_usb_xhci_Host_opReg_cfg) & ((1u << 10) - 1)) | (1u << 8) | hw_usb_xhci_mxSlot(host));
 	
 	// determine the number of interrupts
-	host->intrNum = min(4, hw_usb_xhci_mxIntr(host));
+	host->intrNum = min(hw_usb_xhci_Host_mxIntrNum, min(cpu_num, hw_usb_xhci_mxIntr(host)));
 
 	host->intr = mm_kmalloc(sizeof(intr_Desc) * host->intrNum, mm_Attr_Shared, NULL);
 	if (host->intr == NULL) {
