@@ -19,6 +19,7 @@ typedef struct hw_usb_xhci_Request {
     task_Request req;
     #define hw_usb_xhci_Request_flags_Finished  (1u << 0)
     #define hw_usb_xhci_Request_flags_Command   (1u << 1)
+    #define hw_usb_xhci_Request_flags_Abort     (1u << 2)
     hw_usb_xhci_TRB res;
     hw_usb_xhci_TRB input[];
 } __attribute__ ((packed)) hw_usb_xhci_Request;
@@ -229,6 +230,8 @@ typedef struct hw_usb_xhci_Device {
     u16 portId, speed;
     u32 flag;
     u32 intrTrg;
+    // enabled ctx bitmap
+    u32 ctxFlag;
 
     #define hw_usb_xhci_Device_flag_Enbl    (1ul << 0)
     // whether the device is directly connected to the host
@@ -269,7 +272,7 @@ typedef struct hw_usb_xhci_Host {
     intr_Desc *intr;
 
     #define hw_usb_xhci_Host_mxIntrNum 8
-    u32 intrNum;
+    u16 intrNum, portNum;
 
     u32 flag;
 

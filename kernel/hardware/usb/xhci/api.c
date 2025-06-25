@@ -53,6 +53,7 @@ u8 hw_usb_xhci_getSlotTp(hw_usb_xhci_Host * host, u32 portIdx) {
     return 0;
 }
 
+// allocate input context, which is private memory block
 hw_usb_xhci_InCtx *hw_usb_xhci_allocInCtx(hw_usb_xhci_Host *host) {
     void *ctx = mm_kmalloc((host->flag & hw_usb_xhci_Host_flag_Ctx64) ? sizeof(hw_usb_xhci_InCtx64) : sizeof(hw_usb_xhci_InCtx32), 0, NULL);
     if (!ctx) {
@@ -166,7 +167,7 @@ hw_usb_xhci_Request *hw_usb_xhci_makeRequest(u32 size, u32 flags) {
         printk(RED, BLACK, "hw: xhci: alloc request failed\n");
         return NULL;
     }
-    task_Request_init(&req->req, task_Request_Flag_Abort);
+    task_Request_init(&req->req, (flags & hw_usb_xhci_Request_flags_Abort ? task_Request_Flag_Abort : 0));
     memset(req->input, 0, size * sizeof(hw_usb_xhci_TRB));
     req->flags = flags;
     req->inputSz = size;
@@ -265,7 +266,6 @@ hw_usb_xhci_Device *hw_usb_xhci_newDev(hw_usb_xhci_Host *host, hw_usb_xhci_Devic
 
     dev->device.drv = NULL;
     dev->device.parent = &host->pci.device;
-
     // make new task for the device
     dev->mgrTsk = task_newTask(hw_usb_xhci_devMgrTsk, (u64)dev, task_attr_Builtin);
 
@@ -275,6 +275,7 @@ hw_usb_xhci_Device *hw_usb_xhci_newDev(hw_usb_xhci_Host *host, hw_usb_xhci_Devic
 
 int hw_usb_xhci_freeDev(hw_usb_xhci_Device *dev) {
     if (!dev) return res_FAIL;
+    SafeList_del(&dev->host->devLst, &dev->lst);
     if (mm_kfree(dev, mm_Attr_Shared) == res_FAIL) {
         printk(RED, BLACK, "hw: xhci: free device failed\n");
         return res_FAIL;

@@ -77,4 +77,8 @@ __always_inline__ RBNode *RBTree_getRightLck(RBTree *tree) {
 
 RBNode *RBTree_getNext(RBTree *tree, RBNode *node);
 
+RBNode *RBTree_getNextLck(RBTree *tree, RBNode *node);
+
+void RBTree_debug(RBTree *tree);
+
 #endif

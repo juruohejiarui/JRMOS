@@ -13,7 +13,7 @@ void task_syscall_initTbl() {
 
 int task_syscall_init() {
 	if (hal_task_syscall_init() == res_FAIL) return res_FAIL;
-	printk(WHITE, BLACK, "syscall: cpu #%d: initialized\n", task_current->cpuId);
+	// printk(WHITE, BLACK, "syscall: cpu #%d: initialized\n", task_current->cpuId);
 	return res_SUCC;
 }
 

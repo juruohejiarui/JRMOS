@@ -11,7 +11,7 @@ int hw_usb_hid_keyboard(hw_usb_xhci_Device *dev, hw_hid_Parser *parser, int inEp
     hw_hid_KeyboardInput input;
     hw_hid_KeyboardOutput output;
 
-    hw_usb_xhci_Request *req = hw_usb_xhci_makeRequest(1, 0);
+    hw_usb_xhci_Request *req = hw_usb_xhci_makeRequest(1, hw_usb_xhci_Request_flags_Abort);
     
     hw_usb_xhci_TRB_setData(&req->input[0], mm_dmas_virt2Phys(rawReport));
     hw_usb_xhci_TRB_setTp(&req->input[0], hw_usb_xhci_TRB_Tp_Normal);

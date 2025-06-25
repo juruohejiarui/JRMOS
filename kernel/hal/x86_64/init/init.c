@@ -87,6 +87,8 @@ void hal_init_init() {
 
 	task_initIdle();
 
+	task_signal_init();
+
 	hal_cpu_chk();
 
 	if (task_syscall_init() == res_FAIL) while (1) hal_hw_hlt();
@@ -95,7 +97,7 @@ void hal_init_init() {
 
 	intr_unmask();
 
-	task_freeMgrTsk = task_newSubTask(task_freeMgr, 0, task_attr_Builtin);
+	task_sche_freeMgrTsk = task_newSubTask(task_freeMgr, 0, task_attr_Builtin);
 
 	init_init();
 
@@ -120,7 +122,7 @@ void hal_init_initAP() {
 
 	hal_cpu_chk();
 
-	printk(WHITE, BLACK, "init: cpu #%d initialized\n", task_current->cpuId);
+	// printk(WHITE, BLACK, "init: cpu #%d initialized\n", task_current->cpuId);
 	hal_hw_mfence();
 
 	while (1) {

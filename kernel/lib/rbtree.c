@@ -1,4 +1,5 @@
 #include <lib/rbtree.h>
+#include <screen/screen.h>
 
 #define parent(nd) 	((RBNode *)((nd)->unionParCol & ~3ul))
 #define color(nd) 	((nd)->unionParCol & 1)
@@ -226,14 +227,9 @@ void RBTree_del(RBTree *tree, RBNode *node) {
 }
 
 RBNode *RBTree_getRight(RBTree *tree) {
-	SpinLock_lock(&tree->lock);
-	if (tree == NULL || tree->root == NULL) {
-		SpinLock_unlock(&tree->lock);
-		return NULL;
-	}
+	if (tree == NULL || tree->root == NULL) { return NULL; }
 	RBNode *res = tree->root;
 	while (res->right) res = res->right;
-	SpinLock_unlock(&tree->lock);
 	return res;
 }
 
@@ -258,4 +254,23 @@ RBNode *RBTree_getNext(RBTree *tree, RBNode *node) {
 	node = _getNext(tree, node);
 	SpinLock_unlock(&tree->lock);
 	return node;
+}
+
+RBNode *RBTree_getNextLck(RBTree *tree, RBNode *node) {
+	SpinLock_lock(&tree->lock);
+	RBNode *nxt = RBTree_getNext(tree, node);
+	SpinLock_unlock(&tree->lock);
+	return nxt;
+}
+
+void _debug(RBNode *node, int dep) {
+	for (int i = 0; i < dep; i++) printk(WHITE, BLACK, "    ");
+	printk(WHITE, BLACK, "%p: left=%p right=%p", node, node->left, node->right);
+	if (node->left) _debug(node->left, dep + 1);
+	if (node->right) _debug(node->right, dep + 1);
+}
+
+void RBTree_debug(RBTree *tree) {
+	printk(WHITE, BLACK, "tree: %p, left=%p root=%p\n", tree, tree->left, tree->root);
+	if (tree->root) _debug(tree->root, 0);
 }

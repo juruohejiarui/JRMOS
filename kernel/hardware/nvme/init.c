@@ -85,8 +85,6 @@ __always_inline__ int hw_nvme_initIntr(hw_nvme_Host *host) {
 	host->msi = NULL;
 	host->flags &= ~hw_nvme_Host_flags_msix;
 
-	host->intrNum = 4;
-
 	for (hw_pci_CapHdr *hdr = hw_pci_getNxtCap(host->pci.cfg, NULL); hdr != NULL; hdr = hw_pci_getNxtCap(host->pci.cfg, hdr)) {
 		switch (hdr->capId) {
 			case hw_pci_CapHdr_capId_MSI :
@@ -104,6 +102,7 @@ __always_inline__ int hw_nvme_initIntr(hw_nvme_Host *host) {
 		return res_FAIL;
 	}
 	
+	host->intrNum = max(2, min(hw_nvme_Host_mxIntrNum, cpu_num));
 	// allocate interrupt descriptor
 	host->intr = mm_kmalloc(sizeof(intr_Desc) * host->intrNum, mm_Attr_Shared, NULL);
 	if (host->intr == NULL) {

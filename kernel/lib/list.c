@@ -27,17 +27,21 @@ void SafeList_del(SafeList *list, ListNode *node) {
 	SpinLock_unlockMask(&list->lck);
 }
 
-void SafeList_delHead(SafeList *list) {
+ListNode *SafeList_delHead(SafeList *list) {
 	SpinLock_lockMask(&list->lck);
+	ListNode *nd = list->head.next;
 	List_del(list->head.next);
 	SpinLock_unlockMask(&list->lck);
+	return nd;
 
 }
 
-void SafeList_delTail(SafeList *list) {
+ListNode *SafeList_delTail(SafeList *list) {
 	SpinLock_lockMask(&list->lck);
+	ListNode *nd = list->head.prev;
 	List_del(list->head.prev);
 	SpinLock_unlockMask(&list->lck);
+	return nd;
 }
 
 ListNode *SafeList_getHead(SafeList *list) {

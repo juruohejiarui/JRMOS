@@ -30,11 +30,6 @@ int hw_DiskDev_install(hw_DiskDev *dev) {
 		SafeList_insTail(&hw_diskdev_enbLst, &dev->lst);
 		printk(GREEN, BLACK, "hw: disk: succ to install device %p, size=%ld\n", dev, dev->size(dev));
 	}
-
-	u8 *lba = mm_kmalloc(hw_diskdev_lbaSz, mm_Attr_Shared, NULL);
-	dev->read(dev, 1, 1, lba);
-	printk(WHITE, BLACK, "%s\n", lba);
-	mm_kfree(lba, mm_Attr_Shared);
 	return res;
 }
 

@@ -1,7 +1,7 @@
 #ifndef __HARDWARE_PCI_DEVNAME_H__
 #define __HARDWARE_PCI_DEVNAME_H__
 
-char *hw_pci_devName[256][256] = {
+const char *hw_pci_devName[256][256] = {
 	[0x01][0x0] = "SCSI Bus Controller",
 	[0x01][0x1] = "IDE Controller",
 	[0x01][0x2] = "Floppy Disk Controller",

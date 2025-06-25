@@ -101,6 +101,7 @@ __always_inline__ int _initHost(hw_usb_xhci_Host *host) {
 	printk(WHITE, BLACK, "hw: xhci: host %p: mxslot:%d mxintr:%d mxport:%d mxerst:%d mxscr:%d\n",
 		host, hw_usb_xhci_mxSlot(host), hw_usb_xhci_mxIntr(host), hw_usb_xhci_mxPort(host), hw_usb_xhci_mxERST(host), hw_usb_xhci_mxScrSz(host));
 
+
 	// check if the controller support neccessary features: 4K page, 64bit address, port power control
 	if (~hw_usb_xhci_OpReg_read32(host, hw_usb_xhci_Host_opReg_pgSize) & 0x1) {
 		printk(RED, BLACK, "hw: xhci: host %p does not support 4K page\n", host);
@@ -270,12 +271,13 @@ __always_inline__ int _initHost(hw_usb_xhci_Host *host) {
 	}
 	memset(host->dev, 0, sizeof(hw_usb_xhci_Device *) * (hw_usb_xhci_mxSlot(host) + 1));
 	
-	host->portDev = mm_kmalloc(sizeof(hw_usb_xhci_Device *) * (hw_usb_xhci_mxPort(host) + 1), mm_Attr_Shared, NULL);
+	host->portNum = hw_usb_xhci_mxPort(host) + 1;
+	host->portDev = mm_kmalloc(sizeof(hw_usb_xhci_Device *) * host->portNum, mm_Attr_Shared, NULL);
 	if (host->portDev == NULL) {
 		printk(RED, BLACK, "hw: xhci: host %p failed to allocate port device array\n", host);
 		return res_FAIL;
 	}
-	memset(host->portDev, 0, sizeof(hw_usb_xhci_Device *) * (hw_usb_xhci_mxPort(host) + 1));
+	memset(host->portDev, 0, sizeof(hw_usb_xhci_Device *) * host->portNum);
 
 	// release this host from BIOS
 	for (void *extCap = hw_usb_xhci_nxtExtCap(host, NULL); extCap; extCap = hw_usb_xhci_nxtExtCap(host, extCap)) {
@@ -351,11 +353,10 @@ __always_inline__ int _initHost(hw_usb_xhci_Host *host) {
 
 	// for qemu xhci, call portChange manually
 	if (host->pci.cfg->vendorId == 0x1b36 && host->pci.cfg->deviceId == 0x000d) {
-		for (int i = hw_usb_xhci_mxPort(host); i > 0; i--)
+		for (int i = 1; i <= host->portNum; i++)
 			if (hw_usb_xhci_PortReg_read(host, i, hw_usb_xhci_Host_portReg_sc) & 1)
 				hw_usb_xhci_portChange(host, i);
 	}
- 
 	return res_SUCC;
 }
 
@@ -395,7 +396,8 @@ int hw_usb_xhci_devInit(hw_usb_xhci_Device *dev) {
 	// get slot ID
 	hw_usb_xhci_Host *host = dev->host;
 
-	hw_usb_xhci_Request *req = hw_usb_xhci_makeRequest(1, hw_usb_xhci_Request_flags_Command), *req2 = hw_usb_xhci_makeRequest(3, 0);
+	hw_usb_xhci_Request *req = hw_usb_xhci_makeRequest(1, hw_usb_xhci_Request_flags_Command | hw_usb_xhci_Request_flags_Abort), 
+		*req2 = hw_usb_xhci_makeRequest(3, hw_usb_xhci_Request_flags_Abort);
 	hw_usb_xhci_TRB_setTp(&req->input[0], hw_usb_xhci_TRB_Tp_EnblSlot);
 	
 	// get slot Type
@@ -433,6 +435,7 @@ int hw_usb_xhci_devInit(hw_usb_xhci_Device *dev) {
 
 	{
 		void *ctrlCtx = hw_usb_xhci_getCtxEntry(host, dev->inCtx, hw_usb_xhci_InCtx_Ctrl);
+		// addflag
 		hw_usb_xhci_writeCtx(ctrlCtx, 1, ~0x0u, (1u << 0) | (1u << 1));
 	}
 

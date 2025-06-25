@@ -6,7 +6,7 @@
 int hw_usb_hid_mouse(hw_usb_xhci_Device *dev, hw_hid_Parser *parser, int inEp) {
     printk(WHITE, BLACK, "hw: usb hid: device %p is a mouse with parser %p.\n", dev, parser);
 
-    hw_usb_xhci_Request *req = hw_usb_xhci_makeRequest(1, 0);
+    hw_usb_xhci_Request *req = hw_usb_xhci_makeRequest(1, hw_usb_xhci_Request_flags_Abort);
 
     u32 sz = parser->reportEnum[hw_hid_ReportTp_Input].report[0]->sz / 8;
 

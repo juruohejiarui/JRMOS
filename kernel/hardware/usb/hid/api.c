@@ -3,7 +3,7 @@
 #include <screen/screen.h>
 
 int hw_usb_hid_setReport(hw_usb_xhci_Device *dev, u8 *report, u32 reportSz, u8 reportId, u8 interId) {
-    hw_usb_xhci_Request *req = hw_usb_xhci_makeRequest(3, 0);
+    hw_usb_xhci_Request *req = hw_usb_xhci_makeRequest(3, hw_usb_xhci_Request_flags_Abort);
     hw_usb_xhci_mkCtrlDataReq(req,
         hw_usb_xhci_mkCtrlReqSetup(0x21, 0x09, 0x0200 | reportId, interId, reportSz),
         hw_usb_xhci_TRB_ctrl_dir_out,

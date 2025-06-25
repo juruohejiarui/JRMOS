@@ -17,10 +17,7 @@ __always_inline__ void task_Request_init(task_Request *req, u64 flags) {
 	req->flags.value = flags;
 }
 
-__always_inline__ void task_Request_send(task_Request *req) {
-	Atomic_btr(&req->flags, 1);
-	if (req->flags.value & task_Request_Flag_Abort) task_sche_waitReq();
-}
+void task_Request_send(task_Request *req);
 
 __always_inline__ void task_Request_response(task_Request *req) {
 	Atomic_bts(&req->flags, 1);
@@ -31,4 +28,8 @@ __always_inline__ int task_Request_isFinished(task_Request *req) {
 	return req->flags.value & task_Request_Flag_Finish;
 }
 
+// give up all the request, must guarantee that those request will not be responsed
+__always_inline__ void task_Request_giveUp() {
+	task_current->reqWait.value = 0;
+}
 #endif 

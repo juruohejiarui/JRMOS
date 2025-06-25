@@ -69,9 +69,9 @@ int SafeList_isEmpty(SafeList *list);
 
 void SafeList_del(SafeList *list, ListNode *node);
 
-void SafeList_delHead(SafeList *list);
+ListNode *SafeList_delHead(SafeList *list);
 
-void SafeList_delTail(SafeList *list);
+ListNode *SafeList_delTail(SafeList *list);
 
 ListNode *SafeList_getHead(SafeList *list);
 

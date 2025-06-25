@@ -67,8 +67,9 @@ int hw_usb_hid_config(hw_Device *dev) {
         hw_usb_xhci_writeCtx(inCtx, 1, ~0x0u, 1);
         for (int i = 0; i < interDesc->bNumEp; i++) {
             int epId = hw_usb_devdesc_Ep_epId(epDesc[i]), epTp = hw_usb_devdesc_Ep_epTp(epDesc[i]);
-            // printk(WHITE, BLACK, "hw: usb hid: device %p ep %d: id:%d tp:%d\n", usbDev, i, epId, epTp);
+            printk(WHITE, BLACK, "hw: usb hid: device %p ep %d: id:%d tp:%d\n", usbDev, i, epId, epTp);
             // write addflags of ctrl context
+            bit_set1_32(&usbDev->ctxFlag, epId);
             hw_usb_xhci_writeCtx(inCtx, 1, (1u << epId), 1);
 
             // write slot context
@@ -101,8 +102,8 @@ int hw_usb_hid_config(hw_Device *dev) {
     }
     
     // set "configure endpoint command"
-    hw_usb_xhci_Request *req = hw_usb_xhci_makeRequest(1, hw_usb_xhci_Request_flags_Command), 
-        *req2 = hw_usb_xhci_makeRequest(2, 0);
+    hw_usb_xhci_Request *req = hw_usb_xhci_makeRequest(1, hw_usb_xhci_Request_flags_Command | hw_usb_xhci_Request_flags_Abort), 
+        *req2 = hw_usb_xhci_makeRequest(2, hw_usb_xhci_Request_flags_Abort);
     if (req == NULL || req2 == NULL) {
         printk(RED, BLACK, "hw: usb hid: device %p failed to allocate request\n", dev);
         if (req) hw_usb_xhci_freeRequest(req);
@@ -129,7 +130,7 @@ int hw_usb_hid_config(hw_Device *dev) {
     printk(GREEN, BLACK, "hw: usb hid: device %p set configuration\n", dev);
 
     hw_usb_xhci_freeRequest(req2);
-    req2 = hw_usb_xhci_makeRequest(3, 0);
+    req2 = hw_usb_xhci_makeRequest(3, hw_usb_xhci_Request_flags_Abort);
 
     u8 *report = NULL; u32 reportSz = 0;
     // get the first report descriptor
@@ -202,7 +203,7 @@ int hw_usb_hid_install(hw_Device *dev) {
         return res_FAIL;
     }
     // set_protocol & set_idle
-    hw_usb_xhci_Request *req = hw_usb_xhci_makeRequest(2, 0);
+    hw_usb_xhci_Request *req = hw_usb_xhci_makeRequest(2, hw_usb_xhci_Request_flags_Abort);
     hw_usb_xhci_mkCtrlReq(req, hw_usb_xhci_mkCtrlReqSetup(0x21, 0x0b, 1, usbDev->inter->bIntrNum, 0), hw_usb_xhci_TRB_ctrl_dir_out);
     hw_usb_xhci_request(usbDev->host, usbDev->epRing[hw_usb_xhci_DevCtx_CtrlEp], req, usbDev, hw_usb_xhci_DbReq_make(hw_usb_xhci_DevCtx_CtrlEp, 0));
     if (hw_usb_xhci_TRB_getCmplCode(&req->res) != hw_usb_xhci_TRB_CmplCode_Succ) {

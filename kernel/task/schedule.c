@@ -70,6 +70,16 @@ void task_sche_yield() {
     hal_task_sche_yield();
 }
 
+void task_sche_wake(task_TaskStruct *task) {
+    SpinLock_lockMask(cpu_desc[task->cpuId].scheLck);
+    if (task->state == task_state_Sleep) {
+        SafeList_del(&task_mgr.sleepTsks, &task->scheNd);
+        RBTree_ins(&task_mgr.tasks[task->cpuId], &task->rbNd);
+        task->state = task_state_Idle;
+    }
+    SpinLock_unlockMask(cpu_desc[task->cpuId].scheLck);
+}
+
 void task_sche_preempt(task_TaskStruct *task) {
     // mask interrupt
     {
@@ -86,7 +96,6 @@ void task_sche_preempt(task_TaskStruct *task) {
             task->state = task_state_NeedPreempt;
             break;
         case task_state_NeedSchedule:
-        case task_state_NeedSleep:
             printk(WHITE, BLACK, "task #%d: preempt #%d from need schedule/need sleep\n", task_current->pid, task->pid);
             task->state = task_state_Running;
             break;
@@ -103,22 +112,26 @@ void task_sche_preempt(task_TaskStruct *task) {
     SpinLock_unlockMask(&task_mgr.scheLck[task->cpuId]);
 }
 
-int cnt = 0;
+void task_sche_waitReq() {
+	Atomic_inc(&task_current->reqWait);
+	// try to yield, scheduler will put current task to sleep task list
+	while (task_current->reqWait.value > 0) task_sche_yield();
+}
 
 void task_sche_finishReq(task_TaskStruct *task) {
+    SpinLock_lockMask(&task_mgr.scheLck[task->cpuId]);
     Atomic_dec(&task->reqWait);
-    if (task_current->reqWait.value == 0) {
-        SpinLock_lockMask(&task_mgr.scheLck[task->cpuId]);
+    if (task->reqWait.value == 0) {
         // if the task is in sleep state, move it back to running state
         if (task->state == task_state_Sleep) {
-            task->state = task_state_Idle;
             SafeList_del(&task_mgr.sleepTsks, &task->scheNd);
-            RBTree_ins(cpu_getvar(tsks), &task->rbNd);
-            // sync the vRuntime of the task
             task_sche_syncVRuntime(task);
-        }
-        SpinLock_unlockMask(&task_mgr.scheLck[task->cpuId]);
+            RBTree_ins(&task_mgr.tasks[task->cpuId], &task->rbNd);
+            task->state = task_state_Idle;
+            // sync the vRuntime of the task
+        } 
     }
+    SpinLock_unlockMask(&task_mgr.scheLck[task->cpuId]);
 }
 
 // state transition for current task when switch to other task
@@ -127,12 +140,12 @@ __always_inline__ void task_sche_hangCur() {
     if (task_current->reqWait.value > 0) {
         SafeList_insTail(&task_mgr.sleepTsks, &task_current->scheNd);
         task_current->state = task_state_Sleep;
+        return ;
     }
     switch (task_current->state) {
         case task_state_NeedFree :
             task_current->state = task_state_Free;
             SafeList_insTail(&task_mgr.freeTsks, &task_current->scheNd);
-            if (task_freeMgrTsk->reqWait.value > 0) task_sche_finishReq(task_freeMgrTsk);
             break;
         default:
             task_current->state = task_state_Idle;
@@ -164,6 +177,7 @@ void task_sche() {
     return ;
 
     needSche:
+    // printk(WHITE, BLACK, "...");
     task_sche_hangCur();
     nxtTsk->state = task_state_Running;
     SpinLock_unlock(cpu_getvar(scheLck));
@@ -177,7 +191,7 @@ task_ThreadStruct *task_newThread(u64 attr) {
         return NULL;
     }
     memset(thread, 0, sizeof(task_ThreadStruct));
-    SpinLock_lock(&mm_map_krlTblLck);
+    SpinLock_lockMask(&mm_map_krlTblLck);
 
     thread->krlTblModiJiff.value = mm_map_krlTblModiJiff.value;
     thread->allocMem.value = thread->allocVirtMem.value = 0;
@@ -194,7 +208,7 @@ task_ThreadStruct *task_newThread(u64 attr) {
 
     hal_task_newThread(&thread->hal, attr);
 
-    SpinLock_unlock(&mm_map_krlTblLck);
+    SpinLock_unlockMask(&mm_map_krlTblLck);
 
     return thread;
 }
@@ -299,6 +313,7 @@ task_TaskStruct *_newTask(void *entryAddr, u64 arg, u64 attr, task_ThreadStruct 
 
     _insertNewTsk(tsk);
 
+
     return tsk;
 }
 
@@ -324,12 +339,15 @@ void task_exit(u64 res) {
     while (1) task_sche_yield();
 }
 
-task_TaskStruct *task_freeMgrTsk;
+task_TaskStruct *task_sche_freeMgrTsk;
 
 u64 task_freeMgr(u64 arg) {
     u64 tot = 0;
     while (1) {
-        if (SafeList_isEmpty(&task_mgr.freeTsks)) task_sche_waitReq();
+        while (SafeList_isEmpty(&task_mgr.freeTsks)) {
+            task_current->priority = task_Priority_Lowest;
+            task_sche_yield();
+        }
         task_current->priority = task_Priority_Running;
         while (!SafeList_isEmpty(&task_mgr.freeTsks)) {
             task_TaskStruct *tsk = container(SafeList_getHead(&task_mgr.freeTsks), task_TaskStruct, scheNd);

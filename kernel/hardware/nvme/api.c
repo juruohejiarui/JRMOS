@@ -112,8 +112,6 @@ int hw_nvme_request(hw_nvme_Host *host, hw_nvme_SubQue *subQue, hw_nvme_Request 
 
 	hw_nvme_writeSubDb(host, subQue);
 
-	printk(WHITE, BLACK, "hw: nvme: %p: write submission doorbell %d\n", host, subQue->iden);
-
 	task_Request_send(&req->req);
 
 	if (req->res.status != 0x01) {
@@ -215,8 +213,6 @@ u64 hw_nvme_devRead(hw_DiskDev *dev, u64 offset, u64 size, void *buf) {
 	hw_nvme_Request *req = nvmeDev->reqs[reqIdx];
 	hw_nvme_SubQueEntry *entry = &req->input[0];
 	hw_nvme_SubQue *subQue;
-
-	printk(WHITE, BLACK, "%d %p\n", reqIdx, req);
 
 	// make request and send
 	u64 res = 0;

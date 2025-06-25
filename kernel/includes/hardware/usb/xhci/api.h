@@ -225,6 +225,10 @@ intr_handlerDeclare(hw_usb_xhci_msiHandler);
 
 void hw_usb_xhci_portChange(hw_usb_xhci_Host *host, u32 portIdx);
 
+void hw_usb_xhci_portChgHandle(hw_usb_xhci_Host *host, int portIdx);
+
+void hw_usb_xhci_portMgrTsk(hw_usb_xhci_Host *host);
+
 void hw_usb_xhci_devMgrTsk(hw_usb_xhci_Device *dev);
 
 int hw_usb_xhci_init();

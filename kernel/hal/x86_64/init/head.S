@@ -1,5 +1,6 @@
 #include <hal/linkage.h>
 #include <hal/cpu/genasm.h>
+#include <hal/interrupt/genasm.h>
 
 .globl cpu_desc
 .globl hal_hw_apic_supportFlag
@@ -163,14 +164,20 @@ goToKernel:
     .quad hal_init_init
 
 ignoreInt:
-    cld
+    cli
+    pushq $0
+    
     // save the register in the order of struct PtraceRegs
     pushq %rax
-    pushq %rbx
-    pushq %rcx
-    pushq %rdx
+    movq %es, %rax
+    pushq %rax
+    movq %ds, %rax
+    pushq %rax
     pushq %rdi
     pushq %rsi
+    pushq %rdx
+    pushq %rcx
+    pushq %rbx
     pushq %r8
     pushq %r9
     pushq %r10
@@ -179,16 +186,29 @@ ignoreInt:
     pushq %r13
     pushq %r14
     pushq %r15
-    movq %es, %rax
-    pushq %rax
-    movq %ds, %rax
-    pushq %rax
 
     // switch the segment register to kernel data 64-bit
     movq $0x10, %rax
     movq %rax, %ds
     movq %rax, %es
 
+    movq hal_intr_PtReg_rip(%rsp), %rdi
+    callq hal_intr_chkSwapgs
+
+    movq $0xb, %rax
+    xorq %rcx, %rcx
+    cpuid
+    leaq cpu_desc(%rip), %rax
+    xorq %r8, %r8
+ignoreInt_FindCpuId:
+    cmpl hal_cpu_Desc_x2apic(%rax), %edx
+    je ignoreInt_FindCpuId_End
+    addq $cpu_DescSize, %rax
+    incq %r8
+    jmp ignoreInt_FindCpuId
+ignoreInt_FindCpuId_End:
+    // printk(RED, BLACK, "Unknown interrupt or fault at RIP %p cpuid=%d\n", rip, cpuid);
+    movq hal_intr_PtReg_rip(%rsp), %rcx
     leaq intMsg(%rip), %rax
     pushq %rax
     movq %rax, %rdx
@@ -208,7 +228,7 @@ ignoreInt_loop:
     movq %rax, %es
 
 intMsg:
-    .asciz "Unknown interrupt or fault at RIP\n"
+    .asciz "Unknown interrupt or fault at RIP %p cpuid=%d\n"
 
 stkPtr:
 	.quad hal_init_stk + 32768

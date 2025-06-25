@@ -48,7 +48,8 @@ void hw_pci_lstDev() {
 		printk(WHITE, BLACK, "pci:%02x:%02x:%01x: device=%04x vendor=%04x hdrTp=%02x cls=%04x subcls=%04x progIf=%04x %s \n", 
 			dev->busId, dev->devId, dev->funcId, 
 			dev->cfg->deviceId, dev->cfg->vendorId, dev->cfg->hdrTp, 
-			dev->cfg->class, dev->cfg->subclass, dev->cfg->progIf, hw_pci_devName[dev->cfg->class][dev->cfg->subclass]
+			dev->cfg->class, dev->cfg->subclass, dev->cfg->progIf, 
+			({const void *ptr = hw_pci_devName[dev->cfg->class][dev->cfg->subclass]; ptr != NULL ? ptr : ""; })
 		);
 	}
 }
@@ -70,7 +71,7 @@ int hw_pci_chk() {
 	}
 	int res = res_SUCC;
 	for (ListNode *cur = hw_pci_devLst.head.next, *nxt = cur->next; 
-			cur != &hw_pci_devLst.head; 
+			cur != &hw_pci_devLst.head;
 			cur = nxt, nxt = cur->next) {
 		hw_pci_Dev *dev = container(cur, hw_pci_Dev, lst);
 		if (dev->device.drv != NULL)

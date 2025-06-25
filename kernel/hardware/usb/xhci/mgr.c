@@ -48,12 +48,15 @@ __always_inline__ void hw_usb_xhci_portConnect(hw_usb_xhci_Host *host, u32 portI
 		printk(RED, BLACK, "hw: xhci: host %p failed to create device for port %d\n", host, portIdx);
 		return;
 	}
+	printk(WHITE, BLACK, "finish portConnect\n");
 }
 
 __always_inline__ void hw_usb_xhci_portDisconnect(hw_usb_xhci_Host *host, u32 portIdx) {
 	hw_usb_xhci_Device *dev = host->portDev[portIdx];
 	if (dev == NULL) return ;
-	task_signal_send(dev->mgrTsk, task_Signal_Int);
+	// in interrupt program, we can not directly send interrupt
+	// thus, use the interrupt signal
+	task_signal_sendFromIntr(dev->mgrTsk, task_Signal_Int);
 }
 
 void hw_usb_xhci_portChange(hw_usb_xhci_Host *host, u32 portIdx) {
@@ -72,6 +75,7 @@ void hw_usb_xhci_portChange(hw_usb_xhci_Host *host, u32 portIdx) {
 }
 
 void hw_usb_xhci_uninstallDev(hw_usb_xhci_Device *dev) {
+	task_Request_giveUp();
 	if (dev->device.drv != NULL) {
 		if (dev->device.drv->uninstall(&dev->device) == res_FAIL)
 			printk(RED, BLACK, "hw: xhci: failed to uninstall device %p\n", dev);
@@ -79,6 +83,26 @@ void hw_usb_xhci_uninstallDev(hw_usb_xhci_Device *dev) {
 	if (dev->flag & hw_usb_xhci_Device_flag_Direct) {
 		dev->host->portDev[dev->portId] = NULL;
 	}
+	hw_usb_xhci_Request *req = hw_usb_xhci_makeRequest(1, hw_usb_xhci_Request_flags_Command | hw_usb_xhci_Request_flags_Abort);
+	
+	// disable endpoint context (except ctrl endpoint)
+	if (dev->ctxFlag) {
+		printk(WHITE, BLACK, "hw: xhci: disable bitmap %x\n", dev->ctxFlag);
+		hw_usb_xhci_InCtx *inCtx = dev->inCtx;
+		void *ctrlCtx = hw_usb_xhci_getCtxEntry(dev->host, inCtx, hw_usb_xhci_InCtx_Ctrl);
+		// drop flag
+		hw_usb_xhci_writeCtx(ctrlCtx, 0, ~0x0, dev->ctxFlag & ~0b11u);
+		// add flag
+		hw_usb_xhci_writeCtx(ctrlCtx, 1, ~0x0, 0);
+
+		hw_usb_xhci_TRB_setTp(&req->input[0], hw_usb_xhci_TRB_Tp_EvalCtx);
+		hw_usb_xhci_TRB_setSlot(&req->input[0], dev->slotId);
+		hw_usb_xhci_request(dev->host, dev->host->cmdRing, req, NULL, 0);
+		if (hw_usb_xhci_TRB_getCmplCode(&req->res) != hw_usb_xhci_TRB_CmplCode_Succ)
+			printk(RED, BLACK, "hw: xhci: device %p failed to disable endpoint(s).\n", dev);
+		else printk(GREEN, BLACK, "hw: xhci: device %p disable endpoint(s)", dev);
+	}
+
 	for (int i = 0; i < 31; i++) {
 		if (dev->epRing[i]) {
 			printk(WHITE, BLACK, "hw: xhci: free ring for endpoint %d\n", i);
@@ -86,18 +110,16 @@ void hw_usb_xhci_uninstallDev(hw_usb_xhci_Device *dev) {
 			dev->epRing[i] = NULL;
 		}
 	}
+	
 	if (dev->slotId) {
-		hw_usb_xhci_Request *req = hw_usb_xhci_makeRequest(1, hw_usb_xhci_Request_flags_Command);
 		hw_usb_xhci_TRB_setTp(&req->input[0], hw_usb_xhci_TRB_Tp_DisblSlot);
 		hw_usb_xhci_TRB_setSlot(&req->input[0], dev->slotId);
 		hw_usb_xhci_request(dev->host, dev->host->cmdRing, req, NULL, 0);
-		if (hw_usb_xhci_TRB_getCmplCode(&req->res) != hw_usb_xhci_TRB_CmplCode_Succ) {
+		if (hw_usb_xhci_TRB_getCmplCode(&req->res) != hw_usb_xhci_TRB_CmplCode_Succ)
 			printk(RED, BLACK, "hw: xhci: device %p failed to disable slot\n", dev);
-			return;
-		}
-		printk(GREEN, BLACK, "hw: xhci: device %p disabled slot:%d\n", dev, dev->slotId);
-		hw_usb_xhci_freeRequest(req);
+		else printk(GREEN, BLACK, "hw: xhci: device %p disabled slot:%d\n", dev, dev->slotId);
 	}
+	hw_usb_xhci_freeRequest(req);
 	hw_usb_xhci_freeDev(dev);
 	printk(GREEN, BLACK, "hw: xhci: device %p uninstalled\n", dev);
 	task_exit(-1);
