@@ -1,5 +1,6 @@
 #include <hardware/diskdev.h>
 #include <screen/screen.h>
+#include <fs/gpt/api.h>
 #include <mm/mm.h>
 
 SafeList hw_diskdev_enbLst, hw_diskdev_unenbLst;
@@ -30,6 +31,8 @@ int hw_DiskDev_install(hw_DiskDev *dev) {
 		SafeList_insTail(&hw_diskdev_enbLst, &dev->lst);
 		printk(GREEN, BLACK, "hw: disk: succ to install device %p, size=%ld\n", dev, dev->size(dev));
 	}
+
+	fs_gpt_scan(dev);
 	return res;
 }
 

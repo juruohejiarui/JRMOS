@@ -102,7 +102,6 @@ __always_inline__ void _fixAfterIns(RBTree *tree, RBNode *node) {
 }
 
 void RBTree_ins(RBTree *tree, RBNode *node) {
-	if (tree == NULL || node == NULL) return ;
 	if (tree->root == NULL) {
 		tree->root = tree->left = node;
 		node->left = node->right = NULL;
@@ -180,9 +179,7 @@ __always_inline__ void _fixAfterDel(RBTree *tree, RBNode *node, RBNode *par) {
 }
 
 void RBTree_del(RBTree *tree, RBNode *node) {
-	if (tree == NULL || node == NULL) return ;
-
-	if (tree->left == node) tree->left = _getNext(tree, node);
+	if (tree->left == node) tree->left = RBTree_getNext(tree, node);
 	RBNode *child, *par;
 	int col;
 	if (node->left == NULL) child = node->right;
@@ -202,7 +199,7 @@ void RBTree_del(RBTree *tree, RBNode *node) {
 		if (parent(node) == old) par = node;
 		node->unionParCol = old->unionParCol;
 		node->left = old->left;
-		node->right = old->right;
+		node->right = old->right; 
 		if (parent(old)) {
 			if (parent(old)->left == old)
 				parent(old)->left = node;
@@ -227,13 +224,12 @@ void RBTree_del(RBTree *tree, RBNode *node) {
 }
 
 RBNode *RBTree_getRight(RBTree *tree) {
-	if (tree == NULL || tree->root == NULL) { return NULL; }
 	RBNode *res = tree->root;
 	while (res->right) res = res->right;
 	return res;
 }
 
-static RBNode *_getNext(RBTree *tree, RBNode *node) {
+RBNode *RBTree_getNext(RBTree *tree, RBNode *node) {
 	RBNode *par;
 	if (node->right) {
 		node = node->right;
@@ -243,17 +239,6 @@ static RBNode *_getNext(RBTree *tree, RBNode *node) {
 	while ((par = parent(node)) && node == par->right)
 		node = par;
 	return par;
-}
-
-RBNode *RBTree_getNext(RBTree *tree, RBNode *node) {
-	SpinLock_lock(&tree->lock);
-	if (tree == NULL || tree->root == NULL) {
-		SpinLock_unlock(&tree->lock);
-		return NULL;
-	}
-	node = _getNext(tree, node);
-	SpinLock_unlock(&tree->lock);
-	return node;
 }
 
 RBNode *RBTree_getNextLck(RBTree *tree, RBNode *node) {
