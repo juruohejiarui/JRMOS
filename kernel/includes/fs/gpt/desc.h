@@ -32,13 +32,20 @@ typedef struct fs_gpt_ParEntry {
 	u8 parName[72];
 } __attribute__ ((packed)) fs_gpt_ParEntry;
 
-#define fs_gpt_parTypeGuid_EfiSysPar0 0x11d2f81fc12a7328
-#define fs_gpt_parTypeGuid_EfiSysPar1 0x00a0c93ec93bba4b
+typedef struct fs_gpt_Tbl {
+	fs_gpt_Hdr hdr;
+	fs_gpt_ParEntry entry[0];
+} fs_gpt_Tbl;
 
-#define fs_gpt_parTypeGuid_LinuxFSDt0 0x477284830fc63daf
-#define fs_gpt_parTypeGuid_LinuxFSDt1 0x3d69d8477de48e79
+#define fs_gpt_parTypeGuid_None			0x0
 
-#define fs_gpt_parTypeGuid_MsBasicDt0 0x4433b9e5ebd0a0a2
-#define fs_gpt_parTypeGuid_MsBasicDt1 0x68b6b72699c787c0
+#define fs_gpt_parTypeGuid_EfiSysPar0	0x11d2f81fc12a7328
+#define fs_gpt_parTypeGuid_EfiSysPar1	0x3bc93ec9a0004bba
+
+#define fs_gpt_parTypeGuid_LinuxFSDt0	0x477284830fc63daf
+#define fs_gpt_parTypeGuid_LinuxFSDt1	0xe47d47d8693d798e
+
+#define fs_gpt_parTypeGuid_MsBasicDt0	0x4433b9e5ebd0a0a2
+#define fs_gpt_parTypeGuid_MsBasicDt1	0x68b6b72699c787c0
 
 #endif

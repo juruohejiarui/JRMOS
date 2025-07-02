@@ -5,7 +5,6 @@
         "*.tcc": "c"
     },
     "makefile.makefilePath": "${workspaceFolder}/kernel/",
-    "clangd.enable": true,
     "C_Cpp.intelliSenseEngine": "default",
     "C_Cpp.enhancedColorization": "enabled"
 }

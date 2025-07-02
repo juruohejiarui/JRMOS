@@ -3,13 +3,13 @@
 u32 crc32_noReflect(u8 *dt, u64 size) {
 	u32 crc = ~0x0u;
 	for (u64 i = 0; i < size; i++) {
-		crc ^= ((u32)dt[i] << 24);
+		crc ^= (u32)dt[i];
 		for (int bit = 0; bit < 8; bit++) {
-			if (crc & 0x80000000) crc = (crc << 1) ^ 0x04c11db7u;
-			else crc <<= 1;
+			if (crc & 1) crc = (crc >> 1) ^ 0xedb88320u;
+			else crc >>= 1;
 		}
 	}
-	return crc;
+	return ~crc;
 }
 
 #ifndef HAL_LIB_CRC32
