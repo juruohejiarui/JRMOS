@@ -37,7 +37,7 @@ void fs_gpt_scan(hw_DiskDev *dev) {
 		hdr->szOfParEntry,              hdr->parEntryArrCrc32);
 	u32 oldCrc = hdr->hdrCrc32;
 	hdr->hdrCrc32 = 0;
-	u32 crc32 = crc32_noReflect((u8 *)hdr, hdr->hdrSz);
+	u32 crc32 = crc32_ieee802((u8 *)hdr, hdr->hdrSz);
 	hdr->hdrCrc32 = oldCrc;
 
 	if (crc32 != hdr->hdrCrc32) {

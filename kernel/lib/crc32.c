@@ -1,11 +1,11 @@
 #include <lib/crc32.h>
 
-u32 crc32_noReflect(u8 *dt, u64 size) {
-	u32 crc = ~0x0u;
+u32 crc32_ieee802(u8 *dt, u64 size) {
+	u32 crc = 0xffffffffu; // Initial value for CRC-32
 	for (u64 i = 0; i < size; i++) {
 		crc ^= (u32)dt[i];
 		for (int bit = 0; bit < 8; bit++) {
-			if (crc & 1) crc = (crc >> 1) ^ 0xedb88320u;
+			if (crc & 0x1) crc = (crc >> 1) ^ 0xedb88320u; // Polynomial for CRC-32
 			else crc >>= 1;
 		}
 	}

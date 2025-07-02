@@ -24,7 +24,7 @@ typedef struct fs_File {
 typedef struct fs_Dir {
     fs_DirEntry entry;
     // get next entry
-    int (*entry)(struct fs_Dir *dir, fs_DirEntry *dirEntry);
+    int (*nxtEntry)(struct fs_Dir *dir, fs_DirEntry *dirEntry);
     int (*close)(struct fs_Dir *dir);
 } fs_Dir;
 
