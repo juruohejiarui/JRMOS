@@ -5,10 +5,10 @@
 static int _analyseGeneration(u32 deviceId) {
 	switch (deviceId & 0xfff0) {
 		case 0xa780 :
-			printk(WHITE, BLACK, "hw: gpu: intel: Raptor Lake\n");
+			printk(screen_log, "hw: gpu: intel: Raptor Lake\n");
 			break;
 		default :
-			printk(RED, BLACK, "hw: gpu: intel: unsupported GPU.\n");
+			printk(screen_err, "hw: gpu: intel: unsupported GPU.\n");
 			return res_FAIL;
 	}
 	return res_SUCC;
@@ -23,11 +23,11 @@ int hal_hw_gpu_intel_init() {
 		} else dev = NULL;
 	}
 	if (dev == NULL) {
-		printk(YELLOW, BLACK, "hw: gpu: intel GPU not found.\n");
+		printk(screen_warn, "hw: gpu: intel GPU not found.\n");
 		return res_FAIL;
 	}
 	if (_analyseGeneration(dev->cfg->deviceId) != res_SUCC) return res_FAIL;
-	printk(GREEN, BLACK, "hw: gpu: find intel GPU: %02x:%02x:%02x %04x:%04x\n",
+	printk(screen_succ, "hw: gpu: find intel GPU: %02x:%02x:%02x %04x:%04x\n",
 		dev->busId, dev->devId, dev->funcId, dev->cfg->vendorId, dev->cfg->deviceId);
 	return res_SUCC;
 }

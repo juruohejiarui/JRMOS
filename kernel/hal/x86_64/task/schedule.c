@@ -31,7 +31,7 @@ void hal_task_sche_switchTss(task_TaskStruct *prev, task_TaskStruct *next) {
 	cpuTss->ist2 = tskTss->ist2;
 
 
-	// printk(WHITE, BLACK, "from %p,rip=%p to %p,rip=%p\n", prev, prev->hal.rip, next, next->hal.rip);
+	// printk(screen_log, "from %p,rip=%p to %p,rip=%p\n", prev, prev->hal.rip, next, next->hal.rip);
 
 	prev->hal.gsBase = hal_hw_readMsr(hal_msr_IA32_GS_BASE);
 	prev->hal.fsBase = hal_hw_readMsr(hal_msr_IA32_FS_BASE);
@@ -47,7 +47,7 @@ void hal_task_sche_switchTss(task_TaskStruct *prev, task_TaskStruct *next) {
 	hal_hw_writeMsr(hal_msr_IA32_FS_BASE, next->hal.fsBase);
 	hal_hw_writeMsr(hal_msr_IA32_KERNEL_GS_BASE, next->hal.gsKrlBase);
 
-	// printk(WHITE, BLACK, "cpu %d: prev gsBase %p next gsBase %p\n", task_current->cpuId, prev->hal.gsBase, next->hal.gsBase);
+	// printk(screen_log, "cpu %d: prev gsBase %p next gsBase %p\n", task_current->cpuId, prev->hal.gsBase, next->hal.gsBase);
 }
 
 void hal_task_sche_updOtherState() {
@@ -85,7 +85,7 @@ void hal_task_tskEntry(void *entry, u64 arg, u64 attr) {
 		task_exit(res);
 	} else {
 		/// @todo allocation of user stack
-		hal_task_syscall_toUsr(entry, arg, (void *)0x100000);
+		hal_task_syscall_toUsr(entry, arg);
 	}
 }
 

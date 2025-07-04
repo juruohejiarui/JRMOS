@@ -18,7 +18,7 @@ int hw_usb_hid_check(hw_Device *dev) {
         if (hdr->tp == hw_usb_devdesc_Tp_Inter) {
             hw_usb_devdesc_Inter *inter = container(hdr, hw_usb_devdesc_Inter, hdr);
             if (inter->bInterCls == 0x03) {
-                printk(GREEN, BLACK, "hw: usb hid: device %p is a USB HID device\n", dev);
+                printk(screen_succ, "hw: usb hid: device %p is a USB HID device\n", dev);
                 return res_SUCC;
             }
         }
@@ -42,7 +42,7 @@ int hw_usb_hid_config(hw_Device *dev) {
             }
         }
     }
-    printk(WHITE, BLACK, "hw: usb hid: device %p interface descriptor: %p, class %02x, subclass %02x, protocol %02x\n", 
+    printk(screen_log, "hw: usb hid: device %p interface descriptor: %p, class %02x, subclass %02x, protocol %02x\n", 
            dev, interDesc, interDesc->bInterCls, interDesc->bInterSubCls, interDesc->bInterProtocol);
     // read hid descriptor & report descriptor for parsing
     hw_usb_devdesc_Hid *hidDesc = NULL;
@@ -67,7 +67,7 @@ int hw_usb_hid_config(hw_Device *dev) {
         hw_usb_xhci_writeCtx(inCtx, 1, ~0x0u, 1);
         for (int i = 0; i < interDesc->bNumEp; i++) {
             int epId = hw_usb_devdesc_Ep_epId(epDesc[i]), epTp = hw_usb_devdesc_Ep_epTp(epDesc[i]);
-            printk(WHITE, BLACK, "hw: usb hid: device %p ep %d: id:%d tp:%d\n", usbDev, i, epId, epTp);
+            printk(screen_log, "hw: usb hid: device %p ep %d: id:%d tp:%d\n", usbDev, i, epId, epTp);
             // write addflags of ctrl context
             bit_set1_32(&usbDev->ctxFlag, epId);
             hw_usb_xhci_writeCtx(inCtx, 1, (1u << epId), 1);
@@ -90,7 +90,7 @@ int hw_usb_hid_config(hw_Device *dev) {
             
             hw_usb_xhci_EpCtx_writeESITPay(epCtx, hw_usb_xhci_readCtx(epCtx, 1, hw_usb_xhci_EpCtx_mxPackSize) * (hw_usb_xhci_readCtx(epCtx, 1, hw_usb_xhci_EpCtx_mxBurstSize) + 1));
 
-            printk(WHITE, BLACK, "hw: usb hid: device %p ep %d : interval=%d epTp=%d CErr=%d mxPkSz=%d mxBurstSz=%d mxESITPay=%ld\n", 
+            printk(screen_log, "hw: usb hid: device %p ep %d : interval=%d epTp=%d CErr=%d mxPkSz=%d mxBurstSz=%d mxESITPay=%ld\n", 
                    usbDev, epId, 
                    hw_usb_xhci_readCtx(epCtx, 0, hw_usb_xhci_EpCtx_interval), 
                    hw_usb_xhci_readCtx(epCtx, 1, hw_usb_xhci_EpCtx_epTp), 
@@ -105,7 +105,7 @@ int hw_usb_hid_config(hw_Device *dev) {
     hw_usb_xhci_Request *req = hw_usb_xhci_makeRequest(1, hw_usb_xhci_Request_flags_Command | hw_usb_xhci_Request_flags_Abort), 
         *req2 = hw_usb_xhci_makeRequest(2, hw_usb_xhci_Request_flags_Abort);
     if (req == NULL || req2 == NULL) {
-        printk(RED, BLACK, "hw: usb hid: device %p failed to allocate request\n", dev);
+        printk(screen_err, "hw: usb hid: device %p failed to allocate request\n", dev);
         if (req) hw_usb_xhci_freeRequest(req);
         if (req2) hw_usb_xhci_freeRequest(req2);
         return res_FAIL;
@@ -116,18 +116,18 @@ int hw_usb_hid_config(hw_Device *dev) {
 
     hw_usb_xhci_request(usbDev->host, usbDev->host->cmdRing, req, NULL, 0);
     if (hw_usb_xhci_TRB_getCmplCode(&req->res) != hw_usb_xhci_TRB_CmplCode_Succ) {
-        printk(RED, BLACK, "hw: usb hid: device %p failed to configure endpoint\n", dev);
+        printk(screen_err, "hw: usb hid: device %p failed to configure endpoint\n", dev);
         goto Fail;
     }
-    printk(GREEN, BLACK, "hw: usb hid: device %p configured endpoint\n", dev);
+    printk(screen_succ, "hw: usb hid: device %p configured endpoint\n", dev);
 
     hw_usb_xhci_mkCtrlReq(req2, hw_usb_xhci_mkCtrlReqSetup(0x00, 0x09, usbDev->cfgDesc[0]->bCfgVal, 0, 0), hw_usb_xhci_TRB_ctrl_dir_out);
     hw_usb_xhci_request(usbDev->host, usbDev->epRing[hw_usb_xhci_DevCtx_CtrlEp], req2, usbDev, hw_usb_xhci_DbReq_make(hw_usb_xhci_DevCtx_CtrlEp, 0));
     if (hw_usb_xhci_TRB_getCmplCode(&req2->res) != hw_usb_xhci_TRB_CmplCode_Succ) {
-        printk(RED, BLACK, "hw: usb hid: device %p failed to set configuration\n", dev);
+        printk(screen_err, "hw: usb hid: device %p failed to set configuration\n", dev);
         goto Fail;
     }
-    printk(GREEN, BLACK, "hw: usb hid: device %p set configuration\n", dev);
+    printk(screen_succ, "hw: usb hid: device %p set configuration\n", dev);
 
     hw_usb_xhci_freeRequest(req2);
     req2 = hw_usb_xhci_makeRequest(3, hw_usb_xhci_Request_flags_Abort);
@@ -139,7 +139,7 @@ int hw_usb_hid_config(hw_Device *dev) {
             reportSz = hidDesc->desc[i].wDescLen;
             report = mm_kmalloc(reportSz, mm_Attr_Shared, NULL);
             if (report == NULL) {
-                printk(RED, BLACK, "hw: usb hid: device %p failed to allocate report descriptor\n", dev);
+                printk(screen_err, "hw: usb hid: device %p failed to allocate report descriptor\n", dev);
                 goto Fail;
             }
             // read report descriptor
@@ -149,25 +149,25 @@ int hw_usb_hid_config(hw_Device *dev) {
                 report, reportSz);
             hw_usb_xhci_request(usbDev->host, usbDev->epRing[hw_usb_xhci_DevCtx_CtrlEp], req2, usbDev, hw_usb_xhci_DbReq_make(hw_usb_xhci_DevCtx_CtrlEp, 0));
             if (hw_usb_xhci_TRB_getCmplCode(&req2->res) != hw_usb_xhci_TRB_CmplCode_Succ) {
-                printk(RED, BLACK, "hw: usb hid: device %p failed to read report descriptor\n", dev);
+                printk(screen_err, "hw: usb hid: device %p failed to read report descriptor\n", dev);
                 goto Fail;
             }
-            printk(GREEN, BLACK, "hw: usb hid: device %p read report descriptor, size %d\n", dev, reportSz);
+            printk(screen_succ, "hw: usb hid: device %p read report descriptor, size %d\n", dev, reportSz);
             goto FoundReport;
         }
     }
-    printk(RED, BLACK, "hw: usb hid: device %p has no report descriptor\n", dev);
+    printk(screen_err, "hw: usb hid: device %p has no report descriptor\n", dev);
     goto Fail;
     FoundReport:
     // parse report
     hw_hid_Parser *parser = hw_hid_getParser(dev, 1);
     if (parser == NULL) {
-        printk(RED, BLACK, "hw: usb hid: device %p failed to allocate parser\n", dev);
+        printk(screen_err, "hw: usb hid: device %p failed to allocate parser\n", dev);
         goto Fail;
     }
 
     if (hw_hid_parse(report, reportSz, parser) == res_FAIL) {
-        printk(RED, BLACK, "hw: usb hid: device %p failed to parse report descriptor\n", dev);
+        printk(screen_err, "hw: usb hid: device %p failed to parse report descriptor\n", dev);
         hw_hid_delParser(parser);
         mm_kfree(report, mm_Attr_Shared);
         goto Fail;
@@ -181,7 +181,7 @@ int hw_usb_hid_config(hw_Device *dev) {
     if (interDesc->bInterSubCls == 0x01)
         parser->tp = interDesc->bInterProtocol;
     else {
-        printk(RED, BLACK, "hw: usb hid: device %p unsupported custom device.\n", dev);
+        printk(screen_err, "hw: usb hid: device %p unsupported custom device.\n", dev);
         hw_hid_delParser(parser);
         goto Fail;
     }
@@ -199,7 +199,7 @@ int hw_usb_hid_install(hw_Device *dev) {
     hw_usb_xhci_Device *usbDev = container(dev, hw_usb_xhci_Device, device);
     hw_hid_Parser *parser = hw_hid_getParser(dev, 0);
     if (parser == NULL) {
-        printk(RED, BLACK, "hw: usb hid: faileed to find parser for device %p.\n", dev);
+        printk(screen_err, "hw: usb hid: faileed to find parser for device %p.\n", dev);
         return res_FAIL;
     }
     // set_protocol & set_idle
@@ -207,14 +207,14 @@ int hw_usb_hid_install(hw_Device *dev) {
     hw_usb_xhci_mkCtrlReq(req, hw_usb_xhci_mkCtrlReqSetup(0x21, 0x0b, 1, usbDev->inter->bIntrNum, 0), hw_usb_xhci_TRB_ctrl_dir_out);
     hw_usb_xhci_request(usbDev->host, usbDev->epRing[hw_usb_xhci_DevCtx_CtrlEp], req, usbDev, hw_usb_xhci_DbReq_make(hw_usb_xhci_DevCtx_CtrlEp, 0));
     if (hw_usb_xhci_TRB_getCmplCode(&req->res) != hw_usb_xhci_TRB_CmplCode_Succ) {
-        printk(RED, BLACK, "hw: usb hid: device %p failed on SET_PROTOCOL request\n", usbDev);
+        printk(screen_err, "hw: usb hid: device %p failed on SET_PROTOCOL request\n", usbDev);
         return res_FAIL;
     }
     
     hw_usb_xhci_mkCtrlReq(req, hw_usb_xhci_mkCtrlReqSetup(0x21, 0x0a, 1, usbDev->inter->bIntrNum, 0), hw_usb_xhci_TRB_ctrl_dir_out);
     hw_usb_xhci_request(usbDev->host, usbDev->epRing[hw_usb_xhci_DevCtx_CtrlEp], req, usbDev, hw_usb_xhci_DbReq_make(hw_usb_xhci_DevCtx_CtrlEp, 0));
     if (hw_usb_xhci_TRB_getCmplCode(&req->res) != hw_usb_xhci_TRB_CmplCode_Succ) {
-        printk(RED, BLACK, "hw: usb hid: device %p failed on SET_IDLE request\n", usbDev);
+        printk(screen_err, "hw: usb hid: device %p failed on SET_IDLE request\n", usbDev);
         return res_FAIL;
     }
     // get endpoints
@@ -229,7 +229,7 @@ int hw_usb_hid_install(hw_Device *dev) {
             else outEp = epId;
         }
     }
-    printk(WHITE, BLACK, "hw: usb hid: device %p inEp:%d outEp:%d\n", usbDev, inEp, outEp);
+    printk(screen_log, "hw: usb hid: device %p inEp:%d outEp:%d\n", usbDev, inEp, outEp);
     hw_usb_xhci_freeRequest(req);
     switch (parser->tp) {
         case hw_hid_Parser_type_Keyboard :

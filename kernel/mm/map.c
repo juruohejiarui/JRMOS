@@ -38,7 +38,7 @@ int mm_map_init() {
     _allocLg2 = bit_ffs64(pgNumPerTbl) - 1;
     SpinLock_init(&_cacheLck);
     SpinLock_init(&mm_map_krlTblLck);
-    printk(WHITE, BLACK, "mm: map: alloc lg2=%d\n", _allocLg2);
+    printk(screen_log, "mm: map: alloc lg2=%d\n", _allocLg2);
     return _initCache();
 }
 
@@ -70,18 +70,18 @@ void mm_map_dbg(int detail) {
     SpinLock_lock(&_cacheLck);
 
 
-    printk(WHITE, BLACK, "mm:map:nrTbl:%d nrTblGrp:%d ", _nrTbl, _nrTblGrp);
+    printk(screen_log, "mm:map:nrTbl:%d nrTblGrp:%d ", _nrTbl, _nrTblGrp);
     if (!detail) {
         SpinLock_unlock(&_cacheLck);
         if (intrState) intr_unmask();
         return ;
     }
-    printk(WHITE, BLACK, "\n");
+    printk(screen_log, "\n");
     for (int i = 0; i < _nrTblGrp; i++)
-        printk(WHITE, BLACK, "%#011lx %2d%c",
+        printk(screen_log, "%#011lx %2d%c",
             (u64)_tblGrpCache[i] & 0xffffffffful, _tblGrpCache[i]->ord,
             (i % 12 == 11 ? '\n' : ' '));
-    if (_nrTblGrp % 12 != 0) printk(WHITE, BLACK, "\n");
+    if (_nrTblGrp % 12 != 0) printk(screen_log, "\n");
 
     SpinLock_unlock(&_cacheLck);
     if (intrState) intr_unmask();
@@ -90,7 +90,7 @@ void mm_map_dbg(int detail) {
 int mm_map_freeTbl(hal_mm_PageTbl *tbl) {
     mm_Page *pg = mm_getDesc(mm_dmas_virt2Phys(tbl));
     if (~pg->attr & (mm_Attr_MMU | mm_Attr_HeadPage)) {
-        printk(RED, BLACK, "mm: failed to free page table %p. Invalid table pointer.\n", tbl);
+        printk(screen_err, "mm: failed to free page table %p. Invalid table pointer.\n", tbl);
         while (1) ;
         return res_FAIL;
     }

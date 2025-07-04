@@ -57,18 +57,18 @@ void hal_init_init() {
 
 	res = mm_map_init();
 	if (res == res_FAIL) {
-		printk(RED, BLACK, "init: map init failed\n");
+		printk(screen_err, "init: map init failed\n");
 		while (1) ;
 	}
 
 	if (screen_enableBuf() == res_FAIL) {
-		printk(RED, BLACK, "init: screen buf init failed\n");
+		printk(screen_err, "init: screen buf init failed\n");
 		while (1) hal_hw_hlt();
 	}
 
 
 	if (intr_init() == res_FAIL) {
-		printk(RED, BLACK, "init: intr init failed\n");
+		printk(screen_err, "init: intr init failed\n");
 		while (1) hal_hw_hlt();
 	}
 	if (softirq_init() == res_FAIL) while (1) hal_hw_hlt();
@@ -122,7 +122,7 @@ void hal_init_initAP() {
 
 	hal_cpu_chk();
 
-	// printk(WHITE, BLACK, "init: cpu #%d initialized\n", task_current->cpuId);
+	// printk(screen_log, "init: cpu #%d initialized\n", task_current->cpuId);
 	hal_hw_mfence();
 
 	while (1) {

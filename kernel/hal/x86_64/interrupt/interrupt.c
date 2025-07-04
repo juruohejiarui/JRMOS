@@ -38,7 +38,7 @@ void hal_intr_setTssItem(u64 idx, hal_intr_TSS *tss) {
 void hal_intr_dispatcher(u64 rsp, u64 irqId) {
     intr_Desc *intr = &hal_intr_desc[irqId - 0x20];
     if (intr->handler == NULL) {
-        printk(RED, BLACK, "intr: no handler for intr #%#lx\n", irqId);
+        printk(screen_err, "intr: no handler for intr #%#lx\n", irqId);
     } else intr->handler(intr->param);
     if (intr->ctrl != NULL && intr->ctrl->ack != NULL) intr->ctrl->ack(intr);
 }

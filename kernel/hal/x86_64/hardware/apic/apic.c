@@ -36,36 +36,36 @@ int hal_hw_apic_map() {
 
 int hal_hw_apic_initLocal() {
 	hal_hw_apic_supportFlag = 0;
-	printk(RED, BLACK, "hw: apic: init local.\n");
+	printk(screen_err, "hw: apic: init local.\n");
 
 	_locApicPg = mm_allocPages(0, mm_Attr_Shared);
 	if (_locApicPg == NULL) {
-		printk(RED, BLACK, "hw: apic: failed to allocate page for ApicBase.\n");
+		printk(screen_err, "hw: apic: failed to allocate page for ApicBase.\n");
 		return res_FAIL;
 	}
 	hal_hw_apic_setApicBase(mm_getPhyAddr(_locApicPg));
 
 	u32 a, b, c, d;
 	hal_hw_cpu_cpuid(1, 0, &a, &b, &c, &d);
-	printk(WHITE, BLACK, "CPUID\t01: a:%#010x,b:%#010x,c:%#010x,d:%#010x\n", a, b, c, d);
+	printk(screen_log, "CPUID\t01: a:%#010x,b:%#010x,c:%#010x,d:%#010x\n", a, b, c, d);
 
-	printk(WHITE, BLACK, "hw: apic: support: ");
+	printk(screen_log, "hw: apic: support: ");
 	if (d & (1ull<< 9))
-		printk(GREEN, BLACK, "xAPIC ");
+		printk(screen_succ, "xAPIC ");
 	else {
-		printk(RED, BLACK, "xAPIC ");
+		printk(screen_err, "xAPIC ");
 		return res_FAIL;
 	}
 	
 	if (c & (1ull<< 21))
-		printk(GREEN, BLACK, "x2APIC "),
+		printk(screen_succ, "x2APIC "),
 		hal_hw_apic_supportFlag |= hal_hw_apic_supportFlag_X2Apic;
-	else printk(RED, BLACK, "x2APIC ");
+	else printk(screen_err, "x2APIC ");
 
 	if (*(u64 *)mm_dmas_phys2Virt(0xfee00030) & (1ull<< 24))
-		printk(GREEN, BLACK, "EOI-broadcase\n"),
+		printk(screen_succ, "EOI-broadcase\n"),
 		hal_hw_apic_supportFlag |= hal_hw_apic_supportFlag_EOIBroadcase;
-	else printk(RED, BLACK, "EOI-broadcase\n");
+	else printk(screen_err, "EOI-broadcase\n");
 
 	{
 		u64 val = hal_hw_readMsr(0x1b);
@@ -74,12 +74,12 @@ int hal_hw_apic_initLocal() {
 		hal_hw_writeMsr(0x1b, val);
 	}
 
-	printk(WHITE, BLACK, "hw: apic: enable: ");
+	printk(screen_log, "hw: apic: enable: ");
 	u64 x, y;
 	x = hal_hw_readMsr(0x1b);
-	printk(((x & 0x800) ? GREEN : RED), BLACK, "xAPIC ");
-	printk(((x & 0x400) ? GREEN : RED), BLACK, "x2APIC\n");
-	printk(WHITE, BLACK, "hw: apic: msr 0x1b: %p\n", x);
+	printk(((x & 0x800) ? screen_succ : screen_err), "xAPIC ");
+	printk(((x & 0x400) ? screen_succ : screen_err), "x2APIC\n");
+	printk(screen_log, "hw: apic: msr 0x1b: %p\n", x);
 
 	// enable SVR[8] and SVR[12]
 	{
@@ -101,7 +101,7 @@ int hal_hw_apic_initIO() {
 
 int hal_hw_apic_init() {
 	if (hal_hw_apic_map() == res_FAIL) {
-		printk(RED, BLACK, "hw: apic: failed to map.\n");
+		printk(screen_err, "hw: apic: failed to map.\n");
 		return res_FAIL;
 	}
 	hal_hw_io_out8(0x21, 0xff);

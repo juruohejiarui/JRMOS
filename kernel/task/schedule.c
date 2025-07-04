@@ -90,17 +90,17 @@ void task_sche_preempt(task_TaskStruct *task) {
     SpinLock_lockMask(&task_mgr.scheLck[task->cpuId]);
     switch (task->state) {
         case task_state_Idle:
-            printk(WHITE, BLACK, "task #%d: preempt #%d from idle\n", task_current->pid, task->pid);
+            printk(screen_log, "task #%d: preempt #%d from idle\n", task_current->pid, task->pid);
             RBTree_del(&task_mgr.tasks[task->cpuId], &task->rbNd);
             List_insTail(&task_mgr.preemptTsks[task->cpuId], &task->scheNd);
             task->state = task_state_NeedPreempt;
             break;
         case task_state_NeedSchedule:
-            printk(WHITE, BLACK, "task #%d: preempt #%d from need schedule/need sleep\n", task_current->pid, task->pid);
+            printk(screen_log, "task #%d: preempt #%d from need schedule/need sleep\n", task_current->pid, task->pid);
             task->state = task_state_Running;
             break;
         case task_state_Sleep:
-            printk(WHITE, BLACK, "task #%d: preempt #%d from sleep\n", task_current->pid, task->pid);
+            printk(screen_log, "task #%d: preempt #%d from sleep\n", task_current->pid, task->pid);
 
             SafeList_del(&task_mgr.sleepTsks, &task->scheNd);
             List_insTail(&task_mgr.preemptTsks[task->cpuId], &task->scheNd);
@@ -161,7 +161,7 @@ void task_sche() {
     // search for the next task
     if (!List_isEmpty(cpu_getvar(preemptTsks))) {
         nxtTsk = container(List_getHead(cpu_getvar(preemptTsks)), task_TaskStruct, scheNd);
-        printk(WHITE, BLACK, "task #%d preempted by #%d\n", task_current->pid, nxtTsk->pid);
+        printk(screen_log, "task #%d preempted by #%d\n", task_current->pid, nxtTsk->pid);
         List_del(&nxtTsk->scheNd);
         goto needSche;
     } else {
@@ -177,7 +177,7 @@ void task_sche() {
     return ;
 
     needSche:
-    // printk(WHITE, BLACK, "...");
+    // printk(screen_log, "...");
     task_sche_hangCur();
     nxtTsk->state = task_state_Running;
     SpinLock_unlock(cpu_getvar(scheLck));
@@ -187,7 +187,7 @@ void task_sche() {
 task_ThreadStruct *task_newThread(u64 attr) {
     task_ThreadStruct *thread = mm_kmalloc(sizeof(task_ThreadStruct), mm_Attr_Shared, NULL);
     if (thread == NULL) {
-        printk(RED, BLACK, "task: failed to allocate thread structure.\n");
+        printk(screen_err, "task: failed to allocate thread structure.\n");
         return NULL;
     }
     memset(thread, 0, sizeof(task_ThreadStruct));
@@ -247,10 +247,10 @@ int task_freeThread(task_ThreadStruct *thread) {
 
 int task_freeTask(task_TaskStruct *tsk) {
     if (task_delSubTask(tsk) == res_FAIL) {
-        printk(RED, BLACK, "task: failed to delete subtask #%ld from thread.\n", tsk->pid);
+        printk(screen_err, "task: failed to delete subtask #%ld from thread.\n", tsk->pid);
         return res_FAIL;
     }
-    // printk(WHITE, BLACK, "  ->%d\n", intr_state());
+    // printk(screen_log, "  ->%d\n", intr_state());
     if (hal_task_freeTask(tsk) == res_FAIL) return res_FAIL;
     return mm_kfree(tsk, mm_Attr_Shared);
 }
@@ -286,7 +286,7 @@ __always_inline__ void _insertNewTsk(task_TaskStruct *tsk) {
 task_TaskStruct *_newTask(void *entryAddr, u64 arg, u64 attr, task_ThreadStruct *thread) {
     task_Union *tskUnion = mm_kmalloc(sizeof(task_Union), mm_Attr_Shared, NULL);
     if (tskUnion == NULL) {
-        printk(RED, BLACK, "task: failed to allocate task structure.\n");
+        printk(screen_err, "task: failed to allocate task structure.\n");
         return NULL;
     }
     memset(tskUnion, 0, sizeof(task_Union));
@@ -305,7 +305,7 @@ task_TaskStruct *_newTask(void *entryAddr, u64 arg, u64 attr, task_ThreadStruct 
     task_insSubTask(tsk, tsk->thread);
 
     if (hal_task_dispatchTask(tsk) == res_FAIL) {
-        printk(RED, BLACK, "task: failed to dispatch task #%ld.\n", tsk->pid);
+        printk(screen_err, "task: failed to dispatch task #%ld.\n", tsk->pid);
         task_delSubTask(tsk);
         mm_kfree(tskUnion, mm_Attr_Shared);
         return NULL;
@@ -324,7 +324,7 @@ task_TaskStruct *task_newSubTask(void *entryAddr, u64 arg, u64 attr) {
 task_TaskStruct *task_newTask(void *entryAddr, u64 arg, u64 attr) {
     task_ThreadStruct *thread = task_newThread(attr);
     if (thread == NULL) {
-        printk(RED, BLACK, "task: failed to create thread for new task.\n");
+        printk(screen_err, "task: failed to create thread for new task.\n");
         return NULL;
     }
     task_TaskStruct *tsk = _newTask(entryAddr, arg, attr, thread);
@@ -354,8 +354,8 @@ u64 task_freeMgr(u64 arg) {
             SafeList_del(&task_mgr.freeTsks, &tsk->scheNd);
             u64 pid = tsk->pid;
             if (task_freeTask(tsk) == res_FAIL) {
-                printk(RED, BLACK, "task: failed to free task #%ld.\n", pid);
-            } else printk(GREEN, BLACK, "task: task #%ld is killed, tot=%ld\n", pid, ++tot);
+                printk(screen_err, "task: failed to free task #%ld.\n", pid);
+            } else printk(screen_succ, "task: task #%ld is killed, tot=%ld\n", pid, ++tot);
         }
     }
     return 0;

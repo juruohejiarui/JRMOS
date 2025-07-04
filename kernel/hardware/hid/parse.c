@@ -21,7 +21,7 @@ static void _initParser(hw_hid_Parser *parser, hw_Device *dev) {
     parser->colCap = hw_hid_Parser_DefaultColCap;
     parser->col = mm_kmalloc(sizeof(struct hw_hid_Collection) * parser->colCap, mm_Attr_Shared, NULL);
     if (!parser->col) {
-        printk(RED, BLACK, "hw: hid: parser %p: collection allocation failed\n", parser);
+        printk(screen_err, "hw: hid: parser %p: collection allocation failed\n", parser);
         return;
     }
     parser->dev = dev;
@@ -41,7 +41,7 @@ hw_hid_Parser *hw_hid_getParser(hw_Device *dev, int create) {
     if (par == NULL && create) {
         par = mm_kmalloc(sizeof(hw_hid_Parser), mm_Attr_Shared, NULL);
         if (par == NULL) {
-            printk(RED, BLACK, "hw: hid: failed to create new parser.\n");
+            printk(screen_err, "hw: hid: failed to create new parser.\n");
             return NULL;
         }
         _initParser(par, dev);
@@ -121,14 +121,14 @@ static int _parseGlobal(struct hw_hid_Parser *parser, struct hw_hid_Item *item) 
     switch (item->tag) {
         case hw_hid_Item_tag_Push :
             if (parser->gloStkPtr == hw_hid_ParserGlobal_StkSize) {
-                printk(RED, BLACK, "hw: hid: parser %p global stack overflow\n", parser);
+                printk(screen_err, "hw: hid: parser %p global stack overflow\n", parser);
                 return res_FAIL;
             }
             memcpy(&parser->glo, parser->gloStk + (parser->gloStkPtr++), sizeof(struct hw_hid_ParserGlobal));
             return res_SUCC;
         case hw_hid_Item_tag_Pop :
             if (!parser->gloStkPtr) {
-                printk(RED, BLACK, "hw: hid: parser %p global stack underflow\n", parser);
+                printk(screen_err, "hw: hid: parser %p global stack underflow\n", parser);
                 return res_FAIL;
             }
             memcpy(parser->gloStk + (--parser->gloStkPtr), &parser->glo, sizeof(struct hw_hid_ParserGlobal));
@@ -157,26 +157,26 @@ static int _parseGlobal(struct hw_hid_Parser *parser, struct hw_hid_Item *item) 
         case hw_hid_Item_tag_ReportSize :
             parser->glo.reportSz = hw_hid_Item_udata(item);
             if (parser->glo.reportSz > 32) {
-                printk(RED, BLACK, "hw: hid: parser %p: invalid report size: %d\n", parser, parser->glo.reportSz);
+                printk(screen_err, "hw: hid: parser %p: invalid report size: %d\n", parser, parser->glo.reportSz);
                 return res_FAIL;
             }
             return res_SUCC;
         case hw_hid_Item_tag_ReportCount :
             parser->glo.reportCnt = hw_hid_Item_udata(item);
             if (parser->glo.reportCnt > 256) {
-                printk(RED, BLACK, "hw: hid: parser %p: invalid report count: %d\n", parser, parser->glo.reportCnt);
+                printk(screen_err, "hw: hid: parser %p: invalid report count: %d\n", parser, parser->glo.reportCnt);
                 return res_FAIL;
             }
             return res_SUCC;
         case hw_hid_Item_tag_ReportId :
             parser->glo.reportId = hw_hid_Item_udata(item);
             if (parser->glo.reportId == 0) {
-                printk(RED, BLACK, "hw: hid: parser %p: invalid report id: %d\n", parser, parser->glo.reportId);
+                printk(screen_err, "hw: hid: parser %p: invalid report id: %d\n", parser, parser->glo.reportId);
                 return res_FAIL;
             }
             return res_SUCC;
         default:
-            printk(RED, BLACK, "hw: hid: parser %p: unknown global item tag: %d\n", parser, item->tag);
+            printk(screen_err, "hw: hid: parser %p: unknown global item tag: %d\n", parser, item->tag);
             return res_FAIL;
     }
 }
@@ -187,7 +187,7 @@ static int _completeUsage(struct hw_hid_Parser *parser, u32 idx) {
 }
 static int _addUsage(struct hw_hid_Parser *parser, u32 usage) {
     if (parser->loc.usageIdx >= hw_hid_ParserLocal_UsageMx) {
-        printk(RED, BLACK, "hw: hid: parser %p: usage index overflow\n", parser);
+        printk(screen_err, "hw: hid: parser %p: usage index overflow\n", parser);
         return res_FAIL;
     }
     parser->loc.usage[parser->loc.usageIdx] = usage;
@@ -200,7 +200,7 @@ static int _addUsage(struct hw_hid_Parser *parser, u32 usage) {
 static int _parseLocal(struct hw_hid_Parser *parser, struct hw_hid_Item *item) {
     u32 data; u32 n;
     if (item->size == 0) {
-        printk(RED, BLACK, "hw: hid: parser %p: invalid local item size: %d\n", parser, item->size);
+        printk(screen_err, "hw: hid: parser %p: invalid local item size: %d\n", parser, item->size);
         return res_FAIL;
     }
     data = hw_hid_Item_udata(item);
@@ -208,14 +208,14 @@ static int _parseLocal(struct hw_hid_Parser *parser, struct hw_hid_Item *item) {
         case hw_hid_Item_tag_Delimiter :
             if (data) {
                 if (parser->loc.delimiterDep != 0) { 
-                    printk(RED, BLACK, "hw: hid: parser %p: nested delimiter %d\n", parser, data);
+                    printk(screen_err, "hw: hid: parser %p: nested delimiter %d\n", parser, data);
                     return res_FAIL;
                 }
                 parser->loc.delimiterDep++;
                 parser->loc.delimiterBranch++;
             } else {
                 if (parser->loc.delimiterDep < 1) {
-                    printk(RED, BLACK, "hw: hid: parser %p: bogus close delimiter\n", parser);
+                    printk(screen_err, "hw: hid: parser %p: bogus close delimiter\n", parser);
                     return res_FAIL;
                 }
                 parser->loc.delimiterDep--;
@@ -223,14 +223,14 @@ static int _parseLocal(struct hw_hid_Parser *parser, struct hw_hid_Item *item) {
             return res_SUCC;
         case hw_hid_Item_tag_Usage :
             if (parser->loc.delimiterBranch > 1) {
-                printk(YELLOW, BLACK, "hw: hid: parser %p: alternative usage ignored\n", parser);
+                printk(screen_warn, "hw: hid: parser %p: alternative usage ignored\n", parser);
                 return res_SUCC;
             }
             if (item->size <= 2) data = (parser->glo.usagePg << 16) + data;
             return _addUsage(parser, data);
         case hw_hid_Item_tag_UsageMinimum :
             if (parser->loc.delimiterBranch > 1) {
-                printk(YELLOW, BLACK, "hw: hid: parser %p: alternative usage minimum ignored\n", parser);
+                printk(screen_warn, "hw: hid: parser %p: alternative usage minimum ignored\n", parser);
                 return res_SUCC;
             }
             if (item->size <= 2) data = (parser->glo.usagePg << 16) + data;
@@ -238,18 +238,18 @@ static int _parseLocal(struct hw_hid_Parser *parser, struct hw_hid_Item *item) {
             return res_SUCC;
         case hw_hid_Item_tag_UsageMaximum :
             if (parser->loc.delimiterBranch > 1) {
-                printk(YELLOW, BLACK, "hw: hid: parser %p: alternative usage minimum ignored\n", parser);
+                printk(screen_warn, "hw: hid: parser %p: alternative usage minimum ignored\n", parser);
                 return res_SUCC;
             }
             if (item->size <= 2) data = (parser->glo.usagePg << 16) + data;
             for (n = parser->loc.usageMin; n <= data; n++) 
                 if (_addUsage(parser, n) != res_SUCC) {
-                    printk(RED, BLACK, "hw: hid: parser %p: add usage %d failed\n", parser, n);
+                    printk(screen_err, "hw: hid: parser %p: add usage %d failed\n", parser, n);
                     return res_FAIL;
                 }
             return res_SUCC;
         default :
-            printk(RED, BLACK, "hw: hid: parser %p: unknown local item tag: %d\n", parser, item->tag);
+            printk(screen_err, "hw: hid: parser %p: unknown local item tag: %d\n", parser, item->tag);
             return res_FAIL;
     }
 }
@@ -259,13 +259,13 @@ static int _collection(struct hw_hid_Parser *parser, u32 tp ) {
     u32 usage = parser->loc.usage[0];
 
     if (parser->colStkPtr == hw_hid_Parser_CollectStkSz) {
-        printk(RED, BLACK, "hw: hid: parser %p: collection stack overflow\n", parser);
+        printk(screen_err, "hw: hid: parser %p: collection stack overflow\n", parser);
         return res_FAIL;
     }
     if (parser->colSz == parser->colCap) {
         coll = mm_kmalloc(sizeof(struct hw_hid_Collection) * parser->colCap * 2, mm_Attr_Shared, NULL);
         if (!coll) {
-            printk(RED, BLACK, "hw: hid: parser %p: collection allocation failed\n", parser);
+            printk(screen_err, "hw: hid: parser %p: collection allocation failed\n", parser);
             return res_FAIL;
         }
         memcpy(parser->col, coll, sizeof(struct hw_hid_Collection) * parser->colSz);
@@ -290,7 +290,7 @@ static int _collection(struct hw_hid_Parser *parser, u32 tp ) {
 
 static int _endCollection(struct hw_hid_Parser *parser) {
     if (!parser->colStkPtr) {
-        printk(RED, BLACK, "hw: hid: parser %p: collection stack underflow\n", parser);
+        printk(screen_err, "hw: hid: parser %p: collection stack underflow\n", parser);
         return res_FAIL;
     }
     parser->colStkPtr--;
@@ -309,13 +309,13 @@ static u32 _lookupCol(struct hw_hid_Parser *parser, u32 tp ) {
 static struct hw_hid_Report *_registerReport(struct hw_hid_Parser *parser, u32 tp , u32 id, u32 app) {
     struct hw_hid_ReportEnum *repEnum = parser->reportEnum + tp ;
     if (id >= hw_hid_ReportEnum_MxReports) {
-        printk(RED, BLACK, "hw: hid: parser %p: report id %d too high\n", parser, id);
+        printk(screen_err, "hw: hid: parser %p: report id %d too high\n", parser, id);
         return NULL;
     }
     if (repEnum->report[id]) return repEnum->report[id];
     struct hw_hid_Report *report = mm_kmalloc(sizeof(struct hw_hid_Report), mm_Attr_Shared, NULL);
     if (!report) {
-        printk(RED, BLACK, "hw: hid: parser %p: report allocation failed\n", parser);
+        printk(screen_err, "hw: hid: parser %p: report allocation failed\n", parser);
         return NULL;
     }
     memset(report, 0, sizeof(struct hw_hid_Report));
@@ -328,20 +328,20 @@ static struct hw_hid_Report *_registerReport(struct hw_hid_Parser *parser, u32 t
     List_insTail(&repEnum->reportLst, &report->lst);
     List_init(&report->fieldLst);
 
-    printk(WHITE, BLACK, "hw: hid: parser %p: new report %p, tp=%d id=%d\n", parser, report, tp , id);
+    printk(screen_log, "hw: hid: parser %p: new report %p, tp=%d id=%d\n", parser, report, tp , id);
 
     return report;
 }
 
 static struct hw_hid_Field *_registerField(struct hw_hid_Report *report, u32 usage) {
     if (report->fieldCnt >= hw_hid_Parser_MxFields) {
-        printk(RED, BLACK, "hw: hid: report %p: field count overflow\n", report);
+        printk(screen_err, "hw: hid: report %p: field count overflow\n", report);
         return NULL;
     }
     struct hw_hid_Field *field = mm_kmalloc(
         sizeof(struct hw_hid_Field) + usage * sizeof(struct hw_hid_Usage), mm_Attr_Shared, NULL);
     if (!field) {
-        printk(RED, BLACK, "hw: hid: report %p: field allocation failed\n", report);
+        printk(screen_err, "hw: hid: report %p: field allocation failed\n", report);
         return NULL;
     }
 
@@ -363,13 +363,13 @@ static int _addField(struct hw_hid_Parser *parser, u32 tp , u32 flags) {
     report = _registerReport(parser, tp , parser->glo.reportId, app);
 
     if (!report) {
-        printk(RED, BLACK, "hw: hid: parser %p: failed to register report\n", parser);
+        printk(screen_err, "hw: hid: parser %p: failed to register report\n", parser);
         return res_FAIL;
     }
 
     if ((parser->glo.logicalMin < 0 && parser->glo.logicalMax < parser->glo.logicalMin)
             || (parser->glo.logicalMin >= 0 && (u32)parser->glo.logicalMax < (u32)parser->glo.logicalMin)) {
-        printk(RED, BLACK, "hw: hid: parser %p: invalid logical range: %d ~ %d\n", 
+        printk(screen_err, "hw: hid: parser %p: invalid logical range: %d ~ %d\n", 
                parser, parser->glo.logicalMin, parser->glo.logicalMax);
         return res_FAIL;
     }
@@ -377,7 +377,7 @@ static int _addField(struct hw_hid_Parser *parser, u32 tp , u32 flags) {
     report->sz += parser->glo.reportSz * parser->glo.reportCnt;
 
     if (report->sz > (mxBufSz - 1) << 3) {
-        printk(RED, BLACK, "hw: hid: parser %p: report too long.", parser);
+        printk(screen_err, "hw: hid: parser %p: report too long.", parser);
         return res_FAIL;
     }
 
@@ -390,7 +390,7 @@ static int _addField(struct hw_hid_Parser *parser, u32 tp , u32 flags) {
     field = _registerField(report, usages);
 
     if (field == NULL) {
-        printk(RED, BLACK, "hw: hid: parser %p: failed to register field\n", parser);
+        printk(screen_err, "hw: hid: parser %p: failed to register field\n", parser);
         return res_FAIL;
     }
 
@@ -442,7 +442,7 @@ static int _parseMain(struct hw_hid_Parser *parser, struct hw_hid_Item *item) {
             ret = _addField(parser, hw_hid_ReportTp_Feature, data);
             break;
         default :
-            printk(RED, BLACK, "hw: hid: parser %p: unknown main item tag: %d\n", parser, item->tag);
+            printk(screen_err, "hw: hid: parser %p: unknown main item tag: %d\n", parser, item->tag);
             return res_FAIL;
     }
     memset(&parser->loc, 0, sizeof(struct hw_hid_ParserLocal));
@@ -459,11 +459,11 @@ int hw_hid_parse(u8 *report, u32 reportLen, hw_hid_Parser *parser) {
     while ((nxt = _fetchItem(st, ed, &item)) != NULL) {
         st = nxt;
         if (item.format != hw_hid_Item_format_Short) {
-            printk(RED, BLACK, "hw: hid: parser %p: no support for long item.\n", parser);
+            printk(screen_err, "hw: hid: parser %p: no support for long item.\n", parser);
             goto Fail;
         }
         if (tsk[item.tp](parser, &item) != res_SUCC) {
-            printk(RED, BLACK, "hw: hid: parser %p: item %u %u %u %u\n", 
+            printk(screen_err, "hw: hid: parser %p: item %u %u %u %u\n", 
                 parser, item.format, (u32)item.tp , (u32)item.size, (u32)item.tag);
             goto Fail;
         }
@@ -476,27 +476,27 @@ int hw_hid_parse(u8 *report, u32 reportLen, hw_hid_Parser *parser) {
 static void _printReportEnum(struct hw_hid_ReportEnum *repEnum) {
     int repIdx = 0;
     for (ListNode *repNd = repEnum->reportLst.next; repNd != &repEnum->reportLst; repNd = repNd->next, repIdx++) {
-        printk(WHITE, BLACK, "Report #%d:\n", repIdx);
+        printk(screen_log, "Report #%d:\n", repIdx);
         struct hw_hid_Report *rep = container(repNd, struct hw_hid_Report, lst);
         for (int i = 0; i < rep->fieldCnt; i++) {
             struct hw_hid_Field *field = rep->field[i];
-            printk(WHITE, BLACK, "\tphy:[%d %d] logical:[%d %d] off:%d sz:%d cnt:%d flag:%d", 
+            printk(screen_log, "\tphy:[%d %d] logical:[%d %d] off:%d sz:%d cnt:%d flag:%d", 
                 field->physicalMin, field->physicalMax,
                 field->logicalMin, field->logicalMax, 
                 field->reportOff, field->reportSz, field->reportCnt,
                 field->flag);
-            printk(WHITE, BLACK, "\n");
+            printk(screen_log, "\n");
         }
     }
 }
 
 void hw_hid_printParser(hw_hid_Parser *parser) {
     SpinLock_lock(&_printLck);
-    printk(WHITE, BLACK, "parser %p:\nInput:\n", parser);
+    printk(screen_log, "parser %p:\nInput:\n", parser);
     struct hw_hid_ReportEnum *repEnum = &parser->reportEnum[hw_hid_ReportTp_Input];
     _printReportEnum(repEnum);
 
-    printk(WHITE, BLACK, "Output:\n", parser);
+    printk(screen_log, "Output:\n", parser);
     repEnum = &parser->reportEnum[hw_hid_ReportTp_Output];
     _printReportEnum(repEnum);
     SpinLock_unlock(&_printLck);

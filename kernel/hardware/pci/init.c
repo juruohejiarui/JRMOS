@@ -32,7 +32,7 @@ static void _chkFunc(u64 baseAddr, u16 bus, u16 dev, u16 func) {
 	// printk device information
 	hw_pci_Dev *devStruct = mm_kmalloc(sizeof(hw_pci_Dev), mm_Attr_Shared, NULL);
 	if (devStruct == NULL) {
-		printk(RED, BLACK, "pci: failed to allocate device structure.\n");
+		printk(screen_err, "pci: failed to allocate device structure.\n");
 		return ;
 	}
 	devStruct->busId = bus, devStruct->devId = dev, devStruct->funcId = func;
@@ -45,7 +45,7 @@ static void _chkFunc(u64 baseAddr, u16 bus, u16 dev, u16 func) {
 void hw_pci_lstDev() {
 	SafeList_enum(&hw_pci_devLst, pciDevNd) {
 		hw_pci_Dev *dev = container(pciDevNd, hw_pci_Dev, lst);
-		printk(WHITE, BLACK, "pci:%02x:%02x:%01x: device=%04x vendor=%04x hdrTp=%02x cls=%04x subcls=%04x progIf=%04x %s \n", 
+		printk(screen_log, "pci:%02x:%02x:%01x: device=%04x vendor=%04x hdrTp=%02x cls=%04x subcls=%04x progIf=%04x %s \n", 
 			dev->busId, dev->devId, dev->funcId, 
 			dev->cfg->deviceId, dev->cfg->vendorId, dev->cfg->hdrTp, 
 			dev->cfg->class, dev->cfg->subclass, dev->cfg->progIf, 
@@ -55,7 +55,7 @@ void hw_pci_lstDev() {
 }
 
 int hw_pci_chk() {
-	printk(WHITE, BLACK, "hw: pci: checking\n");
+	printk(screen_log, "hw: pci: checking\n");
 	SafeList_enum(&hw_pci_devLst, pciDevNd) {
 		hw_pci_Dev *dev = container(pciDevNd, hw_pci_Dev, lst);
 		// scan drivers

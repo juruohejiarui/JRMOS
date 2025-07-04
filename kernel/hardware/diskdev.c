@@ -29,7 +29,7 @@ int hw_DiskDev_install(hw_DiskDev *dev) {
 	if (res == res_SUCC) {
 		SafeList_del(&hw_diskdev_unenbLst, &dev->lst);
 		SafeList_insTail(&hw_diskdev_enbLst, &dev->lst);
-		printk(GREEN, BLACK, "hw: disk: succ to install device %p, size=%ld\n", dev, dev->size(dev));
+		printk(screen_succ, "hw: disk: succ to install device %p, size=%ld\n", dev, dev->size(dev));
 	}
 
 	fs_gpt_scan(dev);

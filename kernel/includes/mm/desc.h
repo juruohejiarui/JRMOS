@@ -16,6 +16,8 @@
 #define mm_Attr_System		0x40u
 #define mm_Attr_Exist		0x80u
 #define mm_Attr_Writable	0x100u
+#define mm_Attr_User		0x200u
+#define mm_Attr_Executable	0x400u
 
 #define mm_kernelAddr	((void *)(task_krlAddrSt + 0x100000ul))
 
@@ -55,6 +57,7 @@ struct mm_Page {
 	u16 buddyId;
 	u16 ord;
 	u32 attr;
+	u64 ref;
 } __attribute__ ((packed));
 
 struct mm_MemMap {

@@ -29,19 +29,19 @@ int hal_hw_hpet_init() {
         }
     }
     if (hal_hw_hpet_xsdtDesc == NULL) {
-        printk(RED, BLACK, "hw: hpet: cannot find HPET configuration in UEFI Table.\n");
+        printk(screen_err, "hw: hpet: cannot find HPET configuration in UEFI Table.\n");
         return res_FAIL;
     }
-    printk(WHITE, BLACK, "hw: hpet: desc:%p addr:%p\n", hal_hw_hpet_xsdtDesc, hal_hw_hpet_xsdtDesc->addr.addr);
+    printk(screen_log, "hw: hpet: desc:%p addr:%p\n", hal_hw_hpet_xsdtDesc, hal_hw_hpet_xsdtDesc->addr.addr);
 
     hal_hw_io_out32(0xcf8, 0x8000f8f0);
     u32 x = hal_hw_io_in32(0xcfc) & 0xffffc000;
     if (x > 0xfec00000 && x < 0xfee00000) {
-        printk(WHITE, BLACK, "hw: hpet: set enable register.\n");
+        printk(screen_log, "hw: hpet: set enable register.\n");
         u32 *p = (u32 *)mm_dmas_phys2Virt(x + 0x3404ul);
         *p = 0x80;
         hal_hw_mfence();
-    } else printk(WHITE, BLACK, "hw: hpet: no need to set enable register.\n");
+    } else printk(screen_log, "hw: hpet: no need to set enable register.\n");
 
     memset(&hal_hw_hpet_rteDesc, 0, sizeof(hal_hw_apic_RteDesc));
     
@@ -56,42 +56,42 @@ int hal_hw_hpet_init() {
 
     // check capability
     u64 cap = hal_hw_hpet_getReg64(hal_hw_hpet_capId);
-    printk(WHITE, BLACK, "hw: hpet: cap: ");
-    if (cap & hal_hw_hpet_capId_64bit) printk(GREEN, BLACK, "64bit ");
+    printk(screen_log, "hw: hpet: cap: ");
+    if (cap & hal_hw_hpet_capId_64bit) printk(screen_succ, "64bit ");
     else {
-        printk(RED, BLACK, "64bit ");
+        printk(screen_err, "64bit ");
         return res_FAIL;
     }
-    if (cap & hal_hw_hpet_capId_LegacyReplace) printk(GREEN, BLACK, "Legacy-Replace ");
+    if (cap & hal_hw_hpet_capId_LegacyReplace) printk(screen_succ, "Legacy-Replace ");
     else {
-        printk(RED, BLACK, "Legacy-Replace ");
+        printk(screen_err, "Legacy-Replace ");
         return res_FAIL;
     }
 
     // get the minimum tick of HPET
     u64 minTick = (cap >> 32) & ((1ull<< 32) - 1);
-    printk(WHITE, BLACK, "minTick=%ld\n", minTick);
+    printk(screen_log, "minTick=%ld\n", minTick);
 
     // set and check check configuration and capability of timer 0
     hal_hw_setTimerCfg(0, hal_hw_hpet_timerCfgCap_Enable | hal_hw_hpet_timerCfgCap_Period | hal_hw_hpet_timerCfgCap_SetVal | hal_hw_hpet_timerCfgCap_Irq(2));
     u64 cfgCap0 = hal_hw_getTimerCfg(0);
-    printk(WHITE, BLACK, "hw: hpet: timer0: ");
-    if (cfgCap0 & hal_hw_hpet_timerCfgCap_Enable) printk(GREEN, BLACK, "Enable ");
+    printk(screen_log, "hw: hpet: timer0: ");
+    if (cfgCap0 & hal_hw_hpet_timerCfgCap_Enable) printk(screen_succ, "Enable ");
     else {
-        printk(RED, BLACK, "Disable ");
+        printk(screen_err, "Disable ");
         return res_FAIL;
     }
-    if (cfgCap0 & hal_hw_hpet_timerCfgCap_64Cap) printk(GREEN, BLACK, "64bit ");
+    if (cfgCap0 & hal_hw_hpet_timerCfgCap_64Cap) printk(screen_succ, "64bit ");
     else {
-        printk(RED, BLACK, "64bit ");
+        printk(screen_err, "64bit ");
         return res_FAIL;
     }
-    if (cfgCap0 & hal_hw_hpet_timerCfgCap_Period) printk(GREEN, BLACK, "Period ");
+    if (cfgCap0 & hal_hw_hpet_timerCfgCap_Period) printk(screen_succ, "Period ");
     else {
-        printk(RED, BLACK, "Period ");
+        printk(screen_err, "Period ");
         return res_FAIL;
     }
-    printk(WHITE, BLACK, "tick=%ld\n", ((1000000000000) / minTick));
+    printk(screen_log, "tick=%ld\n", ((1000000000000) / minTick));
     hal_hw_setTimerCmp(0, ((1000000000000) / minTick));
 
     intr_initDesc(hal_hw_hpet_intrDesc, hal_hw_hpet_intrHandler, 0, "HPET", &hal_hw_apic_intrCtrl);
@@ -102,17 +102,17 @@ int hal_hw_hpet_init() {
     hal_hw_hpet_setReg64(hal_hw_hpet_mainCounter, 0x0);
     hal_hw_hpet_setReg64(hal_hw_hpet_intrState, 0xfffffffful);
     hal_hw_hpet_setReg64(hal_hw_hpet_cfg, hal_hw_hpet_cfg_Enable | hal_hw_hpet_cfg_LegacyReplace);
-    printk(WHITE, BLACK, "hw: hpet: cfg: ");
+    printk(screen_log, "hw: hpet: cfg: ");
     {
         u64 cfg = hal_hw_hpet_getReg64(hal_hw_hpet_cfg);
-        if (cfg & hal_hw_hpet_cfg_Enable) printk(GREEN, BLACK, "Enable ");
+        if (cfg & hal_hw_hpet_cfg_Enable) printk(screen_succ, "Enable ");
         else {
-            printk(RED, BLACK, "Disable ");
+            printk(screen_err, "Disable ");
             return res_FAIL;
         }
-        if (cfg & hal_hw_hpet_cfg_LegacyReplace) printk(GREEN, BLACK, "Legacy-Replace\n");
+        if (cfg & hal_hw_hpet_cfg_LegacyReplace) printk(screen_succ, "Legacy-Replace\n");
         else {
-            printk(RED, BLACK, "Legacy-Replace\n");
+            printk(screen_err, "Legacy-Replace\n");
             return res_FAIL;
         }
     }

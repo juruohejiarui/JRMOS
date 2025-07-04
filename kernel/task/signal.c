@@ -6,7 +6,7 @@
 void task_signal_setHandler(u64 signal, void (*handler)(u64), u64 param) {
     task_current->thread->sigHandler[signal] = handler;
     task_current->thread->sigParam[signal] = param;
-    printk(WHITE, BLACK, "task: signal: task #%d set handler for signal #%d with param %p\n", task_current->pid, signal, param);
+    printk(screen_log, "task: signal: task #%d set handler for signal #%d with param %p\n", task_current->pid, signal, param);
 }
 
 void task_signal_send(task_TaskStruct *target, u64 signal) {
@@ -47,13 +47,13 @@ void task_signal_scan() {
     for (int i = 0; i < 64; i++) if (task_current->signal.value & (1ul << i)) {
         void (*handler)(u64);
         if (!(handler = task_current->thread->sigHandler[i])) {
-            printk(RED, BLACK, "task: signal: task %ld no handler for signal #%d\n", task_current->pid, i);
+            printk(screen_err, "task: signal: task %ld no handler for signal #%d\n", task_current->pid, i);
             if (!i) task_exit(-1);
         } else {
             // if there is handler, then call the handler and reset the bit
             intr_unmask();
             Atomic_btr(&task_current->signal, i);
-            printk(YELLOW, BLACK, "task: singal: task %ld handle signal #%d\n", task_current->pid, i);
+            printk(screen_warn, "task: singal: task %ld handle signal #%d\n", task_current->pid, i);
             handler(task_current->thread->sigParam[i]);
             intr_mask();
         }

@@ -65,7 +65,7 @@ void softirq_scan() {
         softirq_Desc *desc = cpu_getvar(sirq[i]);
         Atomic_btr(&curCpu->sirqFlag, i);
         if (desc == NULL || desc->handler == NULL) {
-            printk(RED, BLACK, "sirq: cpu #%d no handler for sirq #%d\n",
+            printk(screen_err, "sirq: cpu #%d no handler for sirq #%d\n",
                 task_current->cpuId, i);
         } else {
             intr_mask();

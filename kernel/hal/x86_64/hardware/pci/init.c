@@ -21,10 +21,10 @@ int hal_hw_pci_init() {
 		}
 	}
 	if (_mfcgDesc == NULL) {
-		printk(RED, BLACK, "hw: pci: MCFG not found\n");
+		printk(screen_err, "hw: pci: MCFG not found\n");
 		return res_FAIL;
 	}
-	printk(WHITE, BLACK, "hw: pci: MCFG: %p\n", _mfcgDesc);
+	printk(screen_log, "hw: pci: MCFG: %p\n", _mfcgDesc);
 	u32 _devCnt = (_mfcgDesc->hdr.length - sizeof(hal_hw_uefi_McfgDesc)) / sizeof(struct hal_hw_uefi_McfgDescEntry);
 	for (int i = 0; i < _devCnt; i++) {
 		for (u16 bus = _mfcgDesc->entry[i].stBus; bus <= _mfcgDesc->entry[i].edBus; bus++) hw_pci_chkBus(_mfcgDesc->entry[i].addr, bus);

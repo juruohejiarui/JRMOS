@@ -6,7 +6,7 @@
 hw_nvme_SubQue *hw_nvme_allocSubQue(hw_nvme_Host *host, u32 iden, u32 size, hw_nvme_CmplQue *trg) {
 	hw_nvme_SubQueEntry *entry = mm_kmalloc(sizeof(hw_nvme_SubQue) + size * sizeof(hw_nvme_SubQueEntry) + size * sizeof(hw_nvme_Request *), mm_Attr_Shared, NULL);
 	if (entry == NULL) {
-		printk(RED, BLACK, "hw: nvme: %p: failed to allocate submission queue size=%d\n", host, size);
+		printk(screen_err, "hw: nvme: %p: failed to allocate submission queue size=%d\n", host, size);
 		return NULL;
 	}
 	memset(entry, 0, sizeof(hw_nvme_SubQueEntry) * size);
@@ -27,7 +27,7 @@ hw_nvme_SubQue *hw_nvme_allocSubQue(hw_nvme_Host *host, u32 iden, u32 size, hw_n
 hw_nvme_CmplQue *hw_nvme_allocCmplQue(hw_nvme_Host *host, u32 iden, u32 size) {
 	hw_nvme_CmplQueEntry *entry = mm_kmalloc(sizeof(hw_nvme_CmplQue) + size * sizeof(hw_nvme_CmplQueEntry), mm_Attr_Shared, NULL);
 	if (entry == NULL) {
-		printk(RED, BLACK, "hw: nvme: %p: failed to allocate completion queue size=%d\n", host, size);
+		printk(screen_err, "hw: nvme: %p: failed to allocate completion queue size=%d\n", host, size);
 		return NULL;
 	}
 	memset(entry, 0, sizeof(hw_nvme_CmplQueEntry) * size);
@@ -45,7 +45,7 @@ hw_nvme_CmplQue *hw_nvme_allocCmplQue(hw_nvme_Host *host, u32 iden, u32 size) {
 hw_nvme_Request *hw_nvme_makeReq(int inputSz) {
 	hw_nvme_Request *req = mm_kmalloc(sizeof(hw_nvme_Request) + inputSz * sizeof(hw_nvme_SubQueEntry), mm_Attr_Shared, NULL);
 	if (req == NULL) {
-		printk(RED, BLACK, "hw: nvme: failed to allocate request, size=%d\n", inputSz);
+		printk(screen_err, "hw: nvme: failed to allocate request, size=%d\n", inputSz);
 		return NULL;
 	}
 	task_Request_init(&req->req, task_Request_Flag_Abort);
@@ -115,7 +115,7 @@ int hw_nvme_request(hw_nvme_Host *host, hw_nvme_SubQue *subQue, hw_nvme_Request 
 	task_Request_send(&req->req);
 
 	if (req->res.status != 0x01) {
-		printk(RED, BLACK, "hw: nvme: %p: request %p failed status:%x\n", host, req, req->res.status);
+		printk(screen_err, "hw: nvme: %p: request %p failed status:%x\n", host, req, req->res.status);
 	}
 }
 
@@ -152,7 +152,7 @@ int hw_nvme_devInstall(hw_Device *dev) {
 
 	for (int i = 0; i < 64; i++) {
 		if ((nvmeDev->reqs[i] = hw_nvme_makeReq(1)) == NULL) {
-			printk(RED, BLACK, "hw: nvme: %p: device %p: failed to allocate request block #%d\n", nvmeDev->host, nvmeDev, i);
+			printk(screen_err, "hw: nvme: %p: device %p: failed to allocate request block #%d\n", nvmeDev->host, nvmeDev, i);
 			return res_FAIL;
 		}
 	}
@@ -165,11 +165,11 @@ int hw_nvme_devUninstall(hw_Device *dev) {
 
 	// some tasks are not finished
 	if (nvmeDev->reqBitmap)
-		printk(YELLOW, BLACK, "hw: nvme: %p: device %p: some task not finished when uninstalling.\n", nvmeDev->host, nvmeDev);
+		printk(screen_warn, "hw: nvme: %p: device %p: some task not finished when uninstalling.\n", nvmeDev->host, nvmeDev);
 
 	for (int i = 0; i < 64; i++) {
 		if (hw_nvme_freeReq(nvmeDev->reqs[i]) == res_FAIL) {
-			printk(RED, BLACK, "hw: nvme: %p: device %p: failed to free request block #%d\n", nvmeDev->host, nvmeDev, i);
+			printk(screen_err, "hw: nvme: %p: device %p: failed to free request block #%d\n", nvmeDev->host, nvmeDev, i);
 			return res_FAIL;
 		}
 	}
@@ -229,7 +229,7 @@ u64 hw_nvme_devRead(hw_DiskDev *dev, u64 offset, u64 size, void *buf) {
 		subQue = _findIOSubQue(nvmeDev->host);
 		hw_nvme_request(nvmeDev->host, subQue, req);
 		if (req->res.status != 0x01) {
-			printk(RED, BLACK, "hw: nvme: %p: device %p: failed to read blk: %ld~%ld\n", 
+			printk(screen_err, "hw: nvme: %p: device %p: failed to read blk: %ld~%ld\n", 
 				nvmeDev->host, nvmeDev, 
 				offset + res, offset + res + blkSz - 1);
 			break;
@@ -264,7 +264,7 @@ u64 hw_nvme_devWrite(hw_DiskDev *dev, u64 offset, u64 size, void *buf) {
 		subQue = _findIOSubQue(nvmeDev->host);
 		hw_nvme_request(nvmeDev->host, subQue, req);
 		if (req->res.status != 0x01) {
-			printk(RED, BLACK, "hw: nvme: %p: device %p: failed to read blk: %ld~%ld\n", 
+			printk(screen_err, "hw: nvme: %p: device %p: failed to read blk: %ld~%ld\n", 
 				nvmeDev->host, nvmeDev, 
 				offset + res, offset + res + blkSz - 1);
 			break;

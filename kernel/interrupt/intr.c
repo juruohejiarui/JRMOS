@@ -53,7 +53,7 @@ int intr_alloc(intr_Desc *desc, int intrNum) {
         bit_set1(&cpu_desc[bstCpu].intrMsk[desc[i].vecId / 64], desc[i].vecId % 64);
     }
 	SpinLock_unlock(&intr_allocLck);
-    printk(WHITE, BLACK, "intr: alloc on cpu %d, vec:%d~%d\n", bstCpu, desc[0].vecId, desc[0].vecId + intrNum - 1);
+    printk(screen_log, "intr: alloc on cpu %d, vec:%d~%d\n", bstCpu, desc[0].vecId, desc[0].vecId + intrNum - 1);
     hal_intr_setInCpuDesc(desc, intrNum);
 	return res_SUCC;
 }

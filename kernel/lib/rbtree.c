@@ -249,13 +249,13 @@ RBNode *RBTree_getNextLck(RBTree *tree, RBNode *node) {
 }
 
 void _debug(RBNode *node, int dep) {
-	for (int i = 0; i < dep; i++) printk(WHITE, BLACK, "    ");
-	printk(WHITE, BLACK, "%p: left=%p right=%p", node, node->left, node->right);
+	for (int i = 0; i < dep; i++) printk(screen_log, "    ");
+	printk(screen_log, "%p: left=%p right=%p", node, node->left, node->right);
 	if (node->left) _debug(node->left, dep + 1);
 	if (node->right) _debug(node->right, dep + 1);
 }
 
 void RBTree_debug(RBTree *tree) {
-	printk(WHITE, BLACK, "tree: %p, left=%p root=%p\n", tree, tree->left, tree->root);
+	printk(screen_log, "tree: %p, left=%p root=%p\n", tree, tree->left, tree->root);
 	if (tree->root) _debug(tree->root, 0);
 }

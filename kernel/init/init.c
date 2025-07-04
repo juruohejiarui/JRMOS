@@ -11,11 +11,11 @@ void init_init() {
 	hw_DiskDev_initMgr();
 
 	if (hw_pci_init() == res_FAIL) {
-		printk(RED, BLACK, "init: failed to initialize pci.\n");
+		printk(screen_err, "init: failed to initialize pci.\n");
 		while (1) ;
 	}
 	if (hw_driver_registerBuiltin() == res_FAIL) {
-		printk(RED, BLACK, "init: failed to register builtin drivers.\n");
+		printk(screen_err, "init: failed to register builtin drivers.\n");
 		while (1) ;
 	}
 

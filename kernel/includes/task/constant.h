@@ -37,4 +37,9 @@ bit 0 indicates whether the task need to be scheduled
 
 #define task_Signal_kill	0x0
 #define task_Signal_Int		0x1
+// signal for host to handle request
+#define task_Signal_ServiceHandle 	0x2
+// signal for client
+#define task_Signal_ServiceDone		0x3
+
 #endif

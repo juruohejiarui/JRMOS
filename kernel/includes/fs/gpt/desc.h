@@ -2,6 +2,7 @@
 #define __FS_GPT_DESC_H__
 
 #include <lib/dtypes.h>
+#include <fs/desc.h>
 
 typedef struct fs_gpt_Hdr {
 	u8 signature[8];
@@ -32,10 +33,17 @@ typedef struct fs_gpt_ParEntry {
 	u8 parName[72];
 } __attribute__ ((packed)) fs_gpt_ParEntry;
 
-typedef struct fs_gpt_Tbl {
+typedef struct fs_gpt_Partition {
+	fs_Partition par;
+	u32 parIdx;	
+} fs_gpt_Partition;
+
+typedef struct fs_gpt_Disk {
+	fs_Disk disk;
+
 	fs_gpt_Hdr hdr;
-	fs_gpt_ParEntry entry[0];
-} fs_gpt_Tbl;
+	fs_gpt_ParEntry entries[0];
+} fs_gpt_Disk;
 
 #define fs_gpt_parTypeGuid_None			0x0
 
@@ -46,6 +54,6 @@ typedef struct fs_gpt_Tbl {
 #define fs_gpt_parTypeGuid_LinuxFSDt1	0xe47d47d8693d798e
 
 #define fs_gpt_parTypeGuid_MsBasicDt0	0x4433b9e5ebd0a0a2
-#define fs_gpt_parTypeGuid_MsBasicDt1	0x68b6b72699c787c0
+#define fs_gpt_parTypeGuid_MsBasicDt1	0xc79926b7b668c087
 
 #endif

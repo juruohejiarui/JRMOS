@@ -1,11 +1,18 @@
 #include <lib/crc32.h>
 
+u32 crc32(u8 *dt, u64 size) {
+	u32 crc = crc32_init();
+	for (u64 i = 0; i < size; i += 4) crc = crc32_u32(crc, *(u32 *)(dt + i));
+	for (int i = size & ~0x7; i < size; i++) crc = crc32_u8(crc, dt[i]);
+	return crc32_end(crc);
+}
+
 u32 crc32_ieee802(u8 *dt, u64 size) {
 	u32 crc = 0xffffffffu; // Initial value for CRC-32
 	for (u64 i = 0; i < size; i++) {
 		crc ^= (u32)dt[i];
 		for (int bit = 0; bit < 8; bit++) {
-			if (crc & 0x1) crc = (crc >> 1) ^ 0xedb88320u; // Polynomial for CRC-32
+			if (crc & 0x1) crc = ((crc >> 1) ^ 0xedb88320u); // Polynomial for CRC-32
 			else crc >>= 1;
 		}
 	}

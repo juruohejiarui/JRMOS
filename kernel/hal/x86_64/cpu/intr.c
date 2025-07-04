@@ -12,7 +12,7 @@ void hal_cpu_intrDispatcher(u64 rsp, u64 irqId) {
 	intr_Desc *desc = &hal_cpu_intrDesc[irqId - 0x80];
 	if (desc->handler) desc->handler(desc->param);
 	else {
-		printk(RED, BLACK, "cpu: no interrupt handler for irq %#x\n", irqId);
+		printk(screen_err, "cpu: no interrupt handler for irq %#x\n", irqId);
 	}
 	desc->ctrl->ack(desc);
 }
@@ -28,12 +28,11 @@ void (*hal_cpu_irqList[0x10])(void) = {
 };
 
 intr_handlerDeclare(hal_cpu_intrOfSchedule) {
-	// printk(WHITE, RED, "a");
 	task_sche_updCurState();
 }
 
 intr_handlerDeclare(hal_cpu_intrOfPause) {
-	printk(RED, BLACK, "P%d ", task_current->cpuId);
+	printk(screen_err, "P%d ", task_current->cpuId);
 }
 
 int hal_cpu_initIntr() {

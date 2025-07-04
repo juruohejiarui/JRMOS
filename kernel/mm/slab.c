@@ -51,7 +51,7 @@ int _delRecord(void *addr) {
         else node = node->left;
     }
     if (!record) {
-        printk(RED, BLACK, "mm: slab: delRecord(): failed to find record of private address %p\n", addr);
+        printk(screen_err, "mm: slab: delRecord(): failed to find record of private address %p\n", addr);
         return res_FAIL;
     }
     RBTree_del(&task_current->thread->slabRecord, node);
@@ -69,13 +69,13 @@ int mm_slab_init() {
             size += upAlign(Page_2MSize / _slab[i].size, 64) / 64 * sizeof(u64);
         }
         size = upAlign(size, mm_pageSize);
-        printk(WHITE, BLACK, "mm: slab: initialization memory %ld\n", size);
+        printk(screen_log, "mm: slab: initialization memory %ld\n", size);
         u64 log2Size = 0;
         while ((1ull<< log2Size) < (size >> mm_pageShift)) log2Size++;
         page = mm_allocPages(log2Size, mm_Attr_Shared);
             
         if (page == NULL) {
-            printk(RED, BLACK, "mm: slab: failed to alloc 2^%d pages for initialization.\n", log2Size);
+            printk(screen_err, "mm: slab: failed to alloc 2^%d pages for initialization.\n", log2Size);
             return res_FAIL;
         }   
     }
@@ -88,7 +88,7 @@ int mm_slab_init() {
         blk->usingCnt = 0, blk->freeCnt = Page_2MSize >> _slab[i].szShift;
         blk->page = alloc2MPage();
         if (blk->page == NULL) {
-            printk(RED, BLACK, "mm: slab: failed to alloc 2M pages for slab #%d\n", i);
+            printk(screen_err, "mm: slab: failed to alloc 2M pages for slab #%d\n", i);
             return res_FAIL;
         }
         blk->addr = mm_dmas_phys2Virt(mm_getPhyAddr(blk->page));
@@ -113,16 +113,16 @@ void mm_slab_dbg(int detail) {
             tot += slab->size * slab->freeCnt;
             totUsage += slab->size * slab->usingCnt;
         }
-        printk(WHITE, BLACK, "mm: slab: usage %ldB=%ldMb/%ldB=%ldMb ", totUsage, totUsage >> 20, tot, tot >> 20);
+        printk(screen_log, "mm: slab: usage %ldB=%ldMb/%ldB=%ldMb ", totUsage, totUsage >> 20, tot, tot >> 20);
         return ;
     }
-    printk(WHITE, BLACK, "mm: slab:\n");
+    printk(screen_log, "mm: slab:\n");
     for (int i = 0; i < mm_slab_mxSizeShift - mm_slab_mnSizeShift + 1; i++) {
         Slab *slab = &_slab[i];
-        printk(YELLOW, BLACK, "[%2d] size=%lu using=%ld free=%ld\n", i, slab->size, slab->usingCnt, slab->freeCnt);
+        printk(screen_warn, "[%2d] size=%lu using=%ld free=%ld\n", i, slab->size, slab->usingCnt, slab->freeCnt);
         for (ListNode *list = slab->blkList.next; list != &slab->blkList; list = list->next) {
             SlabBlk *blk = container(list, SlabBlk, list);
-            printk(WHITE, BLACK, "\t(%p): using=%5d free=%5d colMap[0]=%p addr=%p\n",
+            printk(screen_log, "\t(%p): using=%5d free=%5d colMap[0]=%p addr=%p\n",
                 blk, blk->usingCnt, blk->freeCnt, blk->colMap[0], blk->addr);
         }
     }
@@ -135,7 +135,7 @@ static int _kfree(void *addr);
 __always_inline__ int _newSlabBlk(int sizeId) {
     mm_Page *pages = alloc2MPage();
     if (pages == NULL) {
-        printk(RED, BLACK, "mm: slab: newSlabBlk(): failed to allocate 2M page for a new slab.\n");
+        printk(screen_err, "mm: slab: newSlabBlk(): failed to allocate 2M page for a new slab.\n");
         return res_FAIL;
     }
     u64 structSz = 0; void *addr = mm_dmas_phys2Virt(mm_getPhyAddr(pages));
@@ -152,7 +152,7 @@ __always_inline__ int _newSlabBlk(int sizeId) {
         u64 colCnt = Page_2MSize >> _slab[sizeId].szShift, colLen = upAlign(colCnt, 64) / 64;
         blk = _kmalloc(sizeof(SlabBlk) + colLen * sizeof(u64));
         if (blk == NULL) {
-            printk(RED, BLACK, "mm: slab: newSlabBlk(): failed to allocate slab block with size=%d\n", sizeof(SlabBlk) + colLen * sizeof(u64));
+            printk(screen_err, "mm: slab: newSlabBlk(): failed to allocate slab block with size=%d\n", sizeof(SlabBlk) + colLen * sizeof(u64));
             return res_FAIL;
         }
         blk->usingCnt = 0;
@@ -199,7 +199,7 @@ static void *_kmalloc(u64 size) {
         }
     } else {
         if (_newSlabBlk(id) == res_FAIL) {
-            printk(RED, BLACK, "mm: slab: kmalloc(): failed to make new slab block with size=%ld\n", _slab[id].size);
+            printk(screen_err, "mm: slab: kmalloc(): failed to make new slab block with size=%ld\n", _slab[id].size);
             return NULL;
         }
         blk = container(_slab[id].blkList.next, SlabBlk, list);
@@ -232,7 +232,7 @@ static int _kfree(void *addr) {
         if (find) break;
     }
     if (!find) {
-        printk(RED, BLACK, "mm: slab: kfree(): invalid address %p\n", addr);
+        printk(screen_err, "mm: slab: kfree(): invalid address %p\n", addr);
         return res_FAIL;
     }
     u64 idx = ((u64)addr - (u64)blk->addr) >> _slab[sizeId].szShift;
@@ -247,7 +247,7 @@ static int _kfree(void *addr) {
 
 void *mm_kmalloc(u64 size, u32 attr, void (*destructor)(void *)) {
     if (size > mm_slab_mxSize) {
-        printk(RED, BLACK, "mm: slab: kmalloc(): failed to allocate a memory block with size %ld. Too large\n", size);
+        printk(screen_err, "mm: slab: kmalloc(): failed to allocate a memory block with size %ld. Too large\n", size);
         return NULL;
     }
     int intrState = intr_state();
@@ -270,7 +270,7 @@ void *mm_kmalloc(u64 size, u32 attr, void (*destructor)(void *)) {
 int mm_kfree(void *addr, u32 attr) {
     if (~attr & mm_Attr_Shared) {
         if (_delRecord(addr) == res_FAIL) {
-            printk(RED, BLACK, "mm: slab: kfree(): failed to delete record of private address %p.\n", addr);
+            printk(screen_err, "mm: slab: kfree(): failed to delete record of private address %p.\n", addr);
             return res_FAIL;
         }
     }

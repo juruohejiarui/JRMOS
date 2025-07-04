@@ -6,6 +6,8 @@
 __always_inline__ u32 crc32_init() { return 0xffffffff; }
 __always_inline__ u32 crc32_end(u32 crc) { return ~crc; }
 
+u32 crc32(u8 *dt, u64 size);
+
 u32 crc32_ieee802(u8 *dt, u64 size);
 
 #ifdef HAL_LIB_CRC32

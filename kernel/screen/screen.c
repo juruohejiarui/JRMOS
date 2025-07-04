@@ -24,7 +24,7 @@ static SpinLock _printLck, _bufLck;
 
 screen_Info *screen_info;
 
-static void _printStr(unsigned int fcol, unsigned int bcol, const char *str, int len);
+static void _printStr(u64 col, const char *str, int len);
 
 void screen_init() {
 	_bufAddr = NULL;
@@ -52,10 +52,10 @@ int screen_enableBuf() {
     mm_Page *pages = mm_allocPages(max(0, log2BufSize - mm_pageShift), mm_Attr_Shared);
     if (pages == NULL) return res_FAIL;
     _bufAddr = mm_dmas_phys2Virt(mm_getPhyAddr(pages));
-    printk(WHITE, BLACK, "screen: buf addr=%p\ncopying...", _bufAddr);
+    printk(screen_log, "screen: buf addr=%p\ncopying...", _bufAddr);
     // copy the screen to buf
     memcpy(position.fbAddr, _bufAddr, bufSize);
-    printk(GREEN, BLACK, "done\n");
+    printk(screen_succ, "done\n");
 }
 
 #define isDigit(ch) ((ch) >= '0' && (ch) <= '9')
@@ -179,6 +179,17 @@ __always_inline__ int _sprintf(char *buf, const char *fmt, va_list args) {
                     *(str++) = (unsigned char)va_arg(args, int);
                     while (--fld_w > 0) *(str++) = ' ';
                     break;
+                // support width string (print the low byte)
+                case 'S':
+                    s = va_arg(args, char *);
+                    len = 0;
+                    while (s[len]) len += 2;
+                    if (prec >= 0 && len / 2 > prec) len = prec * 2;
+                    if (!(flags & flag_left))
+                        while (len < fld_w--) *(str++) = ' ';
+                    for (i = 0; i < len; i += 2) *(str++) = *(s + i);
+                    while (len / 2 < fld_w--) *(str++) = ' ';
+                    break;
                 case 's':
                     s = va_arg(args, char *);
                     len = strlen(s);
@@ -267,7 +278,7 @@ static void _drawchar(unsigned int fcol, unsigned int bcol, int px, int py, char
         }
 }
 
-void putchar(unsigned int fcol, unsigned int bcol, char ch) {
+void putchar(u64 col, char ch) {
     int i;
     if (ch == '\n') {
         position.yPos++, position.xPos = 0;
@@ -282,23 +293,23 @@ void putchar(unsigned int fcol, unsigned int bcol, char ch) {
         else position.yPos--, position.xPos = position.xRes / screen_charWidth;
     } else if (ch == '\t') {
         do {
-            putchar(fcol, bcol, ' ');
+            putchar(col, ' ');
         } while (position.xPos & 3);
     } else {
         if (position.xPos == position.xRes / screen_charWidth)
-            putchar(fcol, bcol, '\n');
-        _drawchar(fcol, bcol, screen_charWidth * position.xPos, screen_charHeight * position.yPos, ch);
+            putchar(col, '\n');
+        _drawchar(col & 0xffffffff, (col >> 32) & 0xffffffff, screen_charWidth * position.xPos, screen_charHeight * position.yPos, ch);
         position.xPos++;
         _lineLen[position.yPos] = max(_lineLen[position.yPos], position.xPos);
     }
 }
 
-static void _printStr(unsigned int fcol, unsigned int bcol, const char *str, int len) {
+static void _printStr(u64 col, const char *str, int len) {
     // close the interrupt if it is open now
 	u64 prevState = intr_state();
 	if (prevState) intr_mask();
 	SpinLock_lock(&_printLck);
-    while (len--) putchar(fcol, bcol, *str++);
+    while (len--) putchar(col, *str++);
 	SpinLock_unlock(&_printLck);
     if (prevState) intr_unmask();
 }
@@ -316,22 +327,22 @@ void clearScreen() {
 	if (prevState) intr_unmask();
 }
 
-void printk(unsigned int fcol, unsigned int bcol, const char *fmt, ...) {
+void printk(u64 col, const char *fmt, ...) {
     char buf[512] = {0};
     int len = 0;
     va_list args;
     va_start(args, fmt);
     len = _sprintf(buf, fmt, args);
     va_end(args);
-    _printStr(fcol, bcol, buf, len);
+    _printStr(col, buf, len);
 }
 
-void printu(unsigned int fcol, unsigned int bcol, const char *fmt, ...) {
+void printu(u64 col, const char *fmt, ...) {
     char buf[512] = {0};
     int len = 0;
     va_list args;
     va_start(args, fmt);
     len = _sprintf(buf, fmt, args);
     va_end(args);
-    task_syscall4(task_syscall_print, fcol, bcol, buf, len);
+    task_syscall3(task_syscall_print, col, buf, len);
 }

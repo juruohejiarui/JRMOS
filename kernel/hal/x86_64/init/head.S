@@ -199,21 +199,20 @@ ignoreInt:
     xorq %rcx, %rcx
     cpuid
     leaq cpu_desc(%rip), %rax
-    xorq %r8, %r8
+    xorq %rcx, %rcx
 ignoreInt_FindCpuId:
     cmpl hal_cpu_Desc_x2apic(%rax), %edx
     je ignoreInt_FindCpuId_End
     addq $cpu_DescSize, %rax
-    incq %r8
+    incq %rcx
     jmp ignoreInt_FindCpuId
 ignoreInt_FindCpuId_End:
-    // printk(RED, BLACK, "Unknown interrupt or fault at RIP %p cpuid=%d\n", rip, cpuid);
-    movq hal_intr_PtReg_rip(%rsp), %rcx
+    // printk(screen_err, "Unknown interrupt or fault at RIP %p cpuid=%d\n", rip, cpuid);
+    movq hal_intr_PtReg_rip(%rsp), %rdx
     leaq intMsg(%rip), %rax
     pushq %rax
-    movq %rax, %rdx
-    movq $0x00000000, %rsi
-    movq $0x00ff0000, %rdi
+    movq %rax, %rsi
+    movq $0xff0000, %rdi
     movq $0, %rax
     callq printk
     addq $0x8, %rsp

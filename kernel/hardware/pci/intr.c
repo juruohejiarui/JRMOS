@@ -24,15 +24,15 @@ void hw_pci_disableIntx(hw_pci_Cfg *cfg) {
 }
 int hw_pci_allocMsi(hw_pci_MsiCap *cap, intr_Desc *desc, u64 intrNum) {
 	if (hw_pci_MsiCap_vecNum(cap) < intrNum) {
-		printk(RED, BLACK, "hw: pci: alloc too much interrupt for msi, vecNum=%d, require %d interrupt\n", hw_pci_MsiCap_vecNum(cap), intrNum);
+		printk(screen_err, "hw: pci: alloc too much interrupt for msi, vecNum=%d, require %d interrupt\n", hw_pci_MsiCap_vecNum(cap), intrNum);
 		return res_FAIL;
 	}
 	if (intr_alloc(desc, intrNum) == res_FAIL) {
-		printk(RED, BLACK, "hw: pci: alloc msi interrupt failed\n");
+		printk(screen_err, "hw: pci: alloc msi interrupt failed\n");
 		return res_FAIL;
 	}
 	if (hw_pci_setMsi(cap, desc, intrNum) == res_FAIL) {
-		printk(RED, BLACK, "hw: pci: set msi interrupt failed\n");
+		printk(screen_err, "hw: pci: set msi interrupt failed\n");
 		intr_free(desc, intrNum);
 		return res_FAIL;
 	}
@@ -41,12 +41,12 @@ int hw_pci_allocMsi(hw_pci_MsiCap *cap, intr_Desc *desc, u64 intrNum) {
 
 int hw_pci_allocMsix(hw_pci_MsixCap *cap, hw_pci_Cfg *cfg, intr_Desc *desc, u64 intrNum) {
 	if (hw_pci_MsixCap_vecNum(cap) < intrNum) {
-		printk(RED, BLACK, "hw: pci: alloc too much interrupt for msix, vecNum=%d, require %d interrupt\n", hw_pci_MsixCap_vecNum(cap), intrNum);
+		printk(screen_err, "hw: pci: alloc too much interrupt for msix, vecNum=%d, require %d interrupt\n", hw_pci_MsixCap_vecNum(cap), intrNum);
 		return res_FAIL;
 	}
 	for (int i = 0; i < intrNum; i++) {
 		if (intr_alloc(&desc[i], 1) == res_FAIL) {
-			printk(RED, BLACK, "hw: pci: alloc msix interrupt failed\n");
+			printk(screen_err, "hw: pci: alloc msix interrupt failed\n");
 			for (int j = 0; j < i; j++) {
 				intr_free(&desc[j], 1);
 			}
@@ -54,7 +54,7 @@ int hw_pci_allocMsix(hw_pci_MsixCap *cap, hw_pci_Cfg *cfg, intr_Desc *desc, u64 
 		}
 	}
 	if (hw_pci_setMsix(cap, cfg, desc, intrNum) == res_FAIL) {
-		printk(RED, BLACK, "hw: pci: set msix interrupt failed\n");
+		printk(screen_err, "hw: pci: set msix interrupt failed\n");
 		for (int i = 0; i < intrNum; i++) {
 			intr_free(&desc[i], 1);
 		}

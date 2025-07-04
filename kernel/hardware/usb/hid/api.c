@@ -10,7 +10,7 @@ int hw_usb_hid_setReport(hw_usb_xhci_Device *dev, u8 *report, u32 reportSz, u8 r
         report, reportSz);
     hw_usb_xhci_request(dev->host, dev->epRing[hw_usb_xhci_DevCtx_CtrlEp], req, dev, hw_usb_xhci_DbReq_make(hw_usb_xhci_DevCtx_CtrlEp, 0));
     if (hw_usb_xhci_TRB_getCmplCode(&req->res) != hw_usb_xhci_TRB_CmplCode_Succ) {
-        printk(RED, BLACK, "hw: usb hid: device %p failed to set report, code=%d\n", dev, hw_usb_xhci_TRB_getCmplCode(&req->res));
+        printk(screen_err, "hw: usb hid: device %p failed to set report, code=%d\n", dev, hw_usb_xhci_TRB_getCmplCode(&req->res));
         hw_usb_xhci_freeRequest(req);
         return res_FAIL;
     }

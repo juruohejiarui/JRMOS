@@ -57,7 +57,7 @@ u8 hw_usb_xhci_getSlotTp(hw_usb_xhci_Host * host, u32 portIdx) {
 hw_usb_xhci_InCtx *hw_usb_xhci_allocInCtx(hw_usb_xhci_Host *host) {
     void *ctx = mm_kmalloc((host->flag & hw_usb_xhci_Host_flag_Ctx64) ? sizeof(hw_usb_xhci_InCtx64) : sizeof(hw_usb_xhci_InCtx32), 0, NULL);
     if (!ctx) {
-        printk(RED, BLACK, "hw: xhci: alloc input context failed\n");
+        printk(screen_err, "hw: xhci: alloc input context failed\n");
         return NULL;
     }
     memset(ctx, 0, (host->flag & hw_usb_xhci_Host_flag_Ctx64) ? sizeof(hw_usb_xhci_InCtx64) : sizeof(hw_usb_xhci_InCtx32));
@@ -67,7 +67,7 @@ hw_usb_xhci_InCtx *hw_usb_xhci_allocInCtx(hw_usb_xhci_Host *host) {
 hw_usb_xhci_Ring *hw_usb_xhci_allocRing(hw_usb_xhci_Host *host, u32 size) {
 	hw_usb_xhci_TRB *trbs = mm_kmalloc(sizeof(hw_usb_xhci_Ring) + sizeof(hw_usb_xhci_TRB) * size + sizeof(hw_usb_xhci_Request *) * size, mm_Attr_Shared, NULL);
     if (!trbs) {
-        printk(RED, BLACK, "hw: xhci: alloc ring failed\n");
+        printk(screen_err, "hw: xhci: alloc ring failed\n");
         return NULL;
     }
  
@@ -105,7 +105,7 @@ int hw_usb_xhci_freeRing(hw_usb_xhci_Host *host, hw_usb_xhci_Ring *ring) {
 
     SafeList_del(&host->ringLst, &ring->lst);
     if (mm_kfree(ring->trbs, mm_Attr_Shared) == res_FAIL) {
-        printk(RED, BLACK, "hw: xhci: free ring failed\n");
+        printk(screen_err, "hw: xhci: free ring failed\n");
         return res_FAIL;
     }
 
@@ -118,7 +118,7 @@ static int _tryInsReq(hw_usb_xhci_Host *host, hw_usb_xhci_Ring *ring, hw_usb_xhc
     // check if the ring is full
     if (ring->load + req->inputSz > ring->size) {
         SpinLock_unlockMask(&ring->lck);
-        printk(RED, BLACK, "hw: xhci: ring %p is full.\n", ring);
+        printk(screen_err, "hw: xhci: ring %p is full.\n", ring);
         return res_FAIL;
     }
     ring->load += req->inputSz;
@@ -164,7 +164,7 @@ void hw_usb_xhci_request(hw_usb_xhci_Host *host, hw_usb_xhci_Ring *ring, hw_usb_
 hw_usb_xhci_Request *hw_usb_xhci_makeRequest(u32 size, u32 flags) {
 	hw_usb_xhci_Request *req = mm_kmalloc(sizeof(hw_usb_xhci_Request) + size * sizeof(hw_usb_xhci_TRB), 0, NULL);
     if (!req) {
-        printk(RED, BLACK, "hw: xhci: alloc request failed\n");
+        printk(screen_err, "hw: xhci: alloc request failed\n");
         return NULL;
     }
     task_Request_init(&req->req, (flags & hw_usb_xhci_Request_flags_Abort ? task_Request_Flag_Abort : 0));
@@ -176,7 +176,7 @@ hw_usb_xhci_Request *hw_usb_xhci_makeRequest(u32 size, u32 flags) {
 
 int hw_usb_xhci_freeRequest(hw_usb_xhci_Request *req) {
 	if (!req || mm_kfree(req, 0) == res_FAIL) {
-        printk(RED, BLACK, "hw: xhci: free request failed\n");
+        printk(screen_err, "hw: xhci: free request failed\n");
         return res_FAIL;
     }
     return res_SUCC;
@@ -187,7 +187,7 @@ hw_usb_xhci_Request *hw_usb_xhci_response(hw_usb_xhci_Ring *ring, hw_usb_xhci_TR
     SpinLock_lockMask(&ring->lck);
     if (!ring->load) {
         SpinLock_unlockMask(&ring->lck);
-        printk(RED, BLACK, "hw: xhci: ring %p has no request waiting for responese", ring);
+        printk(screen_err, "hw: xhci: ring %p has no request waiting for responese", ring);
         return NULL;
     }
 
@@ -205,14 +205,14 @@ hw_usb_xhci_Request *hw_usb_xhci_response(hw_usb_xhci_Ring *ring, hw_usb_xhci_TR
 hw_usb_xhci_EveRing *hw_usb_xhci_allocEveRing(hw_usb_xhci_Host *host, u16 ringNum, u32 ringSz) {
     hw_usb_xhci_EveRing *eveRing = mm_kmalloc(sizeof(hw_usb_xhci_EveRing) + sizeof(hw_usb_xhci_TRB *) * ringNum, mm_Attr_Shared, NULL);
     if (!eveRing) {
-        printk(RED, BLACK, "hw: xhci: alloc event ring failed\n");
+        printk(screen_err, "hw: xhci: alloc event ring failed\n");
         return NULL;
     }
 
     for (u16 i = 0; i < ringNum; i++) {
         eveRing->rings[i] = mm_kmalloc(ringSz * sizeof(hw_usb_xhci_TRB), mm_Attr_Shared, NULL);
         if (!eveRing->rings[i]) {
-            printk(RED, BLACK, "hw: xhci: alloc event ring trbs failed\n");
+            printk(screen_err, "hw: xhci: alloc event ring trbs failed\n");
             for (u16 j = 0; j < i; j++) {
                 mm_kfree(eveRing->rings[j], mm_Attr_Shared);
             }
@@ -254,7 +254,7 @@ int hw_usb_xhci_waitReady(hw_usb_xhci_Host *host) {
 hw_usb_xhci_Device *hw_usb_xhci_newDev(hw_usb_xhci_Host *host, hw_usb_xhci_Device *parent, u32 portIdx) {
     hw_usb_xhci_Device *dev = mm_kmalloc(sizeof(hw_usb_xhci_Device), mm_Attr_Shared, NULL);
     if (!dev) {
-        printk(RED, BLACK, "hw: xhci: alloc device failed\n");
+        printk(screen_err, "hw: xhci: alloc device failed\n");
         return NULL;
     }
     memset(dev, 0, sizeof(hw_usb_xhci_Device));
@@ -277,7 +277,7 @@ int hw_usb_xhci_freeDev(hw_usb_xhci_Device *dev) {
     if (!dev) return res_FAIL;
     SafeList_del(&dev->host->devLst, &dev->lst);
     if (mm_kfree(dev, mm_Attr_Shared) == res_FAIL) {
-        printk(RED, BLACK, "hw: xhci: free device failed\n");
+        printk(screen_err, "hw: xhci: free device failed\n");
         return res_FAIL;
     }
     return res_SUCC;

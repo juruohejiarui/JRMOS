@@ -30,13 +30,13 @@ int hal_hw_uefi_loadTbl() {
 		break;
 	}
 	if (rsdpIdx == -1) {
-		printk(RED, BLACK, "hw: uefi: cannot find ACPI Table.\n");
+		printk(screen_err, "hw: uefi: cannot find ACPI Table.\n");
 		return res_FAIL;
 	}
 	hal_hw_uefi_rsdpTbl = (hal_hw_uefi_RsdpDesc *)mm_dmas_phys2Virt(
 		((hal_hw_uefi_CfgTbl *)mm_dmas_phys2Virt(hal_hw_uefi_info->cfgTbls))[rsdpIdx].vendorTbl);
 	hal_hw_uefi_xsdtTbl = (hal_hw_uefi_XsdtDesc *)mm_dmas_phys2Virt(hal_hw_uefi_rsdpTbl->xsdtAddr);
 
-	printk(WHITE, BLACK, "hw: uefi: rsdp:%p xsdt:%p\n", hal_hw_uefi_rsdpTbl, hal_hw_uefi_xsdtTbl);
+	printk(screen_log, "hw: uefi: rsdp:%p xsdt:%p\n", hal_hw_uefi_rsdpTbl, hal_hw_uefi_xsdtTbl);
 	return res_SUCC;
 }

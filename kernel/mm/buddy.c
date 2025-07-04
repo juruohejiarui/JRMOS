@@ -26,7 +26,7 @@ __always_inline__ int _getBit(mm_Page *page) {
 __always_inline__ void _revBit(mm_Page *page) {
     if (page->buddyId == 1) return ;
     u64 bitId = (mm_getPhyAddr(page) >> (mm_pageShift + page->ord + 1));
-    // printk(WHITE, BLACK, "_revBit(): page:%p ord=%d, bitId=%p\n", mm_getPhyAddr(page), page->ord, bitId);
+    // printk(screen_log, "_revBit(): page:%p ord=%d, bitId=%p\n", mm_getPhyAddr(page), page->ord, bitId);
     bit_rev(&_buddy.revBit[page->ord + 1][bitId >> 6], bitId & 63);
 }
 
@@ -44,7 +44,7 @@ int mm_buddy_init() {
         u64 nrPage = upAlign(ali, mm_pageSize) >> mm_pageShift;
         mm_Page *pages = mm_init_allocPage(nrPage, 0);
         if (pages == NULL) {
-            printk(RED, BLACK, "mm: buddy: failed to allocate bitmap #%d.\n", i);
+            printk(screen_err, "mm: buddy: failed to allocate bitmap #%d.\n", i);
             return res_FAIL;
         }
         _buddy.revBit[i] = mm_dmas_phys2Virt(mm_getPhyAddr(pages));
@@ -72,28 +72,28 @@ int mm_buddy_init() {
 }
 
 void mm_buddy_dbg(int detail) {
-    printk(WHITE, BLACK, "mm: buddy: usage %ldB=%ldMb/%ldB=%ldMb ", _buddy.totUsage, _buddy.totUsage >> 20, _buddy.tot, _buddy.tot >> 20);
+    printk(screen_log, "mm: buddy: usage %ldB=%ldMb/%ldB=%ldMb ", _buddy.totUsage, _buddy.totUsage >> 20, _buddy.tot, _buddy.tot >> 20);
     if (!detail)
         return ;
-    printk(WHITE, BLACK, "\n");
+    printk(screen_log, "\n");
     for (int i = 0; i <= mm_buddy_mxOrd; i++) {
-        printk(YELLOW, BLACK, "[%2d] ", i);
+        printk(screen_warn, "[%2d] ", i);
         for (ListNode *list = _buddy.freeLst[i].next; list != &_buddy.freeLst[i]; list = list->next) {
             mm_Page *page = container(list, mm_Page, list);
-            printk(WHITE, BLACK, "%#018x,", mm_getPhyAddr(page));
+            printk(screen_log, "%#018x,", mm_getPhyAddr(page));
         }
-        printk(WHITE, BLACK, "\n");
+        printk(screen_log, "\n");
     }
 }
 
 mm_Page *mm_allocPages(u64 log2Size, u32 attr) {
-    // printk(WHITE, BLACK, "mm: buddy: alloc 2^%ld page attr=%#010x\n", log2Size, attr);
+    // printk(screen_log, "mm: buddy: alloc 2^%ld page attr=%#010x\n", log2Size, attr);
     int intrState = intr_state();
     if (intrState) intr_mask();
     SpinLock_lock(&_buddyLck);
     mm_Page *resPage = NULL;
     if (log2Size > mm_buddy_mxOrd) {
-        printk(RED, BLACK, "mm: buddy: required size is too large log2Size=%d\n", log2Size);
+        printk(screen_err, "mm: buddy: required size is too large log2Size=%d\n", log2Size);
         goto Fail;
     }
 
@@ -104,7 +104,7 @@ mm_Page *mm_allocPages(u64 log2Size, u32 attr) {
         break;
     }
     if (resPage == NULL) {
-        printk(RED, BLACK, "mm: buddy: no free page group.\n");
+        printk(screen_err, "mm: buddy: no free page group.\n");
         goto Fail;
     }
 
@@ -125,20 +125,20 @@ mm_Page *mm_allocPages(u64 log2Size, u32 attr) {
     while (1) ;
     SpinLock_unlock(&_buddyLck);
     if (intrState) intr_unmask();
-    printk(RED, BLACK, "mm: buddy: failed to allocate page group with size=2^%d,attr=%#010x\n", log2Size, attr);
+    printk(screen_err, "mm: buddy: failed to allocate page group with size=2^%d,attr=%#010x\n", log2Size, attr);
     return NULL;
 }
 
 int mm_freePages(mm_Page *pages) {
-    // printk(WHITE, BLACK, "mm: buddy: try free %p->%p attr=%#010x\n", pages, mm_getPhyAddr(pages), pages->attr);
+    // printk(screen_log, "mm: buddy: try free %p->%p attr=%#010x\n", pages, mm_getPhyAddr(pages), pages->attr);
     if (~pages->attr & (mm_Attr_HeadPage | mm_Attr_Allocated)) {
-        printk(RED, BLACK, "mm: buddy: invalid pages %p: not head page or allocated page\n", pages);
+        printk(screen_err, "mm: buddy: invalid pages %p: not head page or allocated page\n", pages);
         while (1) ;
         return res_FAIL;
     }
 
     if (~pages->attr & mm_Attr_Shared) {
-        // printk(WHITE, BLACK, "delete private page %p\n", pages);
+        // printk(screen_log, "delete private page %p\n", pages);
         SafeList_del(&task_current->thread->pgRecord, &pages->list);
     }
     
@@ -149,10 +149,10 @@ int mm_freePages(mm_Page *pages) {
     pages->attr = mm_Attr_HeadPage;
     for (int i = pages->ord; i <= mm_buddy_mxOrd; i++) {
         _revBit(pages);
-        // printk(WHITE, BLACK, "ord[%d]: bit:%d\n", i, _getBit(pages));
+        // printk(screen_log, "ord[%d]: bit:%d\n", i, _getBit(pages));
         if (_getBit(pages)) break;
         mm_Page *bud = _getBuddy(pages);
-        // printk(WHITE, BLACK, 
+        // printk(screen_log, 
         //     "\tpages:%p->%p ord=%d buddyId=%d attr=%#010x\n"
         //     "\tbud  :%p->%p ord=%d buddyId=%d attr=%#010x prev:%p next:%p\n", 
         //     pages, mm_getPhyAddr(pages), pages->ord, pages->buddyId, pages->attr,

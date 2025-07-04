@@ -39,13 +39,13 @@ int mm_init() {
 
     mm_memStruct.zones[mm_memStruct.krlZoneId].availSt = upAlign(mm_memStruct.edStruct - task_krlAddrSt, mm_pageSize);
     // from now on, printk can be used
-    printk(WHITE, BLACK, "mm: edStruct: %p mm_symbol_end: %p kernel zone id:%d\nmm:", mm_memStruct.edStruct, &mm_symbol_end, mm_memStruct.krlZoneId);
+    printk(screen_log, "mm: edStruct: %p mm_symbol_end: %p kernel zone id:%d\nmm:", mm_memStruct.edStruct, &mm_symbol_end, mm_memStruct.krlZoneId);
 
     // print layout
     for (int i = 0; i < mm_nrMemMapEntries; i++) {
         mm_MemMap *entry = &mm_memMapEntries[i];
         if (entry->attr & mm_Attr_Firmware) continue;
-        printk(WHITE, BLACK, "\t%d: %lx %lx\n", i, entry->addr, entry->size);
+        printk(screen_log, "\t%d: %lx %lx\n", i, entry->addr, entry->size);
     }
     // modify the zone information, align the address space to 4K, write the pointer of page arrary, initialize usage information
     for (int i = 0; i < mm_memStruct.nrZones; i++) {
@@ -58,9 +58,9 @@ int mm_init() {
 
         zone->pageLen = (zone->phyAddrEd - zone->phyAddrSt) >> mm_pageShift;
     }
-    printk(WHITE, BLACK, "mm:");
+    printk(screen_log, "mm:");
     for (int i = 0; i < mm_memStruct.nrZones; i++) {
-        printk(YELLOW, BLACK, "\t[%2d]:addr:[%p,%p],avail:%p free:%lx\n", i, mm_memStruct.zones[i].phyAddrSt, mm_memStruct.zones[i].phyAddrEd, mm_memStruct.zones[i].availSt, mm_memStruct.zones[i].totFree);
+        printk(screen_warn, "\t[%2d]:addr:[%p,%p],avail:%p free:%lx\n", i, mm_memStruct.zones[i].phyAddrSt, mm_memStruct.zones[i].phyAddrEd, mm_memStruct.zones[i].availSt, mm_memStruct.zones[i].totFree);
     }
 
     // find space for each zone to place page descriptor array
@@ -75,7 +75,7 @@ int mm_init() {
             }
         } 
         if (tgrZone == NULL) {
-            printk(RED, BLACK, "failed to allocate page descriptor array for zone %d: size:%#lx\n", i, pgDescArrSz);
+            printk(screen_err, "failed to allocate page descriptor array for zone %d: size:%#lx\n", i, pgDescArrSz);
             while (1) ;
         }
         zone->page = mm_dmas_phys2Virt(zone->availSt + zone->totUsing);
@@ -87,7 +87,7 @@ int mm_init() {
     mm_memStruct.totMem = 0;
     for (int i = 0; i < mm_memStruct.nrZones; i++)
         mm_memStruct.totMem += mm_memStruct.zones[i].totFree;
-    printk(WHITE, BLACK, "mm: totMem:%p=%ldMB\n", mm_memStruct.totMem, mm_memStruct.totMem >> 10);
+    printk(screen_log, "mm: totMem:%p=%ldMB\n", mm_memStruct.totMem, mm_memStruct.totMem >> 10);
 
     if (mm_buddy_init() == res_FAIL) return res_FAIL;
     if (mm_slab_init() == res_FAIL) return res_FAIL;
@@ -123,7 +123,7 @@ mm_Page *mm_init_allocPage(u64 num, u32 attr) {
 void mm_dbg() {
     mm_buddy_dbg(0);
     mm_slab_dbg(0);
-    printk(WHITE, BLACK, "\r");
+    printk(screen_log, "\r");
 }
 
 mm_Page *mm_getDesc(u64 phyAddr) {

@@ -15,6 +15,13 @@
 #define ORANGE	0xffa000
 #define WHITE	0xffffff
 
+#define screen_color(fcol, bcol) ((u64)(fcol) | ((u64)(bcol) << 32))
+#define screen_log 		screen_color(WHITE, 	BLACK)
+#define screen_err 		screen_color(RED, 		BLACK)
+#define screen_warn 	screen_color(ORANGE, 	BLACK)
+#define screen_succ 	screen_color(GREEN, 	BLACK)
+
+
 typedef struct screen_Info {
 	u32 horRes;
 	u32 verRes;
@@ -30,8 +37,8 @@ void screen_init();
 
 int screen_enableBuf();
 
-void printk(unsigned int fcol, unsigned int bcol, const char *fmt, ...);
+void printk(u64 col, const char *fmt, ...);
 
-void printu(unsigned int fcol, unsigned int bcol, const char *fmt, ...);
+void printu(u64 col, const char *fmt, ...);
 
 #endif

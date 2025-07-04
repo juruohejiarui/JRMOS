@@ -30,8 +30,8 @@ static int _lookupKallsyms(u64 address, int level)
 	if(index < dbg_kallsyms_syms_num)
 	{
 		for(level_index = 0; level_index < level; level_index++)
-			printk(RED,BLACK,"  ");
-		printk(RED,BLACK,"+---> ");
+			printk(screen_err, "  ");
+		printk(screen_err, "+---> ");
 
 		printk(YELLOW,BLACK,"address:%p    (+) %04d function:%s\n",address,address - dbg_kallsyms_addr[index], &string[dbg_kallsyms_idx[index]]);
 		return 0;
@@ -47,10 +47,10 @@ void _backtrace(hal_intr_PtReg *regs) {
 	u64 ret_address = regs->rip;
 	int i = 0;
 
-	printk(RED,BLACK,"====================== Task Struct Information =====================\n");
-	printk(RED,BLACK,"regs->rsp:%p,current->thread->rsp:%p,current:%p,current->tss->rsp0:%p\n",
+	printk(screen_err, "====================== Task Struct Information =====================\n");
+	printk(screen_err, "regs->rsp:%p,current->thread->rsp:%p,current:%p,current->tss->rsp0:%p\n",
 		regs->rsp, task_current->hal.rsp, task_current, task_current->hal.tss.rsp0);
-	printk(RED,BLACK,"====================== Kernel Stack Backtrace ======================\n");
+	printk(screen_err, "====================== Kernel Stack Backtrace ======================\n");
 
 	for(i = 0;i < 10;i++)
 	{
@@ -66,18 +66,18 @@ void _backtrace(hal_intr_PtReg *regs) {
 }
 
 static void _printRegs(u64 rsp) {
-	printk(WHITE, BLACK, "proc #%d task #%d registers: \n", task_current->cpuId, task_current->pid);
+	printk(screen_log, "proc #%d task #%d registers: \n", task_current->cpuId, task_current->pid);
 	for (int i = 0; i < sizeof(hal_intr_PtReg) / sizeof(u64); i++)
-		printk(WHITE, BLACK, "%4s=%p%c", _regName[i], *(u64 *)(rsp + i * 8), ((i + 1) % 8 == 0 || i == sizeof(hal_intr_PtReg) / sizeof(u64) - 1) ? '\n' : ' ');
+		printk(screen_log, "%4s=%p%c", _regName[i], *(u64 *)(rsp + i * 8), ((i + 1) % 8 == 0 || i == sizeof(hal_intr_PtReg) / sizeof(u64) - 1) ? '\n' : ' ');
 	// print msr
-	printk(WHITE, BLACK, "msr: IA32_KERNEL_GS_BASE:%p, IA32_GS_BASE:%p IA32_FS_BASE:%p\n",
+	printk(screen_log, "msr: IA32_KERNEL_GS_BASE:%p, IA32_GS_BASE:%p IA32_FS_BASE:%p\n",
 		hal_hw_readMsr(hal_msr_IA32_KERNEL_GS_BASE), hal_hw_readMsr(hal_msr_IA32_GS_BASE), hal_hw_readMsr(hal_msr_IA32_FS_BASE));
-	printk(WHITE, BLACK, "cr3: %p\n", hal_hw_getCR(3));
+	printk(screen_log, "cr3: %p\n", hal_hw_getCR(3));
 	mm_map_dbg(0);
-	printk(WHITE, BLACK, "\n");
+	printk(screen_log, "\n");
 	mm_buddy_dbg(0);
-	printk(WHITE, BLACK, "\n");
-	printk(WHITE, BLACK, "user stack %p~%p\n", task_current->hal.usrStkTop - task_usrStkSize, task_current->hal.usrStkTop);
+	printk(screen_log, "\n");
+	printk(screen_log, "user stack %p~%p\n", task_current->hal.usrStkTop - task_usrStkSize, task_current->hal.usrStkTop);
 	_backtrace((hal_intr_PtReg *)rsp);
 }
 
@@ -85,7 +85,7 @@ void hal_intr_doDivideError(u64 rsp, u64 errorCode) {
 	u64 *p = NULL;
 	p = (u64 *)(rsp + 0x98);
 	SpinLock_lock(&_trapLogLck);
-	printk(RED,BLACK,"do_divide_error(0),ERROR_CODE:%p,RSP:%p,RIP:%p\t" ,errorCode, rsp, *p);
+	printk(screen_err, "do_divide_error(0),ERROR_CODE:%p,RSP:%p,RIP:%p\t" ,errorCode, rsp, *p);
 	_printRegs(rsp);
 	SpinLock_unlock(&_trapLogLck);
 
@@ -97,14 +97,14 @@ void hal_intr_doDivideError(u64 rsp, u64 errorCode) {
 void hal_intr_doDebug(u64 rsp, u64 errorCode) {
 	u64 *p = NULL;
 	p = (u64 *)(rsp + 0x98);
-	printk(RED,BLACK,"do_debug(1),ERROR_CODE:%p,RSP:%p,RIP:%p\n",errorCode , rsp , *p);
+	printk(screen_err, "do_debug(1),ERROR_CODE:%p,RSP:%p,RIP:%p\n",errorCode , rsp , *p);
 	while(1);
 }
 
 void hal_intr_doNMI(u64 rsp, u64 errorCode) {
 	u64 *p = NULL;
 	p = (u64 *)(rsp + 0x98);
-	printk(RED,BLACK,"do_nmi(2),ERROR_CODE:%p,RSP:%p,RIP:%p\n",errorCode , rsp , *p);
+	printk(screen_err, "do_nmi(2),ERROR_CODE:%p,RSP:%p,RIP:%p\n",errorCode , rsp , *p);
 	while(1);
 }
 
@@ -112,7 +112,7 @@ void hal_intr_doInt3(u64 rsp, u64 errorCode) {
 	u64 *p = NULL;
 	p = (u64 *)(rsp + 0x98);
 	SpinLock_lock(&_trapLogLck);
-	printk(RED,BLACK,"do_int3(3),ERROR_CODE:%p,RSP:%p,RIP:%p\n",errorCode , rsp , *p);
+	printk(screen_err, "do_int3(3),ERROR_CODE:%p,RSP:%p,RIP:%p\n",errorCode , rsp , *p);
 	_printRegs(rsp);
 	SpinLock_unlock(&_trapLogLck);
 	hal_intr_unmask();
@@ -122,28 +122,28 @@ void hal_intr_doInt3(u64 rsp, u64 errorCode) {
 void hal_intr_doOverflow(u64 rsp, u64 errorCode) {
 	u64 *p = NULL;
 	p = (u64 *)(rsp + 0x98);
-	printk(RED,BLACK,"do_overflow(4),ERROR_CODE:%p,RSP:%p,RIP:%p\n",errorCode , rsp , *p);
+	printk(screen_err, "do_overflow(4),ERROR_CODE:%p,RSP:%p,RIP:%p\n",errorCode , rsp , *p);
 	while(1);
 }
 
 void hal_intr_doBounds(u64 rsp, u64 errorCode) {
 	u64 *p = NULL;
 	p = (u64 *)(rsp + 0x98);
-	printk(RED,BLACK,"do_bounds(5),ERROR_CODE:%p,RSP:%p,RIP:%p\n",errorCode , rsp , *p);
+	printk(screen_err, "do_bounds(5),ERROR_CODE:%p,RSP:%p,RIP:%p\n",errorCode , rsp , *p);
 	while(1);
 }
 
 void hal_intr_doUndefinedOpcode(u64 rsp, u64 errorCode) {
 	u64 *p = NULL;
 	p = (u64 *)(rsp + 0x98);
-	printk(RED,BLACK,"do_undefined_opcode(6),ERROR_CODE:%p,RSP:%p,RIP:%p\n",errorCode , rsp , *p);
+	printk(screen_err, "do_undefined_opcode(6),ERROR_CODE:%p,RSP:%p,RIP:%p\n",errorCode , rsp , *p);
 	while(1);
 }
 
 void hal_intr_doDevNotAvailable(u64 rsp, u64 errorCode) {
 	u64 *p = NULL;
 	p = (u64 *)(rsp + 0x98);
-	printk(RED,BLACK,"do_device_not_available(7),ERROR_CODE:%p,RSP:%p,RIP:%p\n",errorCode , rsp , *p);
+	printk(screen_err, "do_device_not_available(7),ERROR_CODE:%p,RSP:%p,RIP:%p\n",errorCode , rsp , *p);
 	// SIMD_clrTS();
 	// SIMD_switchToCur();
 	while (1);
@@ -154,56 +154,56 @@ void hal_intr_doDoubleFault(u64 rsp, u64 errorCode) {
 	u64 *q = NULL;
 	p = (u64 *)(rsp + 0x98);
 	q = (u64 *)(rsp + 0xa0);
-	printk(RED,BLACK,"do_double_fault(8),ERROR_CODE:%p,RSP:%p,RIP:%p,CS:%p,FLAGS:%p\n",errorCode , rsp , *p , *q , *(q + 1));
+	printk(screen_err, "do_double_fault(8),ERROR_CODE:%p,RSP:%p,RIP:%p,CS:%p,FLAGS:%p\n",errorCode , rsp , *p , *q , *(q + 1));
 	while(1);
 }
 
 void hal_intr_doCoprocessorSegmentOverrun(u64 rsp, u64 errorCode) {
 	u64 *p = NULL;
 	p = (u64 *)(rsp + 0x98);
-	printk(RED,BLACK,"do_coprocessor_segment_overrun(9),ERROR_CODE:%p,RSP:%p,RIP:%p\n",errorCode , rsp , *p);
+	printk(screen_err, "do_coprocessor_segment_overrun(9),ERROR_CODE:%p,RSP:%p,RIP:%p\n",errorCode , rsp , *p);
 	while(1);
 }
 
 void hal_intr_doInvalidTSS(u64 rsp, u64 errorCode) {
 	u64 *p = NULL;
 	p = (u64 *)(rsp + 0x98);
-	printk(RED,BLACK,"do_invalid_tss(10),ERROR_CODE:%p,RSP:%p,RIP:%p\n",errorCode , rsp , *p);
+	printk(screen_err, "do_invalid_tss(10),ERROR_CODE:%p,RSP:%p,RIP:%p\n",errorCode , rsp , *p);
 	if (errorCode & 0x01)
-		printk(RED,BLACK,"The exception occurred during the delivery of an event external to the program, such as an interrupt or an exception.\n");
+		printk(screen_err, "The exception occurred during the delivery of an event external to the program, such as an interrupt or an exception.\n");
 	if (errorCode & 0x02)
-		printk(RED,BLACK,"Refers to a gate descriptor in the IDT;\n");
+		printk(screen_err, "Refers to a gate descriptor in the IDT;\n");
 	else {
-		printk(RED,BLACK,"Refers to a descriptor in the GDT or the current LDT;\n");
+		printk(screen_err, "Refers to a descriptor in the GDT or the current LDT;\n");
 		if (errorCode & 0x04)
-			printk(RED,BLACK,"Refers to a segment or gate descriptor in the LDT;\n");
+			printk(screen_err, "Refers to a segment or gate descriptor in the LDT;\n");
 		else
-			printk(RED,BLACK,"Refers to a descriptor in the GDT;\n");
+			printk(screen_err, "Refers to a descriptor in the GDT;\n");
 	}
-	printk(RED,BLACK,"Segment Selector Index:%p\n",errorCode & 0xfff8);
+	printk(screen_err, "Segment Selector Index:%p\n",errorCode & 0xfff8);
 	while(1);
 }
 
 void hal_intr_doSegmentNotPresent(u64 rsp, u64 errorCode) {
 	u64 *p = NULL;
 	p = (u64 *)(rsp + 0x98);
-	printk(RED,BLACK,"do_segment_not_present(11),ERROR_CODE:%p,RSP:%p,RIP:%p\n",errorCode , rsp , *p);
+	printk(screen_err, "do_segment_not_present(11),ERROR_CODE:%p,RSP:%p,RIP:%p\n",errorCode , rsp , *p);
 
 	if(errorCode & 0x01)
-		printk(RED,BLACK,"The exception occurred during delivery of an event external to the program,such as an interrupt or an earlier exception.\n");
+		printk(screen_err, "The exception occurred during delivery of an event external to the program,such as an interrupt or an earlier exception.\n");
 
 	if(errorCode & 0x02)
-		printk(RED,BLACK,"Refers to a gate descriptor in the IDT;\n");
+		printk(screen_err, "Refers to a gate descriptor in the IDT;\n");
 	else
-		printk(RED,BLACK,"Refers to a descriptor in the GDT or the current LDT;\n");
+		printk(screen_err, "Refers to a descriptor in the GDT or the current LDT;\n");
 
 	if((errorCode & 0x02) == 0)
 		if(errorCode & 0x04)
-			printk(RED,BLACK,"Refers to a segment or gate descriptor in the LDT;\n");
+			printk(screen_err, "Refers to a segment or gate descriptor in the LDT;\n");
 		else
-			printk(RED,BLACK,"Refers to a descriptor in the current GDT;\n");
+			printk(screen_err, "Refers to a descriptor in the current GDT;\n");
 
-	printk(RED,BLACK,"Segment Selector Index:%#010x\n",errorCode & 0xfff8);
+	printk(screen_err, "Segment Selector Index:%#010x\n",errorCode & 0xfff8);
 
 	while(1);
 }
@@ -211,19 +211,19 @@ void hal_intr_doSegmentNotPresent(u64 rsp, u64 errorCode) {
 void hal_intr_doStackSegmentFault(u64 rsp, u64 errorCode) {
 	u64 *p = NULL;
 	p = (u64 *)(rsp + 0x98);
-	printk(RED,BLACK,"do_stack_segment_fault(12),ERROR_CODE:%p,RSP:%p,RIP:%p\n",errorCode , rsp , *p);
+	printk(screen_err, "do_stack_segment_fault(12),ERROR_CODE:%p,RSP:%p,RIP:%p\n",errorCode , rsp , *p);
 	if (errorCode & 0x01)
-		printk(RED,BLACK,"The exception occurred during the delivery of an event external to the program, such as an interrupt or an exception.\n");
+		printk(screen_err, "The exception occurred during the delivery of an event external to the program, such as an interrupt or an exception.\n");
 	if (errorCode & 0x02)
-		printk(RED,BLACK,"Refers to a gate descriptor in the IDT;\n");
+		printk(screen_err, "Refers to a gate descriptor in the IDT;\n");
 	else {
-		printk(RED,BLACK,"Refers to a descriptor in the GDT or the current LDT;\n");
+		printk(screen_err, "Refers to a descriptor in the GDT or the current LDT;\n");
 		if (errorCode & 0x04)
-			printk(RED,BLACK,"Refers to a segment or gate descriptor in the LDT;\n");
+			printk(screen_err, "Refers to a segment or gate descriptor in the LDT;\n");
 		else
-			printk(RED,BLACK,"Refers to a descriptor in the GDT;\n");
+			printk(screen_err, "Refers to a descriptor in the GDT;\n");
 	}
-	printk(RED,BLACK,"Segment Selector Index:%p\n",errorCode & 0xfff8);
+	printk(screen_err, "Segment Selector Index:%p\n",errorCode & 0xfff8);
 	while(1);
 }
 
@@ -231,19 +231,19 @@ void hal_intr_doGeneralProtection(u64 rsp, u64 errorCode) {
 	u64 *p = NULL;
 	p = (u64 *)(rsp + 0x98);
 	SpinLock_lock(&_trapLogLck);
-	printk(RED,BLACK,"do_general_protection(13),ERROR_CODE:%p,RSP:%p,RIP:%p\t",errorCode , rsp , *p);
+	printk(screen_err, "do_general_protection(13),ERROR_CODE:%p,RSP:%p,RIP:%p\t",errorCode , rsp , *p);
 	if (errorCode & 0x01)
-		printk(RED,BLACK,"The exception occurred during the delivery of an event external to the program, such as an interrupt or an exception.\n");
+		printk(screen_err, "The exception occurred during the delivery of an event external to the program, such as an interrupt or an exception.\n");
 	if (errorCode & 0x02)
-		printk(RED,BLACK,"Refers to a gate descriptor in the IDT;\n");
+		printk(screen_err, "Refers to a gate descriptor in the IDT;\n");
 	else {
-		printk(RED,BLACK,"Refers to a descriptor in the GDT or the current LDT;\n");
+		printk(screen_err, "Refers to a descriptor in the GDT or the current LDT;\n");
 		if (errorCode & 0x04)
-			printk(RED,BLACK,"Refers to a segment or gate descriptor in the LDT;\n");
+			printk(screen_err, "Refers to a segment or gate descriptor in the LDT;\n");
 		else
-			printk(RED,BLACK,"Refers to a descriptor in the GDT;\n");
+			printk(screen_err, "Refers to a descriptor in the GDT;\n");
 	}
-	printk(RED,BLACK,"Segment Selector Index:%p\n",errorCode & 0xfff8);
+	printk(screen_err, "Segment Selector Index:%p\n",errorCode & 0xfff8);
 	_printRegs(rsp);
 	SpinLock_unlock(&_trapLogLck);
 	hal_intr_PtReg *regs = (void *)rsp;
@@ -268,23 +268,23 @@ void hal_intr_doPageFault(u64 rsp, u64 errorCode) {
 		mm_map(cr2 & ~0xffful, mm_getPhyAddr(page), mm_Attr_Shared2U | mm_Attr_Exist | mm_Attr_Writable);
 	} else {
 		SpinLock_lock(&_trapLogLck);
-		printk(RED,BLACK,"do_page_fault(14),ERROR_CODE:%p,RSP:%p,RIP:%p,CR2:%p\n",errorCode , rsp , *p , cr2);
+		printk(screen_err, "do_page_fault(14),ERROR_CODE:%p,RSP:%p,RIP:%p,CR2:%p\n",errorCode , rsp , *p , cr2);
 		if (errorCode & 0x01)
-			printk(RED,BLACK,"The page fault was caused by a non-present page.\n");
+			printk(screen_err, "The page fault was caused by a non-present page.\n");
 		if (errorCode & 0x02)
-			printk(RED,BLACK,"The page fault was caused by a page-level protection violation.\n");
+			printk(screen_err, "The page fault was caused by a page-level protection violation.\n");
 		if (errorCode & 0x04)
-			printk(RED,BLACK,"The page fault was caused by a non-present page.\n");
+			printk(screen_err, "The page fault was caused by a non-present page.\n");
 		if (errorCode & 0x08)
-			printk(RED,BLACK,"The page fault was caused by a page-level protection violation.\n");
+			printk(screen_err, "The page fault was caused by a page-level protection violation.\n");
 		if (errorCode & 0x10)
-			printk(RED,BLACK,"The page fault was caused by reading a reserved bit.\n");
+			printk(screen_err, "The page fault was caused by reading a reserved bit.\n");
 		if (errorCode & 0x20)
-			printk(RED,BLACK,"The page fault was caused by an instruction fetch.\n");
+			printk(screen_err, "The page fault was caused by an instruction fetch.\n");
 		if (errorCode & 0x40)
-			printk(RED,BLACK,"The page fault was caused by reading a reserved bit.\n");
+			printk(screen_err, "The page fault was caused by reading a reserved bit.\n");
 		if (errorCode & 0x80)
-			printk(RED,BLACK,"The page fault was caused by an instruction fetch.\n");
+			printk(screen_err, "The page fault was caused by an instruction fetch.\n");
 
 		mm_map_dbgMap(cr2 & ~0xffful);
 		_printRegs(rsp);
@@ -301,35 +301,35 @@ void hal_intr_doPageFault(u64 rsp, u64 errorCode) {
 void hal_intr_doX87FPUError(u64 rsp, u64 errorCode) {
 	u64 *p = NULL;
 	p = (u64 *)(rsp + 0x98);
-	printk(RED,BLACK,"do_x87_fpu_error(16),ERROR_CODE:%p,RSP:%p,RIP:%p\n",errorCode , rsp , *p);
+	printk(screen_err, "do_x87_fpu_error(16),ERROR_CODE:%p,RSP:%p,RIP:%p\n",errorCode , rsp , *p);
 	while(1);
 }
 
 void hal_intr_doAlignmentCheck(u64 rsp, u64 errorCode) {
 	u64 *p = NULL;
 	p = (u64 *)(rsp + 0x98);
-	printk(RED,BLACK,"do_alignment_check(17),ERROR_CODE:%p,RSP:%p,RIP:%p\n",errorCode , rsp , *p);
+	printk(screen_err, "do_alignment_check(17),ERROR_CODE:%p,RSP:%p,RIP:%p\n",errorCode , rsp , *p);
 	while(1);
 }
 
 void hal_intr_doMachineCheck(u64 rsp, u64 errorCode) {
 	u64 *p = NULL;
 	p = (u64 *)(rsp + 0x98);
-	printk(RED,BLACK,"do_machine_check(18),ERROR_CODE:%p,RSP:%p,RIP:%p\n",errorCode , rsp , *p);
+	printk(screen_err, "do_machine_check(18),ERROR_CODE:%p,RSP:%p,RIP:%p\n",errorCode , rsp , *p);
 	while(1);
 }
 
 void hal_intr_doSIMDError(u64 rsp, u64 errorCode) {
 	u64 *p = NULL;
 	p = (u64 *)(rsp + 0x98);
-	printk(RED,BLACK,"do_simd_error(19),ERROR_CODE:%p,RSP:%p,RIP:%p\n",errorCode , rsp , *p);
+	printk(screen_err, "do_simd_error(19),ERROR_CODE:%p,RSP:%p,RIP:%p\n",errorCode , rsp , *p);
 	while(1) hal_hw_hlt();
 }
 
 void hal_intr_doVirtualizationError(u64 rsp, u64 errorCode) {
 	u64 *p = NULL;
 	p = (u64 *)(rsp + 0x98);
-	printk(RED,BLACK,"do_virtualization_exception(20),ERROR_CODE:%p,RSP:%p,RIP:%p\n",errorCode , rsp , *p);
+	printk(screen_err, "do_virtualization_exception(20),ERROR_CODE:%p,RSP:%p,RIP:%p\n",errorCode , rsp , *p);
 	while(1);
 }
 

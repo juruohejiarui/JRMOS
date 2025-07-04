@@ -17,47 +17,47 @@ __always_inline__ u64 _cvtAttr(u64 attr) {
 
 
 void hal_mm_map_dbgMap(u64 virt) {
-    printk(WHITE, BLACK, "mm: map: dbg(): virt: %p\n", virt);
+    printk(screen_log, "mm: map: dbg(): virt: %p\n", virt);
     hal_mm_PageTbl *tbl, *subTbl;
 
     tbl = virt >= task_krlAddrSt ? mm_dmas_phys2Virt(mm_krlTblPhysAddr) : mm_dmas_phys2Virt(hal_hw_getCR(3));
-    printk(WHITE, BLACK, " \tpgd tbl: %p\n", tbl);
+    printk(screen_log, " \tpgd tbl: %p\n", tbl);
 
     u64 idx = (virt & hal_mm_pgdIdxMask) >> hal_mm_pgdShift;
     tbl = (hal_mm_PageTbl *)mm_dmas_phys2Virt(tbl->entries[idx] & ~0xffful);
     if (!(tbl->entries[idx] & ~0xffful)) {
-        printk(WHITE, BLACK, " \t[%3x] pud: NULL\n", idx);
+        printk(screen_log, " \t[%3x] pud: NULL\n", idx);
         return;
     }
-    printk(WHITE, BLACK, " \t[%3x] pud tbl: %p\n", idx, tbl);
+    printk(screen_log, " \t[%3x] pud tbl: %p\n", idx, tbl);
 
     idx = (virt & hal_mm_pudIdxMask) >> hal_mm_pudShift;
     
     tbl = (hal_mm_PageTbl *)mm_dmas_phys2Virt(tbl->entries[idx] & ~0xffful);
     if (tbl->entries[idx] & 0x80) {
-        printk(WHITE, BLACK, " \t[%3x] 1G mapping: %p\n", idx, tbl->entries[idx]);
+        printk(screen_log, " \t[%3x] 1G mapping: %p\n", idx, tbl->entries[idx]);
         return;
     }
     if (!(tbl->entries[idx] & ~0xffful)) {
-        printk(WHITE, BLACK, " \t[%3x] pmd tbl: NULL\n", idx);
+        printk(screen_log, " \t[%3x] pmd tbl: NULL\n", idx);
         return;
     }
-    printk(WHITE, BLACK, " \t[%3x] pmd tbl: %p\n", idx, tbl);
+    printk(screen_log, " \t[%3x] pmd tbl: %p\n", idx, tbl);
     
     idx = (virt & hal_mm_pmdIdxMask) >> hal_mm_pmdShift;
     if (!(tbl->entries[idx] & ~0xffful)) {
-        printk(WHITE, BLACK, " \t[%3x] 2M mapping: %p\n", idx, tbl->entries[idx]);
+        printk(screen_log, " \t[%3x] 2M mapping: %p\n", idx, tbl->entries[idx]);
         return;
     }
     tbl = (hal_mm_PageTbl *)mm_dmas_phys2Virt(tbl->entries[idx] & ~0xffful);
     if (!(tbl->entries[idx] & ~0xffful)) {
-        printk(WHITE, BLACK, " \t[%3x] pld tbl: NULL\n", idx);
+        printk(screen_log, " \t[%3x] pld tbl: NULL\n", idx);
         return;
     }
-    printk(WHITE, BLACK, " \t[%3x] pld tbl: %p\n", idx, tbl);
+    printk(screen_log, " \t[%3x] pld tbl: %p\n", idx, tbl);
     
     idx = (virt & hal_mm_pldIdxMask) >> hal_mm_pldShift;
-    printk(WHITE, BLACK, " \tphy addr: %p\n", tbl->entries[idx]);
+    printk(screen_log, " \tphy addr: %p\n", tbl->entries[idx]);
 }
  
 int hal_mm_map(u64 virt, u64 phys, u64 attr) {
@@ -80,7 +80,7 @@ int hal_mm_map(u64 virt, u64 phys, u64 attr) {
         tbl = subTbl;
     } else {
         if (tbl->entries[idx] & 0x80) {
-            printk(RED, BLACK, "mm: map: map(): failed to map %p to %p: exist 1G map: %p\n", virt, phys, tbl->entries[idx]);
+            printk(screen_err, "mm: map: map(): failed to map %p to %p: exist 1G map: %p\n", virt, phys, tbl->entries[idx]);
             return res_FAIL;
         }
         tbl = (hal_mm_PageTbl *)mm_dmas_phys2Virt(tbl->entries[idx] & ~0xffful);
@@ -93,7 +93,7 @@ int hal_mm_map(u64 virt, u64 phys, u64 attr) {
         tbl = subTbl;
     } else {
         if (tbl->entries[idx] & 0x80) {
-            printk(RED, BLACK, "mm: map: map(): failed to map %p to %p: exist 2M map: %p\n", virt, phys, tbl->entries[idx]);
+            printk(screen_err, "mm: map: map(): failed to map %p to %p: exist 2M map: %p\n", virt, phys, tbl->entries[idx]);
             return res_FAIL;
         }
         tbl = (hal_mm_PageTbl *)mm_dmas_phys2Virt(tbl->entries[idx] & ~0xffful);
@@ -122,7 +122,7 @@ int hal_mm_map1G(u64 virt, u64 phys, u64 attr) {
 
     idx = (virt & hal_mm_pudIdxMask) >> hal_mm_pudShift;
     if (tbl->entries[idx]) {
-        printk(RED, BLACK, "mm: map: map1G(): failed to map %p to %p: exist pud entry: %p\n", virt, phys, tbl->entries[idx]);
+        printk(screen_err, "mm: map: map1G(): failed to map %p to %p: exist pud entry: %p\n", virt, phys, tbl->entries[idx]);
         return res_FAIL;
     }
     tbl->entries[idx] = phys | attr | 0x80;
@@ -143,28 +143,28 @@ int hal_mm_unmap(u64 virt) {
     u64 idx = pgdIdx = (virt & hal_mm_pgdIdxMask) >> hal_mm_pgdShift;
     tbl = (hal_mm_PageTbl *)(tbl->entries[idx] & ~0xffful);
     if (tbl == NULL) {
-        printk(RED, BLACK, "mm: map: unmap(): failed to unmap %p. pgd entry is NULL\n", virt);
+        printk(screen_err, "mm: map: unmap(): failed to unmap %p. pgd entry is NULL\n", virt);
         return res_FAIL;
     }
     pud = tbl;
     
     pudIdx = idx = (virt & hal_mm_pudIdxMask) >> hal_mm_pudShift;
     if (tbl->entries[idx] & 0x80) {
-        printk(RED, BLACK, "mm: map: unmap(): failed to unmap %p. part of 1G mapping. entry=%p\n",
+        printk(screen_err, "mm: map: unmap(): failed to unmap %p. part of 1G mapping. entry=%p\n",
             virt, tbl->entries[idx]);
         return res_FAIL;
     }
     tbl = (hal_mm_PageTbl *)mm_dmas_phys2Virt(tbl->entries[idx] & ~0xffful);
 
     if (tbl == NULL) {
-        printk(RED, BLACK, "mm: map: unmap(): failed to unmap %p. pud entry is NULL\n", virt);
+        printk(screen_err, "mm: map: unmap(): failed to unmap %p. pud entry is NULL\n", virt);
         return res_FAIL;
     }
     pmd = tbl;
 
     pmdIdx = idx = (virt & hal_mm_pmdIdxMask) >> hal_mm_pmdShift;
     if (tbl->entries[idx] & 0x80) {
-        printk(RED, BLACK, "mm: map: unmap(): failed to unmap %p. part of 2M mapping. entry=%p\n",
+        printk(screen_err, "mm: map: unmap(): failed to unmap %p. part of 2M mapping. entry=%p\n",
             virt, tbl->entries[idx]);
         return res_FAIL;
     }

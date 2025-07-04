@@ -7,12 +7,18 @@
 #include <task/api.h>
 #include <cpu/api.h>
 #include <mm/mm.h>
+#include <mm/mgr.h>
 #include <mm/map.h>
 #include <mm/buddy.h>
 
-int hal_task_syscall_toUsr(void (*entry)(u64), u64 param, void *usrStk) {
-	task_current->hal.usrStkTop = (u64)usrStk + task_usrStkSize;
-	task_current->hal.usrRsp = (u64)usrStk + task_usrStkSize - Page_4KSize;
+int hal_task_syscall_toUsr(void (*entry)(u64), u64 param) {
+
+	// @todo allocation of user stack
+	void *usrStkPtr = mm_mmap(task_usrStkSize, mm_Attr_User);
+
+	task_current->hal.usrStkTop = (u64)usrStkPtr + task_usrStkSize;
+	task_current->hal.usrRsp = (u64)usrStkPtr + task_usrStkSize - Page_4KSize;
+
 	
 	// push r11 and rcx
 	__asm__ volatile (

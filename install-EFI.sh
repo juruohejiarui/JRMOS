@@ -15,8 +15,13 @@ else
     python3 waitForGoalDisk.py $1
     if [ $? -eq 0 ]; then
         sudo mount $1 /mnt/
-        sudo cp ./BootLoader.efi /mnt/EFI/BOOT/BOOTX64.efi
         sudo cp ./kernel/kernel.bin /mnt/
+        # make /mnt/EFI/BOOT and copy if necessary
+        if [ ! -d "/mnt/EFI/" ]; then
+            echo "install-EFI: EFI/BOOT not found"
+            sudo mkdir -p /mnt/EFI/BOOT/
+            sudo cp ./BootLoader.efi /mnt/EFI/BOOT/BOOTX64.efi
+        fi
         sudo sync
         sudo umount /mnt/
     fi

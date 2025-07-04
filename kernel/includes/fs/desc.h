@@ -4,7 +4,6 @@
 #include <lib/dtypes.h>
 #include <lib/atomic.h>
 #include <hardware/diskdev.h>
-#include <fs/gpt/desc.h>
 
 typedef struct fs_DirEntry {
     u64 attr;
@@ -28,25 +27,32 @@ typedef struct fs_Dir {
     int (*close)(struct fs_Dir *dir);
 } fs_Dir;
 
-typedef struct fs_Disk {
+typedef struct fs_Partition {
     u64 sz;
     u64 st, ed;
     u64 attr;
     Atomic status;
-
-    u64 openCnt;
+    Atomic openCnt;
 
     int (*open)(const u8 *path, fs_File *file);
     int (*openDir)(const u8 *path, fs_Dir *dir);
 
-    int (*install)(struct fs_Disk *disk);
-    int (*uninstall)(struct fs_Disk *disk);
+    int (*install)(struct fs_Partition *disk);
+    int (*uninstall)(struct fs_Partition *disk);
+    
+    struct fs_Disk *disk;
+    ListNode lst;
 
-    hw_DiskDev *diskDev;
-    // partition manager
-    union {
-        fs_gpt_Tbl gptTbl;
-    };
+} fs_Partition;
+
+typedef struct fs_Disk {
+    u64 sz;
+    u64 attr;
+    Atomic status;
+
+    SafeList partLst;
+
+    hw_DiskDev *device;
 } fs_Disk;
 
 #define fs_attr_ReadOnly    0x1

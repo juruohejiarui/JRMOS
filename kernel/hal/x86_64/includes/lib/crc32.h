@@ -13,7 +13,7 @@ __always_inline__ u32 hal_crc32_u8(u32 crc, u8 dt) {
 	return crc;
 }
 
-__always_inline__ u32 hal_crc32_u32(u32 crc, u8 dt) {
+__always_inline__ u32 hal_crc32_u32(u32 crc, u32 dt) {
 	__asm__ volatile (
 		"crc32l	%1, %0	\n\t"
 		: "+r"(crc)

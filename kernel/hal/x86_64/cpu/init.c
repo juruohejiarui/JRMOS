@@ -67,10 +67,10 @@ int _parseMadt() {
 		break;
 	}
 	if (madt == NULL) {
-		printk(RED, BLACK, "cpu: cannot for MADT.\n");
+		printk(screen_err, "cpu: cannot for MADT.\n");
 		return res_FAIL;
 	}
-	printk(WHITE, BLACK, "cpu: MADT:%p length=%ld\n", madt, madt->hdr.length);
+	printk(screen_log, "cpu: MADT:%p length=%ld\n", madt, madt->hdr.length);
 
 	// first scan the table for type9 (x2apic)
 	for (u64 off = sizeof(hal_hw_uefi_MadtDesc); off < madt->hdr.length; ) {
@@ -109,18 +109,18 @@ int hal_cpu_init() {
 		if (hal_hw_apic_supportFlag & hal_hw_apic_supportFlag_X2Apic) {
 			hal_hw_cpu_cpuid(0xb, 0, &a, &b, &c, &d);
 			hal_cpu_bspApicId = d;
-			printk(WHITE, BLACK, "cpu: bsp x2apic:%#x\n", hal_cpu_bspApicId);
+			printk(screen_log, "cpu: bsp x2apic:%#x\n", hal_cpu_bspApicId);
 		} else {
 			hal_hw_cpu_cpuid(0x1, 0, &a, &b, &c, &d);
 			hal_cpu_bspApicId = b >> 24;
-			printk(WHITE, BLACK, "cpu: bsp apic:%#x\n", hal_cpu_bspApicId);
+			printk(screen_log, "cpu: bsp apic:%#x\n", hal_cpu_bspApicId);
 		}
 	}
 	
 	if (_parseMadt() == res_FAIL) return res_FAIL;
-	printk(WHITE, BLACK, "cpu:\n");
+	printk(screen_log, "cpu:\n");
 	for (int i = 0; i < cpu_num; i++) {
-		printk(WHITE, BLACK, "\t#%d: x2apic:%lx apic:%lx stk:%p idtTbl:%p idtPtr:%p tss:%p\n",
+		printk(screen_log, "\t#%d: x2apic:%lx apic:%lx stk:%p idtTbl:%p idtPtr:%p tss:%p\n",
 			i, cpu_desc[i].hal.x2apic, cpu_desc[i].hal.apic, cpu_desc[i].hal.initStk, cpu_desc[i].hal.idtTbl, &cpu_desc[i].hal.idtTblSz,
 			cpu_desc[i].hal.tss);
 	}
@@ -132,10 +132,10 @@ int hal_cpu_init() {
 			break;
 		}
 	if (cpu_bspIdx == cpu_mxNum) {
-		printk(RED, BLACK, "cpu : failed to find BSP in cpu list.\n");
+		printk(screen_err, "cpu : failed to find BSP in cpu list.\n");
 		return res_FAIL;
 	}
-	printk(WHITE, BLACK, "cpu: bspIdx:%d\n", cpu_bspIdx);
+	printk(screen_log, "cpu: bspIdx:%d\n", cpu_bspIdx);
 
 	// set gsbase
 	hal_hw_writeMsr(hal_msr_IA32_GS_BASE, (u64)&cpu_desc[cpu_bspIdx]);
@@ -172,19 +172,19 @@ int hal_cpu_enableAP() {
 		break;
 	}
 	if (entry == NULL) {
-		printk(RED, BLACK, "cpu: failed to find valid space for apu boot.\n");
+		printk(screen_err, "cpu: failed to find valid space for apu boot.\n");
 		return res_FAIL;
 	}
 	icr.vector = stAddr >> Page_4KShift;
 	icr.deliverMode = hal_hw_apic_DeliveryMode_Startup;
 	icr.DestShorthand = hal_hw_apic_DestShorthand_None;
 
-	printk(WHITE, BLACK, "cpu: startup vector: %#x sz=%ld backup=%p\n", icr.vector, bootSz, backup);
+	printk(screen_log, "cpu: startup vector: %#x sz=%ld backup=%p\n", icr.vector, bootSz, backup);
 	memcpy(mm_dmas_phys2Virt(icr.vector << Page_4KShift), backup, bootSz);
 	memcpy(&hal_cpu_apBootEntry, mm_dmas_phys2Virt(icr.vector << Page_4KShift), bootSz);
 
 	for (int i = 0; i < cpu_num; i++) if (i != cpu_bspIdx) {
-		printk(WHITE, BLACK, "cpu: try enabling proc#%d...\r", i);
+		printk(screen_log, "cpu: try enabling proc#%d...\r", i);
 		cpu_Desc *cpu = &cpu_desc[i];
 		hal_hw_apic_setIcrDest(&icr, cpu->hal.apic, cpu->hal.x2apic);
 		hal_hw_apic_writeIcr(*(u64 *)&icr);
@@ -214,7 +214,7 @@ void hal_cpu_chk() {
 
 	hal_cpu_setvar(hal.flags, flags);
 
-	printk(WHITE, BLACK, "cpu #%d: sse42[%c] xsave[%c] osxsave[%c] avx[%c]\n", 
+	printk(screen_log, "cpu #%d: sse42[%c] xsave[%c] osxsave[%c] avx[%c]\n", 
 		hal_cpu_getvar(hal.apic), 
 		(flags & hal_cpu_flags_sse42   ? 'y' : 'n'),
 		(flags & hal_cpu_flags_xsave   ? 'y' : 'n'),
