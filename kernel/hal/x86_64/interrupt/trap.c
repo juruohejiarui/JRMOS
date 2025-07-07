@@ -252,20 +252,17 @@ void hal_intr_doGeneralProtection(u64 rsp, u64 errorCode) {
 	while (1) hal_hw_hlt();
 }
 
-static int _isStkGrow(u64 vAddr, u64 rsp) {
-	if (vAddr <= task_current->hal.usrStkTop && vAddr >= task_current->hal.usrStkTop - task_usrStkSize)
-		return 1;
-	else return 0;
-}
-
 void hal_intr_doPageFault(u64 rsp, u64 errorCode) {
 	u64 *p = NULL;
 	u64 cr2 = 0;
 	__asm__ volatile("movq %%cr2, %0":"=r"(cr2)::"memory");
-	p = (u64 *)(rsp + 0x98);
-	if (_isStkGrow(cr2, ((hal_intr_PtReg *)rsp)->rsp)) {
-		mm_Page *page = mm_allocPages(0, mm_Attr_Shared2U);
-		mm_map(cr2 & ~0xffful, mm_getPhyAddr(page), mm_Attr_Shared2U | mm_Attr_Exist | mm_Attr_Writable);
+	// find mmap information
+	mm_MapBlkInfo *mapInfo = mm_findMap((void *)cr2);
+	if (mapInfo && mapInfo->vAddr + mapInfo->size > cr2) {
+		mm_Page *page = mm_allocPages(
+			(mapInfo->attr & mm_Attr_Large) ? Page_2MSize - mm_pageShift : 0, mapInfo->attr);
+		SafeList_insTail(&mapInfo->pgLst, &page->lst);
+		mm_map(cr2 & ~0xffful, mm_getPhyAddr(page), mapInfo->attr);
 	} else {
 		SpinLock_lock(&_trapLogLck);
 		printk(screen_err, "do_page_fault(14),ERROR_CODE:%p,RSP:%p,RIP:%p,CR2:%p\n",errorCode , rsp , *p , cr2);

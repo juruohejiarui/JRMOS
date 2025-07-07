@@ -14,7 +14,7 @@
 int hal_task_syscall_toUsr(void (*entry)(u64), u64 param) {
 
 	// @todo allocation of user stack
-	void *usrStkPtr = mm_mmap(task_usrStkSize, mm_Attr_User);
+	void *usrStkPtr = mm_mmap(task_usrStkSize, mm_Attr_User, NULL, 0);
 
 	task_current->hal.usrStkTop = (u64)usrStkPtr + task_usrStkSize;
 	task_current->hal.usrRsp = (u64)usrStkPtr + task_usrStkSize - Page_4KSize;

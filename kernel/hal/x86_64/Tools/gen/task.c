@@ -30,7 +30,7 @@ int main() {
 		"#define task_ThreadStruct_hal %#lx\n"
 		"#define hal_task_ThreadStruct_pgd %#lx\n\n",
 		offsetof(task_ThreadStruct, hal),
-		offsetof(task_ThreadStruct, hal) + offsetof(hal_task_ThreadStruct, pgd));
+		offsetof(task_ThreadStruct, mem) + offsetof(task_MemStruct, hal) + offsetof(hal_task_MemStruct, pgd));
 	fwrite(buf, strlen(buf), 1, file);
 
 	sprintf(buf,

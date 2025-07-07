@@ -17,6 +17,6 @@ int task_syscall_init() {
 	return res_SUCC;
 }
 
-int task_syscall_toUsr(void (*entry)(u64), u64 param, void *stkPtr) {
-	return hal_task_syscall_toUsr(entry, param, stkPtr);
+int task_syscall_toUsr(void (*entry)(u64), u64 param) {
+	return hal_task_syscall_toUsr(entry, param);
 }

@@ -11,22 +11,26 @@
 #include <mm/map.h>
 
 typedef struct task_ThreadStruct task_ThreadStruct;
-typedef struct task_MemStruct task_MemStruct;
 
 typedef void (*task_SignalHandler)(u64 signal);
 
-struct task_ThreadStruct {
-	// kernel page table version of this thread.
+typedef struct task_MemStruct {
 	Atomic krlTblModiJiff;
 
-	// memory usage
-	Atomic allocVirtMem;
-	Atomic allocMem;
+	SpinLock allocLck;
+	u64 allocVirtMem;
+	u64 allocMem;
 
-	SafeList pgRecord;
 	RBTree slabRecord;
-
+	mm_MapInfo mapInfo;
+	
 	SpinLock pgTblLck;
+	hal_task_MemStruct hal;
+} task_MemStruct;
+
+struct task_ThreadStruct {
+	// kernel page table version of this thread.
+	task_MemStruct mem;
 
 	task_SignalHandler sigHandler[task_nrSignal];
 	u64 sigParam[task_nrSignal];

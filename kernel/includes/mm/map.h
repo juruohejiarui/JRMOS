@@ -4,35 +4,20 @@
 #include <lib/dtypes.h>
 #include <lib/atomic.h>
 #include <lib/spinlock.h>
-#include <hal/mm/map.h>
 
 extern Atomic mm_map_krlTblModiJiff;
 extern SpinLock mm_map_krlTblLck;
 extern SpinLock mm_map_dbgLck;
 
-#ifdef HAL_MM_MAP_DBGMAP
 void mm_map_dbgMap(u64 virt);
-#else
-#error no definition of mm_dbg for this arch!
-#endif
 
-#ifdef HAL_MM_MAP
 int mm_map(u64 virt, u64 phys, u64 attr);
-#else
-#error no definition of mm_map for this arch!
-#endif
 
-#ifdef HAL_MM_UNMAP
-int mm_unmap(u64 virt);
-#else
-#error no definition of mm_unmap for this arch!
-#endif
+// unmap a virtual memory space start from virt
+// return the size of this virtual memory space
+u64 mm_unmap(u64 virt);
 
-#ifdef HAL_MM_GETMAP
 u64 mm_getMap(u64 virt);
-#else
-#error no definition of hal_mm_getMap for this arch!
-#endif
 
 int mm_map_init();
 

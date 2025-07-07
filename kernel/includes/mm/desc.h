@@ -8,7 +8,7 @@
 #include <hal/mm/dmas.h>
 
 #define mm_Attr_Shared      0x1u
-#define mm_Attr_Shared2U    0x2u
+#define mm_Attr_User	    0x2u
 #define mm_Attr_Firmware    0x4u
 #define mm_Attr_HeadPage	0x8u
 #define mm_Attr_Allocated	0x10u
@@ -16,8 +16,8 @@
 #define mm_Attr_System		0x40u
 #define mm_Attr_Exist		0x80u
 #define mm_Attr_Writable	0x100u
-#define mm_Attr_User		0x200u
-#define mm_Attr_Executable	0x400u
+#define mm_Attr_Executable	0x200u
+#define mm_Attr_Large		0x400u
 
 #define mm_kernelAddr	((void *)(task_krlAddrSt + 0x100000ul))
 
@@ -53,7 +53,7 @@ extern char mm_symbol_edata;
 extern char mm_symbol_end;
 
 struct mm_Page {
-	ListNode list;
+	ListNode lst;
 	u16 buddyId;
 	u16 ord;
 	u32 attr;
@@ -101,6 +101,19 @@ typedef struct mm_SlabRecord {
 	void (*destructor)(void *ptr);
 } mm_SlabRecord;
 
-extern mm_MemStruct mm_memStruct; 
+typedef struct mm_MapBlkInfo {
+	void *vAddr;
+	u64 size;
+	u64 attr;
+	RBNode rbNd;
+	SafeList pgLst;
+} mm_MapBlkInfo;
+
+typedef struct mm_MapInfo {
+	RBTree mapTr;
+	SpinLock mapLck;
+} mm_MapInfo;
+
+extern mm_MemStruct mm_memStruct;
 
 #endif

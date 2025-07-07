@@ -1,5 +1,6 @@
 #include <task/api.h>
 #include <mm/mm.h>
+#include <mm/mgr.h>
 #include <mm/buddy.h>
 #include <interrupt/api.h>
 #include <screen/screen.h>
@@ -28,7 +29,7 @@ __always_inline__ int task_sche_cfsTreeCmp(RBNode *a, RBNode *b) {
     return (ta->vRuntime != tb->vRuntime ? ta->vRuntime < tb->vRuntime : (u64)ta < (u64)tb);
 }
 
-RBTree_insert(task_sche_cfsTreeIns, task_sche_cfsTreeCmp)
+RBTree_insertDef(task_sche_cfsTreeIns, task_sche_cfsTreeCmp)
 
 void task_sche_updCurState() {
     register u64 tmp = task_sche_cfsTbl[task_current->priority];
@@ -48,7 +49,7 @@ void task_sche_updState() {
 
 void task_sche_init() {
     for (int i = 0; i < cpu_num; i++) {
-        RBTree_init(&task_mgr.tasks[i], task_sche_cfsTreeIns, task_sche_cfsTreeCmp);
+        RBTree_init(&task_mgr.tasks[i], task_sche_cfsTreeIns, NULL);
         List_init(&task_mgr.preemptTsks[i]);
         SpinLock_init(&task_mgr.scheLck[i]);
         task_mgr.scheMsk[i].value = 0;
@@ -191,24 +192,14 @@ task_ThreadStruct *task_newThread(u64 attr) {
         return NULL;
     }
     memset(thread, 0, sizeof(task_ThreadStruct));
-    SpinLock_lockMask(&mm_map_krlTblLck);
 
-    thread->krlTblModiJiff.value = mm_map_krlTblModiJiff.value;
-    thread->allocMem.value = thread->allocVirtMem.value = 0;
-    
-    SafeList_init(&thread->pgRecord);
-
-    RBTree_init(&thread->slabRecord, mm_slabRecord_insert, mm_slabRecord_comparator);
+    mm_mgr_init(&thread->mem, attr);
 
     memset(thread->sigHandler, 0, sizeof(thread->sigHandler));
-
-    SpinLock_init(&thread->pgTblLck);
 
     SafeList_init(&thread->tskList);
 
     hal_task_newThread(&thread->hal, attr);
-
-    SpinLock_unlockMask(&mm_map_krlTblLck);
 
     return thread;
 }
@@ -229,17 +220,7 @@ int task_delSubTask(task_TaskStruct *subTsk) {
 }
 
 int task_freeThread(task_ThreadStruct *thread) {
-    for (ListNode *pageList = thread->pgRecord.head.next; pageList != &thread->pgRecord.head; ) {
-        ListNode *nxt = pageList->next;
-        if (mm_freePages(container(pageList, mm_Page, list)) == res_FAIL) return res_FAIL;
-        pageList = nxt;
-    }
-    while (thread->slabRecord.root) {
-        mm_SlabRecord *record = container(thread->slabRecord.root, mm_SlabRecord, rbNode);
-        RBTree_del(&thread->slabRecord, &record->rbNode);
-        mm_kfree(record->ptr, mm_Attr_Shared);
-        mm_kfree(record, mm_Attr_Shared);
-    }
+    mm_mgr_free(&thread->mem);
     if (hal_task_freeThread(thread) == res_FAIL) return res_FAIL;
     mm_kfree(thread, mm_Attr_Shared);
     return res_SUCC;

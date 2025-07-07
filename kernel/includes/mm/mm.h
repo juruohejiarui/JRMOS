@@ -25,7 +25,7 @@ __always_inline__ int mm_slabRecord_comparator(RBNode *a, RBNode *b) {
     return ta->ptr < tb->ptr;
 }
 
-RBTree_insert(mm_slabRecord_insert, mm_slabRecord_comparator);
+RBTree_insertDef(mm_slabRecord_insert, mm_slabRecord_comparator);
 
 void *mm_kmalloc(u64 size, u32 attr, void (*destructor)(void *));
 int mm_kfree(void *addr, u32 attr);

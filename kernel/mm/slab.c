@@ -37,12 +37,12 @@ __always_inline__ int _addRecord(void *addr, u64 size, void (*destructor)(void *
     record->destructor = destructor;
     record->ptr = addr;
     record->size = size;
-    RBTree_ins(&task_current->thread->slabRecord, &record->rbNode);
+    RBTree_insLck(&task_current->thread->mem.slabRecord, &record->rbNode);
     return res_SUCC;
 }
 
 int _delRecord(void *addr) {
-    RBNode *node = task_current->thread->slabRecord.root;
+    RBNode *node = task_current->thread->mem.slabRecord.root;
     mm_SlabRecord *record = NULL;
     while (node) {
         record = container(node, mm_SlabRecord, rbNode);
@@ -54,7 +54,7 @@ int _delRecord(void *addr) {
         printk(screen_err, "mm: slab: delRecord(): failed to find record of private address %p\n", addr);
         return res_FAIL;
     }
-    RBTree_del(&task_current->thread->slabRecord, node);
+    RBTree_delLck(&task_current->thread->mem.slabRecord, node);
     return mm_kfree(record, mm_Attr_Shared);
 }
 

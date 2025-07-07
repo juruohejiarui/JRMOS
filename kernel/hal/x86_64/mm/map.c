@@ -9,9 +9,10 @@
 
 __always_inline__ u64 _cvtAttr(u64 attr) {
     u64 cvt = 0x1;
-    if (attr & mm_Attr_Shared2U)    cvt |= (1ull<< 2);
-    if (attr & mm_Attr_Writable)    cvt |= (1ull<< 1);
-    if (attr & mm_Attr_Exist)       cvt |= (1ull<< 0);
+    if (attr & mm_Attr_User)        cvt |= (1ull << 2);
+    if (attr & mm_Attr_Writable)    cvt |= (1ull << 1);
+    if (attr & mm_Attr_Exist)       cvt |= (1ull << 0);
+    if (attr & mm_Attr_Large)       cvt |= 0x80;
     return cvt;
 }
 
@@ -87,20 +88,28 @@ int hal_mm_map(u64 virt, u64 phys, u64 attr) {
     }
 
     idx = (virt & hal_mm_pmdIdxMask) >> hal_mm_pmdShift;
-    if (!tbl->entries[idx]) {
-        if ((subTbl = mm_map_allocTbl()) == NULL) return res_FAIL;
-        tbl->entries[idx] = mm_dmas_virt2Phys(subTbl) | 0x7;
-        tbl = subTbl;
-    } else {
-        if (tbl->entries[idx] & 0x80) {
+    if (attr & 0x80) {
+        if (!tbl->entries[idx]) tbl->entries[idx] = phys | attr;
+        else {
             printk(screen_err, "mm: map: map(): failed to map %p to %p: exist 2M map: %p\n", virt, phys, tbl->entries[idx]);
             return res_FAIL;
         }
-        tbl = (hal_mm_PageTbl *)mm_dmas_phys2Virt(tbl->entries[idx] & ~0xffful);
-    }
+    } else {
+        if (!tbl->entries[idx]) {
+            if ((subTbl = mm_map_allocTbl()) == NULL) return res_FAIL;
+            tbl->entries[idx] = mm_dmas_virt2Phys(subTbl) | 0x7;
+            tbl = subTbl;
+        } else {
+            if (tbl->entries[idx] & 0x80) {
+                printk(screen_err, "mm: map: map(): failed to map %p to %p: exist 2M map: %p\n", virt, phys, tbl->entries[idx]);
+                return res_FAIL;
+            }
+            tbl = (hal_mm_PageTbl *)mm_dmas_phys2Virt(tbl->entries[idx] & ~0xffful);
+        }
 
-    idx = (virt & hal_mm_pldIdxMask) >> hal_mm_pldShift;
-    tbl->entries[idx] = phys | attr;
+        idx = (virt & hal_mm_pldIdxMask) >> hal_mm_pldShift;
+        tbl->entries[idx] = phys | attr;
+    }
 
     hal_mm_flushTlb();
 
@@ -132,10 +141,11 @@ int hal_mm_map1G(u64 virt, u64 phys, u64 attr) {
     return res_SUCC;
 }
 
-int hal_mm_unmap(u64 virt) {
+u64 hal_mm_unmap(u64 virt) {
     hal_mm_PageTbl *tbl, *subTbl;
     hal_mm_PageTbl *pgd, *pud, *pmd;
     u64 pgdIdx, pudIdx, pmdIdx;
+    int empty = 1;
 
     tbl = virt >= task_krlAddrSt ? mm_dmas_phys2Virt(mm_krlTblPhysAddr) : mm_dmas_phys2Virt(hal_hw_getCR(3));
     pgd = tbl;
@@ -164,9 +174,14 @@ int hal_mm_unmap(u64 virt) {
 
     pmdIdx = idx = (virt & hal_mm_pmdIdxMask) >> hal_mm_pmdShift;
     if (tbl->entries[idx] & 0x80) {
-        printk(screen_err, "mm: map: unmap(): failed to unmap %p. part of 2M mapping. entry=%p\n",
-            virt, tbl->entries[idx]);
-        return res_FAIL;
+        // is a 2M page, then it is valid only if to free entire 2M page,
+        if (virt & ~Page_2MMask) {
+            printk(screen_err, "mm: map: unmap(): failed to unmap %p. part of 2M mapping. entry=%p\n",
+                virt, tbl->entries[idx]);
+            return res_FAIL;
+        }
+        tbl->entries[idx] = 0;
+        goto free2MPage;
     }
     tbl = (hal_mm_PageTbl *)mm_dmas_phys2Virt(tbl->entries[idx] & ~0xffful);
 
@@ -174,34 +189,27 @@ int hal_mm_unmap(u64 virt) {
     tbl->entries[idx] = 0;
 
     // check if pld is empty
-    int empty = 1;
     for (int i = 0; i < hal_mm_nrPageTblEntries; i++)
-        if (tbl->entries[i]) { empty = 0; break; }
-    if (empty) {
-        mm_map_freeTbl(tbl);
-        tbl = NULL;
-        pmd->entries[pmdIdx] = 0;
-    } else goto endUnmap;
+        if (tbl->entries[i]) goto endUnmap;
+    mm_map_freeTbl(tbl);
+    tbl = NULL;
+    pmd->entries[pmdIdx] = 0;
 
     // check if pmd is empty
-    empty = 1;
+free2MPage:
     for (int i = 0; i < hal_mm_nrPageTblEntries; i++)
-        if (pmd->entries[i]) { empty = 0; break; }
-    if (empty) {
-        mm_map_freeTbl(pmd);
-        pmd = NULL;
-        pud->entries[pudIdx] = 0;
-    } else goto endUnmap;
+        if (pmd->entries[i]) goto endUnmap;
+    mm_map_freeTbl(pmd);
+    pmd = NULL;
+    pud->entries[pudIdx] = 0;
 
     // check if pud is empty
     empty = 1;
     for (int i = 0; i < hal_mm_nrPageTblEntries; i++)
-        if (pud->entries[i]) { empty = 0; break; }
-    if (empty) {
-        mm_map_freeTbl(pud);
-        pud = NULL;
-        pgd->entries[pgdIdx] = 0;
-    } else goto endUnmap;
+        if (pud->entries[i]) goto endUnmap;
+    mm_map_freeTbl(pud);
+    pud = NULL;
+    pgd->entries[pgdIdx] = 0;
 
     endUnmap:
     hal_mm_flushTlb();

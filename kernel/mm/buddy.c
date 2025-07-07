@@ -62,7 +62,7 @@ int mm_buddy_init() {
             page->buddyId = 1;
             page->attr = mm_Attr_HeadPage;
             page->ord = ord;
-            List_insBefore(&page->list, &_buddy.freeLst[ord]);
+            List_insBefore(&page->lst, &_buddy.freeLst[ord]);
             addr += (1ull << (ord + mm_pageShift));
             _buddy.tot += (1ull << (ord + mm_pageShift));
         }
@@ -79,7 +79,7 @@ void mm_buddy_dbg(int detail) {
     for (int i = 0; i <= mm_buddy_mxOrd; i++) {
         printk(screen_warn, "[%2d] ", i);
         for (ListNode *list = _buddy.freeLst[i].next; list != &_buddy.freeLst[i]; list = list->next) {
-            mm_Page *page = container(list, mm_Page, list);
+            mm_Page *page = container(list, mm_Page, lst);
             printk(screen_log, "%#018x,", mm_getPhyAddr(page));
         }
         printk(screen_log, "\n");
@@ -99,7 +99,7 @@ mm_Page *mm_allocPages(u64 log2Size, u32 attr) {
 
     for (int ord = log2Size; ord <= mm_buddy_mxOrd; ord++) {
         if (List_isEmpty(&_buddy.freeLst[ord])) continue;
-        resPage = container(_buddy.freeLst[ord].next, mm_Page, list);
+        resPage = container(_buddy.freeLst[ord].next, mm_Page, lst);
         resPage->ord = ord;
         break;
     }
@@ -108,18 +108,20 @@ mm_Page *mm_allocPages(u64 log2Size, u32 attr) {
         goto Fail;
     }
 
-    List_del(&resPage->list);
+    List_del(&resPage->lst);
     _revBit(resPage);
     for (int i = resPage->ord; i > log2Size; i--) {
         mm_Page *rPage = mm_divPageGrp(resPage);
         _revBit(rPage);
-        List_insBefore(&rPage->list, &_buddy.freeLst[i - 1]);
+        List_insBefore(&rPage->lst, &_buddy.freeLst[i - 1]);
     }
     _buddy.totUsage += (1ull << (log2Size + mm_pageShift));
+
     SpinLock_unlock(&_buddyLck);
     if (intrState) intr_unmask();
+
     resPage->attr = attr | mm_Attr_HeadPage | mm_Attr_Allocated;
-    if (~attr & mm_Attr_Shared) SafeList_insTail(&task_current->thread->pgRecord, &resPage->list);
+
     return resPage;
     Fail:
     while (1) ;
@@ -135,11 +137,6 @@ int mm_freePages(mm_Page *pages) {
         printk(screen_err, "mm: buddy: invalid pages %p: not head page or allocated page\n", pages);
         while (1) ;
         return res_FAIL;
-    }
-
-    if (~pages->attr & mm_Attr_Shared) {
-        // printk(screen_log, "delete private page %p\n", pages);
-        SafeList_del(&task_current->thread->pgRecord, &pages->list);
     }
     
     int intrState = intr_state();
@@ -157,7 +154,7 @@ int mm_freePages(mm_Page *pages) {
         //     "\tbud  :%p->%p ord=%d buddyId=%d attr=%#010x prev:%p next:%p\n", 
         //     pages, mm_getPhyAddr(pages), pages->ord, pages->buddyId, pages->attr,
         //     bud, mm_getPhyAddr(bud), bud->ord, bud->buddyId, bud->attr, bud->list.prev, bud->list.next);
-        List_del(&bud->list);
+        List_del(&bud->lst);
         if (mm_buddy_isRight(pages)) {
             pages->buddyId = pages->ord = 0;
             pages->attr ^= mm_Attr_HeadPage;
@@ -169,7 +166,7 @@ int mm_freePages(mm_Page *pages) {
         pages->buddyId = mm_buddy_parent(pages->buddyId);
         pages->ord++;
     }
-    List_insBehind(&pages->list, &_buddy.freeLst[pages->ord]);
+    List_insBehind(&pages->lst, &_buddy.freeLst[pages->ord]);
     SpinLock_unlock(&_buddyLck);
     if (intrState) intr_unmask();
 

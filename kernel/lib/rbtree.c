@@ -48,10 +48,11 @@ __always_inline__ void _linkNode(RBNode **src, RBNode *node, RBNode *par) {
 	*src = node;
 }
 
-void RBTree_init(RBTree *tree, RBTree_Insert insert, RBTree_Comparator cmp) {
+void RBTree_init(RBTree *tree, RBTree_InsFunc insert, RBTree_FindFunc find) {
 	SpinLock_init(&tree->lock);
 	tree->root = tree->left = NULL;
 	tree->insert = insert;
+	tree->find = find;
 }
 
 __always_inline__ void _fixAfterIns(RBTree *tree, RBNode *node) {

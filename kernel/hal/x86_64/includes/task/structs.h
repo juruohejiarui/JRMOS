@@ -6,10 +6,13 @@
 #include <hal/interrupt/desc.h>
 #include <hal/mm/map.h>
 
-typedef struct hal_task_ThreadStruct {
-	// physical address of pgd
+typedef struct hal_task_MemStruct {
 	u64 pgd;
 	hal_mm_PageTbl *pgTbl;
+} __attribute__ ((packed)) hal_task_MemStruct;
+
+typedef struct hal_task_ThreadStruct {
+	
 } __attribute__ ((packed)) hal_task_ThreadStruct;
 
 typedef struct hal_task_TaskStruct {

@@ -1,3 +1,4 @@
+// memory management for tasks and corresponding system calls
 #ifndef __MM_SHARE_H__
 #define __MM_SHARD_H__
 
@@ -5,28 +6,24 @@
 #include <mm/desc.h>
 #include <task/structs.h>
 
-/// @todo
-// share memory block to user space and return the virtual address in user space
-void *mm_shareBlk(void *krlAddr, u64 size, u64 attr);
+// initialize memory management for thread
+void mm_mgr_init(task_MemStruct *mem, u64 tskFlags);
 
-// allocate user block and return status
-int mm_allocBrk(u64 vAddr, u64 size, u64 attr);
+int mm_mgr_free(task_MemStruct *mem);
 
-int mm_freeBrk(u64 vAddr, u64 size);
+// find the first map information block s.t. blk->vAddr <= addr
+mm_MapBlkInfo *mm_findMap(void *addr);
 
-// map a memory block to user space
-// will not immediately write to the page table and allocate pages
-// will return the virtual address of the mapped block
-void *mm_mmap(u64 size, u64 attr);
+/// @brief map a memory block and return the virtual address
+/// @param attr valid properties:
+/// ``mm_Attr_User``: share to user space; 
+/// ``mm_Attr_Executable``: executable
+/// ``mm_Attr_Writable``: writable
+/// @param vAddr restrict the space of allocated virtual address to [vAddr, user_space_end];
+/// if vAddr is NULL, it will find a free virtual address randomly
+/// @return allocated virtual address
+void *mm_mmap(u64 size, u64 attr, void *vAddr, u64 pAddr);
 
-int *mm_unmmap(void *addr);
-
-#define syscall_mm_allocBlk mm_allocBrk
-
-#define syscall_mm_freeBlk mm_freeBrk
-
-#define syscall_mm_mmap mm_mmap
-
-#define syscall_mm_unmmap mm_unmmap
+int mm_unmmap(void *addr);
 
 #endif

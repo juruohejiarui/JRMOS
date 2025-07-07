@@ -16,10 +16,10 @@ __always_inline__ int hw_buf_bufTreeCompare(RBNode *a, RBNode *b) {
 	return da->idenHash != db->idenHash ? da->idenHash < db->idenHash : strcmp(da->idenPath, da->idenPath) == -1;
 }
 
-RBTree_insert(hw_buf_bufTreeInsert, hw_buf_bufTreeCompare);
+RBTree_insertDef(hw_buf_bufTreeInsert, hw_buf_bufTreeCompare);
 
 void hw_buf_init() {
-	RBTree_init(&hw_buf_bufTree, hw_buf_bufTreeInsert, hw_buf_bufTreeCompare);
+	RBTree_init(&hw_buf_bufTree, hw_buf_bufTreeInsert, NULL);
 }
 
 hw_buf_Desc *hw_buf_getBuf(char *iden) {

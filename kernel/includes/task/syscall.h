@@ -17,7 +17,7 @@ void task_syscall_initTbl();
 
 int task_syscall_init();
 
-int task_syscall_toUsr(void (*entry)(u64), u64 param, void *stkPtr);
+int task_syscall_toUsr(void (*entry)(u64), u64 param);
 
 #define task_syscall0 hal_task_syscall0
 #define task_syscall1 hal_task_syscall1
