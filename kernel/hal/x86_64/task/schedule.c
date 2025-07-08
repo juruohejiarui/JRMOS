@@ -54,16 +54,16 @@ void hal_task_sche_updOtherState() {
     hal_cpu_sendIntr_allExcluSelf(hal_cpu_intr_Schedule);
 }
 
-void hal_task_newThread(hal_task_ThreadStruct *thread, u64 attr) {
+void hal_task_newThread(task_ThreadStruct *thread, u64 attr) {
 	if (~attr & task_attr_Usr) {
-		thread->pgd = mm_krlTblPhysAddr;
+		thread->mem.hal.pgd = mm_krlTblPhysAddr;
 	} else {
 		// fork the page table from kernel table
 		hal_mm_PageTbl *pgd = mm_map_allocTbl();
 
 		memcpy(mm_dmas_phys2Virt(mm_krlTblPhysAddr), pgd, sizeof(hal_mm_PageTbl));
 		memset(pgd, 0, sizeof(hal_mm_PageTbl) / 2);
-		thread->pgd = mm_dmas_virt2Phys(pgd);
+		thread->mem.hal.pgd = mm_dmas_virt2Phys(pgd);
 	}
 	
 }
@@ -91,7 +91,7 @@ void hal_task_tskEntry(void *entry, u64 arg, u64 attr) {
 
 int hal_task_freeThread(task_ThreadStruct *thread) {
 	// clear map table
-	if (hal_mm_map_clrTbl(thread->hal.pgd) == res_FAIL) return res_FAIL;
+	if (hal_mm_map_clrTbl(thread->mem.hal.pgd) == res_FAIL) return res_FAIL;
 	return res_SUCC;
 }
 

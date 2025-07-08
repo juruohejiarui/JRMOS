@@ -10,8 +10,8 @@
 #define hal_task_TaskStruct_usrRsp 0xa0
 #define hal_task_TaskStruct_rflags 0x98
 
-#define task_ThreadStruct_hal 0x478
-#define hal_task_ThreadStruct_pgd 0x478
+#define task_ThreadStruct_hal 0x4a8
+#define hal_task_ThreadStruct_pgd 0x80
 
 #define task_usrStkSize 0x1000000
 #define task_krlStkSize 0x8000

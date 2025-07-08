@@ -4,6 +4,7 @@
 #include <hal/init/init.h>
 #include <mm/mm.h>
 #include <mm/buddy.h>
+#include <mm/mgr.h>
 #include <screen/screen.h>
 #include <task/api.h>
 #include <debug/kallsyms.h>
@@ -258,7 +259,7 @@ void hal_intr_doPageFault(u64 rsp, u64 errorCode) {
 	__asm__ volatile("movq %%cr2, %0":"=r"(cr2)::"memory");
 	// find mmap information
 	mm_MapBlkInfo *mapInfo = mm_findMap((void *)cr2);
-	if (mapInfo && mapInfo->vAddr + mapInfo->size > cr2) {
+	if (mapInfo && mapInfo->ed > cr2) {
 		mm_Page *page = mm_allocPages(
 			(mapInfo->attr & mm_Attr_Large) ? Page_2MSize - mm_pageShift : 0, mapInfo->attr);
 		SafeList_insTail(&mapInfo->pgLst, &page->lst);

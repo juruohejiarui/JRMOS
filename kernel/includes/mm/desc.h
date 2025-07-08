@@ -43,6 +43,7 @@
 #endif
 
 #define mm_usrAddrSt	(0x0ul)
+#define mm_usrAddrEd	(0x800000000000ul)
 
 extern char mm_symbol_text;
 extern char mm_symbol_etext;
@@ -102,15 +103,17 @@ typedef struct mm_SlabRecord {
 } mm_SlabRecord;
 
 typedef struct mm_MapBlkInfo {
-	void *vAddr;
-	u64 size;
+	void *st;
+	void *ed;
 	u64 attr;
 	RBNode rbNd;
+	ListNode lstNd;
 	SafeList pgLst;
 } mm_MapBlkInfo;
 
 typedef struct mm_MapInfo {
 	RBTree mapTr;
+	void *cache;
 	SpinLock mapLck;
 } mm_MapInfo;
 

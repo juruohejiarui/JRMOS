@@ -4,6 +4,7 @@
 #include <lib/dtypes.h>
 #include <lib/atomic.h>
 #include <lib/spinlock.h>
+#include <hal/mm/map.h>
 
 extern Atomic mm_map_krlTblModiJiff;
 extern SpinLock mm_map_krlTblLck;

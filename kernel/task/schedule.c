@@ -199,7 +199,7 @@ task_ThreadStruct *task_newThread(u64 attr) {
 
     SafeList_init(&thread->tskList);
 
-    hal_task_newThread(&thread->hal, attr);
+    hal_task_newThread(thread, attr);
 
     return thread;
 }
