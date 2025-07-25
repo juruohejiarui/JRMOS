@@ -18,20 +18,24 @@
 
 u8 hal_init_stk[task_krlStkSize] __attribute__((__section__ (".data.hal_init_stk") )) = {};
 
-u64 hal_init_testUsr_recur(u64 dep, u64 lim) {
-	if (dep < lim) hal_init_testUsr_recur(dep + 1, lim);
-	else {
-		printu(WHITE, BLACK, "U%ld ", dep);
-		task_syscall1(task_syscall_exit, 0);
-	}
-	return 0;
-}
+u64 hal_init_testUsr_recur(u64 dep, u64 lim);
 
 u64 hal_init_testUsr(u64 param) {
 	hal_init_testUsr_recur(0, min(Page_4KSize * param, Page_4KSize * 8));
 	task_syscall1(task_syscall_exit, 0);
 	return 0;
 }
+
+u64 hal_init_testUsr_recur(u64 dep, u64 lim) {
+	// hal_hw_hlt();
+	if (dep < lim) hal_init_testUsr_recur(dep + 1, lim);
+	else {
+		// printu(WHITE, BLACK, "U%ld ", dep);
+		// task_syscall1(task_syscall_exit, 0);
+	}
+	return 0;
+}
+
 u64 hal_init_test(u64 param) {
 	task_signal_setHandler(task_Signal_Int, task_exit, -1);
 	for (int i = 0; i < param * 100; i++) {
@@ -101,7 +105,7 @@ void hal_init_init() {
 
 	init_init();
 
-	// for (int i = 0; i < cpu_num * 4; i++) task_newTask(hal_init_testUsr, i, task_attr_Builtin | task_attr_Usr);
+	// for (int i = 0; i < 3; i++) task_newTask(hal_init_testUsr, i, task_attr_Builtin | task_attr_Usr);
 
 	while (1) {
 		hal_hw_hlt();

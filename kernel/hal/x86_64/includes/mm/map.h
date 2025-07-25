@@ -53,7 +53,7 @@ int hal_mm_map(u64 virt, u64 phys, u64 attr);
 
 int hal_mm_map1G(u64 virt, u64 phys, u64 attr);
 
-u64 hal_mm_unmap(u64 virt);
+int hal_mm_unmap(u64 virt);
 
 u64 hal_mm_getMap(u64 virt);
 

@@ -16,7 +16,7 @@ int mm_map(u64 virt, u64 phys, u64 attr);
 
 // unmap a virtual memory space start from virt
 // return the size of this virtual memory space
-u64 mm_unmap(u64 virt);
+int mm_unmap(u64 virt);
 
 u64 mm_getMap(u64 virt);
 

@@ -14,10 +14,18 @@
 int hal_task_syscall_toUsr(void (*entry)(u64), u64 param) {
 
 	// @todo allocation of user stack
-	void *usrStkPtr = mm_mmap(task_usrStkSize, mm_Attr_User, NULL, 0);
+	void *usrStkPtr = mm_mmap(task_usrStkSize, mm_Attr_User | mm_Attr_Writable, NULL, 0);
 
 	task_current->hal.usrStkTop = (u64)usrStkPtr + task_usrStkSize;
-	task_current->hal.usrRsp = (u64)usrStkPtr + task_usrStkSize - Page_4KSize;
+	task_current->hal.usrRsp = (u64)usrStkPtr + task_usrStkSize;
+
+	printk(screen_log, "usrStkPtr:%p~%p\n", usrStkPtr, task_current->hal.usrRsp);
+
+
+	// copy code to user space if necessary
+	if ((u64)entry & 0xffff000000000000) {
+		/// @todo 
+	}
 
 	
 	// push r11 and rcx

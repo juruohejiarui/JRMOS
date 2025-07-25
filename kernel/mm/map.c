@@ -61,6 +61,7 @@ hal_mm_PageTbl *mm_map_allocTbl() {
 
     hal_mm_PageTbl *tbl = mm_dmas_phys2Virt(mm_getPhyAddr(page));
     memset(tbl, 0, sizeof(hal_mm_PageTbl));
+
     return tbl;
 }
 
@@ -70,7 +71,7 @@ void mm_map_dbg(int detail) {
     SpinLock_lock(&_cacheLck);
 
 
-    printk(screen_log, "mm:map:nrTbl:%d nrTblGrp:%d ", _nrTbl, _nrTblGrp);
+    printk(screen_log, "mm: map: nrTbl:%d nrTblGrp:%d ", _nrTbl, _nrTblGrp);
     if (!detail) {
         SpinLock_unlock(&_cacheLck);
         if (intrState) intr_unmask();
@@ -153,14 +154,14 @@ int mm_map(u64 virt, u64 phys, u64 attr) {
     return res;
 }
 
-u64 mm_unmap(u64 virt) {
+int mm_unmap(u64 virt) {
     if (virt >= task_krlAddrSt) {
         SpinLock_lock(&mm_map_krlTblLck);
         hal_Atomic_inc(&mm_map_krlTblModiJiff);
     }
     else SpinLock_lock(&task_current->thread->mem.pgTblLck);
 
-    u64 res = hal_mm_unmap(virt);
+    int res = hal_mm_unmap(virt);
     
     if (virt >= task_krlAddrSt) SpinLock_unlock(&mm_map_krlTblLck);
     else SpinLock_unlock(&task_current->thread->mem.pgTblLck);

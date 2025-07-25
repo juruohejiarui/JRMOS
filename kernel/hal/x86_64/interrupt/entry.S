@@ -14,17 +14,18 @@ ENTRY(hal_intr_setTr)
     retq
 
 ENTRY(hal_intr_chkSwapgs)
-    movq $0xffff000000000000, %rax
-    testq %rax, %rdi
-    jnz hal_intr_chkSwapgs_end
+    bt $63, %rdi
+    jc hal_intr_chkSwapgs_end
     swapgs
 hal_intr_chkSwapgs_end:
     retq
 
 ENTRY(hal_intr_restoreAll)
 	// conduct swapgs if we should back to user mode
-    movq hal_intr_PtReg_rip(%rsp), %rdi
-    callq hal_intr_chkSwapgs
+    btq $63, hal_intr_PtReg_rip(%rsp)
+    jc hal_intr_restoreAll_popReg
+    swapgs
+hal_intr_restoreAll_popReg:
     popq %r15
     popq %r14
     popq %r13
@@ -106,8 +107,10 @@ errorCode:
     pushq %r14
     pushq %r15
 
-    movq hal_intr_PtReg_rip(%rsp), %rdi
-    callq hal_intr_chkSwapgs
+    btq $63, hal_intr_PtReg_rip(%rsp)
+    jc errorCode_noSwapgs
+    swapgs
+errorCode_noSwapgs:
 
     movq hal_intr_PtReg_errCode(%rsp), %rsi
     movq hal_intr_PtReg_func(%rsp), %rdx

@@ -1,5 +1,6 @@
 #include <hal/interrupt/api.h>
 #include <hal/interrupt/trap.h>
+#include <hal/interrupt/genasm.h>
 #include <hal/hardware/reg.h>
 #include <hal/init/init.h>
 #include <mm/mm.h>
@@ -84,7 +85,7 @@ static void _printRegs(u64 rsp) {
 
 void hal_intr_doDivideError(u64 rsp, u64 errorCode) {
 	u64 *p = NULL;
-	p = (u64 *)(rsp + 0x98);
+	p = (u64 *)(rsp + hal_intr_PtReg_rip);
 	SpinLock_lock(&_trapLogLck);
 	printk(screen_err, "do_divide_error(0),ERROR_CODE:%p,RSP:%p,RIP:%p\t" ,errorCode, rsp, *p);
 	_printRegs(rsp);
@@ -97,21 +98,21 @@ void hal_intr_doDivideError(u64 rsp, u64 errorCode) {
 
 void hal_intr_doDebug(u64 rsp, u64 errorCode) {
 	u64 *p = NULL;
-	p = (u64 *)(rsp + 0x98);
+	p = (u64 *)(rsp + hal_intr_PtReg_rip);
 	printk(screen_err, "do_debug(1),ERROR_CODE:%p,RSP:%p,RIP:%p\n",errorCode , rsp , *p);
 	while(1);
 }
 
 void hal_intr_doNMI(u64 rsp, u64 errorCode) {
 	u64 *p = NULL;
-	p = (u64 *)(rsp + 0x98);
+	p = (u64 *)(rsp + hal_intr_PtReg_rip);
 	printk(screen_err, "do_nmi(2),ERROR_CODE:%p,RSP:%p,RIP:%p\n",errorCode , rsp , *p);
 	while(1);
 }
 
 void hal_intr_doInt3(u64 rsp, u64 errorCode) {
 	u64 *p = NULL;
-	p = (u64 *)(rsp + 0x98);
+	p = (u64 *)(rsp + hal_intr_PtReg_rip);
 	SpinLock_lock(&_trapLogLck);
 	printk(screen_err, "do_int3(3),ERROR_CODE:%p,RSP:%p,RIP:%p\n",errorCode , rsp , *p);
 	_printRegs(rsp);
@@ -122,28 +123,28 @@ void hal_intr_doInt3(u64 rsp, u64 errorCode) {
 
 void hal_intr_doOverflow(u64 rsp, u64 errorCode) {
 	u64 *p = NULL;
-	p = (u64 *)(rsp + 0x98);
+	p = (u64 *)(rsp + hal_intr_PtReg_rip);
 	printk(screen_err, "do_overflow(4),ERROR_CODE:%p,RSP:%p,RIP:%p\n",errorCode , rsp , *p);
 	while(1);
 }
 
 void hal_intr_doBounds(u64 rsp, u64 errorCode) {
 	u64 *p = NULL;
-	p = (u64 *)(rsp + 0x98);
+	p = (u64 *)(rsp + hal_intr_PtReg_rip);
 	printk(screen_err, "do_bounds(5),ERROR_CODE:%p,RSP:%p,RIP:%p\n",errorCode , rsp , *p);
 	while(1);
 }
 
 void hal_intr_doUndefinedOpcode(u64 rsp, u64 errorCode) {
 	u64 *p = NULL;
-	p = (u64 *)(rsp + 0x98);
+	p = (u64 *)(rsp + hal_intr_PtReg_rip);
 	printk(screen_err, "do_undefined_opcode(6),ERROR_CODE:%p,RSP:%p,RIP:%p\n",errorCode , rsp , *p);
 	while(1);
 }
 
 void hal_intr_doDevNotAvailable(u64 rsp, u64 errorCode) {
 	u64 *p = NULL;
-	p = (u64 *)(rsp + 0x98);
+	p = (u64 *)(rsp + hal_intr_PtReg_rip);
 	printk(screen_err, "do_device_not_available(7),ERROR_CODE:%p,RSP:%p,RIP:%p\n",errorCode , rsp , *p);
 	// SIMD_clrTS();
 	// SIMD_switchToCur();
@@ -153,7 +154,7 @@ void hal_intr_doDevNotAvailable(u64 rsp, u64 errorCode) {
 void hal_intr_doDoubleFault(u64 rsp, u64 errorCode) {
 	u64 *p = NULL;
 	u64 *q = NULL;
-	p = (u64 *)(rsp + 0x98);
+	p = (u64 *)(rsp + hal_intr_PtReg_rip);
 	q = (u64 *)(rsp + 0xa0);
 	printk(screen_err, "do_double_fault(8),ERROR_CODE:%p,RSP:%p,RIP:%p,CS:%p,FLAGS:%p\n",errorCode , rsp , *p , *q , *(q + 1));
 	while(1);
@@ -161,14 +162,14 @@ void hal_intr_doDoubleFault(u64 rsp, u64 errorCode) {
 
 void hal_intr_doCoprocessorSegmentOverrun(u64 rsp, u64 errorCode) {
 	u64 *p = NULL;
-	p = (u64 *)(rsp + 0x98);
+	p = (u64 *)(rsp + hal_intr_PtReg_rip);
 	printk(screen_err, "do_coprocessor_segment_overrun(9),ERROR_CODE:%p,RSP:%p,RIP:%p\n",errorCode , rsp , *p);
 	while(1);
 }
 
 void hal_intr_doInvalidTSS(u64 rsp, u64 errorCode) {
 	u64 *p = NULL;
-	p = (u64 *)(rsp + 0x98);
+	p = (u64 *)(rsp + hal_intr_PtReg_rip);
 	printk(screen_err, "do_invalid_tss(10),ERROR_CODE:%p,RSP:%p,RIP:%p\n",errorCode , rsp , *p);
 	if (errorCode & 0x01)
 		printk(screen_err, "The exception occurred during the delivery of an event external to the program, such as an interrupt or an exception.\n");
@@ -187,7 +188,7 @@ void hal_intr_doInvalidTSS(u64 rsp, u64 errorCode) {
 
 void hal_intr_doSegmentNotPresent(u64 rsp, u64 errorCode) {
 	u64 *p = NULL;
-	p = (u64 *)(rsp + 0x98);
+	p = (u64 *)(rsp + hal_intr_PtReg_rip);
 	printk(screen_err, "do_segment_not_present(11),ERROR_CODE:%p,RSP:%p,RIP:%p\n",errorCode , rsp , *p);
 
 	if(errorCode & 0x01)
@@ -211,7 +212,7 @@ void hal_intr_doSegmentNotPresent(u64 rsp, u64 errorCode) {
 
 void hal_intr_doStackSegmentFault(u64 rsp, u64 errorCode) {
 	u64 *p = NULL;
-	p = (u64 *)(rsp + 0x98);
+	p = (u64 *)(rsp + hal_intr_PtReg_rip);
 	printk(screen_err, "do_stack_segment_fault(12),ERROR_CODE:%p,RSP:%p,RIP:%p\n",errorCode , rsp , *p);
 	if (errorCode & 0x01)
 		printk(screen_err, "The exception occurred during the delivery of an event external to the program, such as an interrupt or an exception.\n");
@@ -230,7 +231,7 @@ void hal_intr_doStackSegmentFault(u64 rsp, u64 errorCode) {
 
 void hal_intr_doGeneralProtection(u64 rsp, u64 errorCode) {
 	u64 *p = NULL;
-	p = (u64 *)(rsp + 0x98);
+	p = (u64 *)(rsp + hal_intr_PtReg_rip);
 	SpinLock_lock(&_trapLogLck);
 	printk(screen_err, "do_general_protection(13),ERROR_CODE:%p,RSP:%p,RIP:%p\t",errorCode , rsp , *p);
 	if (errorCode & 0x01)
@@ -254,17 +255,34 @@ void hal_intr_doGeneralProtection(u64 rsp, u64 errorCode) {
 }
 
 void hal_intr_doPageFault(u64 rsp, u64 errorCode) {
-	u64 *p = NULL;
+	u64 *p = (u64 *)(rsp + hal_intr_PtReg_rip);
 	u64 cr2 = 0;
 	__asm__ volatile("movq %%cr2, %0":"=r"(cr2)::"memory");
+
+	// printk(screen_log, "msr: IA32_KERNEL_GS_BASE:%p, IA32_GS_BASE:%p IA32_FS_BASE:%p\n",
+	// 	hal_hw_readMsr(hal_msr_IA32_KERNEL_GS_BASE), hal_hw_readMsr(hal_msr_IA32_GS_BASE), hal_hw_readMsr(hal_msr_IA32_FS_BASE));
+	// hal_hw_hlt();
 	// find mmap information
 	mm_MapBlkInfo *mapInfo = mm_findMap((void *)cr2);
-	if (mapInfo && mapInfo->ed > cr2) {
-		mm_Page *page = mm_allocPages(
-			(mapInfo->attr & mm_Attr_Large) ? Page_2MSize - mm_pageShift : 0, mapInfo->attr);
-		SafeList_insTail(&mapInfo->pgLst, &page->lst);
-		mm_map(cr2 & ~0xffful, mm_getPhyAddr(page), mapInfo->attr);
+	// mm_MapBlkInfo *mapInfo = NULL;
+	if (mapInfo && mapInfo->st <= (void *)cr2) {
+		printk(screen_warn, "trap: #%d,%p: need allocate cr2:%p\n", task_current->pid, task_current, cr2);
+		u64 pAddr;
+		if (mapInfo->attr & mm_Attr_Fixed) {
+			pAddr = mapInfo->pAddr + ((u64)cr2 - (u64)mapInfo->st);
+		} else {
+			mm_Page *page = mm_allocPages((mapInfo->attr & mm_Attr_Large ? Page_2MShift : Page_4KShift) - mm_pageShift, mapInfo->attr);
+			SafeList_insTail(&mapInfo->pgLst, &page->lst);
+			pAddr = mm_getPhyAddr(page);
+		}
+		if (mm_map(cr2 & Page_4KMask, pAddr, mapInfo->attr | mm_Attr_Exist) != res_SUCC) {
+			printk(screen_err, "trap: #%d: map unsuccessful\n");
+			hal_hw_hlt();
+		}
+		mm_map_dbgMap(cr2 & Page_4KMask);
+		// hal_hw_hlt();
 	} else {
+		debug:
 		SpinLock_lock(&_trapLogLck);
 		printk(screen_err, "do_page_fault(14),ERROR_CODE:%p,RSP:%p,RIP:%p,CR2:%p\n",errorCode , rsp , *p , cr2);
 		if (errorCode & 0x01)
@@ -288,45 +306,41 @@ void hal_intr_doPageFault(u64 rsp, u64 errorCode) {
 		_printRegs(rsp);
 		SpinLock_unlock(&_trapLogLck);
 
-		hal_intr_PtReg *regs = (void *)rsp;
-		regs->rip = (u64)task_exit;
-		regs->rdi = -1;
-
 		while (1) hal_hw_hlt();
 	}
 }
 
 void hal_intr_doX87FPUError(u64 rsp, u64 errorCode) {
 	u64 *p = NULL;
-	p = (u64 *)(rsp + 0x98);
+	p = (u64 *)(rsp + hal_intr_PtReg_rip);
 	printk(screen_err, "do_x87_fpu_error(16),ERROR_CODE:%p,RSP:%p,RIP:%p\n",errorCode , rsp , *p);
 	while(1);
 }
 
 void hal_intr_doAlignmentCheck(u64 rsp, u64 errorCode) {
 	u64 *p = NULL;
-	p = (u64 *)(rsp + 0x98);
+	p = (u64 *)(rsp + hal_intr_PtReg_rip);
 	printk(screen_err, "do_alignment_check(17),ERROR_CODE:%p,RSP:%p,RIP:%p\n",errorCode , rsp , *p);
 	while(1);
 }
 
 void hal_intr_doMachineCheck(u64 rsp, u64 errorCode) {
 	u64 *p = NULL;
-	p = (u64 *)(rsp + 0x98);
+	p = (u64 *)(rsp + hal_intr_PtReg_rip);
 	printk(screen_err, "do_machine_check(18),ERROR_CODE:%p,RSP:%p,RIP:%p\n",errorCode , rsp , *p);
 	while(1);
 }
 
 void hal_intr_doSIMDError(u64 rsp, u64 errorCode) {
 	u64 *p = NULL;
-	p = (u64 *)(rsp + 0x98);
+	p = (u64 *)(rsp + hal_intr_PtReg_rip);
 	printk(screen_err, "do_simd_error(19),ERROR_CODE:%p,RSP:%p,RIP:%p\n",errorCode , rsp , *p);
 	while(1) hal_hw_hlt();
 }
 
 void hal_intr_doVirtualizationError(u64 rsp, u64 errorCode) {
 	u64 *p = NULL;
-	p = (u64 *)(rsp + 0x98);
+	p = (u64 *)(rsp + hal_intr_PtReg_rip);
 	printk(screen_err, "do_virtualization_exception(20),ERROR_CODE:%p,RSP:%p,RIP:%p\n",errorCode , rsp , *p);
 	while(1);
 }
@@ -346,7 +360,7 @@ void hal_intr_initTrapGates() {
 	hal_intr_setTrapGate(hal_init_idtTbl, 11, 2, hal_intr_segmentNotPresent);
 	hal_intr_setTrapGate(hal_init_idtTbl, 12, 2, hal_intr_stackSegmentFault);
 	hal_intr_setTrapGate(hal_init_idtTbl, 13, 2, hal_intr_generalProtection);
-	hal_intr_setTrapGate(hal_init_idtTbl, 14, 2, hal_intr_pageFault);
+	hal_intr_setTrapGate(hal_init_idtTbl, 14, 0, hal_intr_pageFault);
 	// 15 reserved
 	hal_intr_setTrapGate(hal_init_idtTbl, 16, 2, hal_intr_x87FPUError);
 	hal_intr_setTrapGate(hal_init_idtTbl, 17, 2, hal_intr_alignmentCheck);

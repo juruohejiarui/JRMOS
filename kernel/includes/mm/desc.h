@@ -18,6 +18,7 @@
 #define mm_Attr_Writable	0x100u
 #define mm_Attr_Executable	0x200u
 #define mm_Attr_Large		0x400u
+#define mm_Attr_Fixed		0x800u
 
 #define mm_kernelAddr	((void *)(task_krlAddrSt + 0x100000ul))
 
@@ -106,14 +107,13 @@ typedef struct mm_MapBlkInfo {
 	void *st;
 	void *ed;
 	u64 attr;
+	u64 pAddr;
 	RBNode rbNd;
-	ListNode lstNd;
 	SafeList pgLst;
 } mm_MapBlkInfo;
 
 typedef struct mm_MapInfo {
 	RBTree mapTr;
-	void *cache;
 	SpinLock mapLck;
 } mm_MapInfo;
 
