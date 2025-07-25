@@ -259,9 +259,6 @@ void hal_intr_doPageFault(u64 rsp, u64 errorCode) {
 	u64 cr2 = 0;
 	__asm__ volatile("movq %%cr2, %0":"=r"(cr2)::"memory");
 
-	// printk(screen_log, "msr: IA32_KERNEL_GS_BASE:%p, IA32_GS_BASE:%p IA32_FS_BASE:%p\n",
-	// 	hal_hw_readMsr(hal_msr_IA32_KERNEL_GS_BASE), hal_hw_readMsr(hal_msr_IA32_GS_BASE), hal_hw_readMsr(hal_msr_IA32_FS_BASE));
-	// hal_hw_hlt();
 	// find mmap information
 	mm_MapBlkInfo *mapInfo = mm_findMap((void *)cr2);
 	// mm_MapBlkInfo *mapInfo = NULL;
@@ -279,8 +276,6 @@ void hal_intr_doPageFault(u64 rsp, u64 errorCode) {
 			printk(screen_err, "trap: #%d: map unsuccessful\n");
 			hal_hw_hlt();
 		}
-		mm_map_dbgMap(cr2 & Page_4KMask);
-		// hal_hw_hlt();
 	} else {
 		debug:
 		SpinLock_lock(&_trapLogLck);

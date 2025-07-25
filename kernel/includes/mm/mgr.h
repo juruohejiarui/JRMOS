@@ -53,9 +53,4 @@ void *mm_mmap(u64 size, u64 attr, void *st, u64 pAddr);
 /// @return 
 int mm_munmap(void *addr, u64 size);
 
-// share the memory block to task with
-void *mm_mshare(void *addr, u64 size, u64 pid) {
-
-}
-
 #endif
