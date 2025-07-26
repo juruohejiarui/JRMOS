@@ -21,6 +21,15 @@ int fs_gpt_registerPar_efiSys(fs_gpt_Disk *disk, u32 idx, fs_gpt_ParEntry *entry
 		mm_kfree(bs, mm_Attr_Shared);
 		return res_FAIL;
 	}
+	// create fat32 partition manager
+	fs_fat32_Partition *par = mm_kmalloc(sizeof(fs_fat32_Partition), mm_Attr_Shared, NULL);
+	if (fs_fat32_initPar(par, bs, &disk->disk, entry->stLba, entry->edLba) == res_FAIL) {
+		printk(screen_err, "fs: gpt: %p partition %d: failed to initialize.\n", disk, idx);
+		mm_kfree(bs, mm_Attr_Shared);
+		mm_kfree(par, mm_Attr_Shared);
+		return res_FAIL;
+	}
+	mm_kfree(bs, mm_Attr_Shared);
 	return res_SUCC;
 }
 

@@ -85,7 +85,7 @@ void *mm_mmap(u64 size, u64 attr, void *st, u64 pAddr) {
     mm_MapInfo *mem = &task_current->thread->mem.mapInfo;
     // align to 4K
     st = _align(st, attr);
-    size = _align(size, attr);
+    size = (u64)_align((void *)size, attr);
     SpinLock_lockMask(&mem->mapLck);
     mm_MapBlkInfo *blk = _findMap(mem, st), *newBlk;
     for (; ; st = blk->ed, blk = _findMap(mem, st)) {
