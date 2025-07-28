@@ -1,4 +1,5 @@
 #include <fs/fat32/api.h>
+#include <fs/api.h>
 #include <lib/string.h>
 
 int fs_fat32_chk(fs_fat32_BootSector *bs) {
@@ -11,7 +12,7 @@ int fs_fat32_initPar(fs_fat32_Partition *par, fs_fat32_BootSector *bs, fs_Disk *
 	memcpy(&par->bootSec, bs, sizeof(fs_fat32_BootSector));
 	par->par.st = stLba;
 	par->par.ed = edLba;
-	par->par.disk = disk;
 
-	// add parition to partition list of disk 
+	// add parition to partition list of disk
+	fs_Disk_addPar(disk, &par->par);
 }

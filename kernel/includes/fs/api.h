@@ -17,6 +17,8 @@ void fs_Partition_init(fs_Partition *par, u64 st, u64 ed, u64 attr, fs_Disk *dis
 
 void fs_Disk_init(fs_Disk *disk, u64 attr);
 
+void fs_Disk_addPar(fs_Disk *disk, fs_Partition *par);
+
 int fs_Disk_install(fs_Disk *disk);
 
 int fs_Disk_uninstall(fs_Disk *disk);

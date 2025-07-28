@@ -16,3 +16,8 @@ void fs_Disk_init(fs_Disk *disk, u64 attr) {
 	disk->status.value = 0;
 	disk->attr = attr;
 }
+
+void fs_Disk_addPar(fs_Disk *disk, fs_Partition *par) {
+	par->disk = disk;
+	SafeList_insTail(&disk->partLst, &par->lst);
+}
