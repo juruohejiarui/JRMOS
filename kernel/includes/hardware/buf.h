@@ -39,7 +39,7 @@ hw_buf_Desc *hw_buf_getBuf(char *iden);
 
 int hw_buf_delBuf(hw_buf_Desc *desc);
 
-hw_buf_ByteBuf *hw_buf_ByteBuf_create(char *iden, int size);
+hw_buf_ByteBuf *hw_buf_ByteBuf_crt(char *iden, int size);
 
 // pop contents of buffer, return the actual size of output
 int hw_buf_ByteBuf_pop(hw_buf_ByteBuf *buf, u8 *output, int size);
@@ -47,6 +47,6 @@ int hw_buf_ByteBuf_pop(hw_buf_ByteBuf *buf, u8 *output, int size);
 // push contents into buffer if there is enough space, return whether this action is successful
 int hw_buf_ByteBuf_push(hw_buf_ByteBuf *buf, u8 *input, int size);
 
-hw_buf_ListBuf *hw_buf_ListBuf_create(char *iden);
+hw_buf_ListBuf *hw_buf_ListBuf_crt(char *iden);
 
 #endif

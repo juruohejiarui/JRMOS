@@ -305,7 +305,7 @@ task_TaskStruct *task_newSubTask(void *entryAddr, u64 arg, u64 attr) {
 task_TaskStruct *task_newTask(void *entryAddr, u64 arg, u64 attr) {
     task_ThreadStruct *thread = task_newThread(attr);
     if (thread == NULL) {
-        printk(screen_err, "task: failed to create thread for new task.\n");
+        printk(screen_err, "task: failed to crt thread for new task.\n");
         return NULL;
     }
     task_TaskStruct *tsk = _newTask(entryAddr, arg, attr, thread);

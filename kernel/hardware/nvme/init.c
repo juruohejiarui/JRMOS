@@ -207,14 +207,14 @@ __always_inline__ int hw_nvme_initQue(hw_nvme_Host *host) {
 __always_inline__ int hw_nvme_registerQue(hw_nvme_Host *host) {
 	hw_nvme_Request *req = hw_nvme_makeReq(1);
 	for (int i = 1; i < host->intrNum; i++) {
-		hw_nvme_initReq_createCmplQue(req, host->cmplQue[i]);
+		hw_nvme_initReq_crtCmplQue(req, host->cmplQue[i]);
 		hw_nvme_request(host, host->subQue[0], req);
 		if (req->res.status != 0x01) {
 			printk(screen_err, "hw: nvme: %p: failed to register io completion queue #%d\n", host, i);
 			return res_FAIL;
 		}
 
-		hw_nvme_initReq_createSubQue(req, host->subQue[i]);
+		hw_nvme_initReq_crtSubQue(req, host->subQue[i]);
 		hw_nvme_request(host, host->subQue[0], req);
 		if (req->res.status != 0x01) {
 			printk(screen_err, "hw: nvme: %p: failed to register io submission queue #%d\n", host, i);

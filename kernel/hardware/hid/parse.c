@@ -29,7 +29,7 @@ static void _initParser(hw_hid_Parser *parser, hw_Device *dev) {
 }
 
 
-hw_hid_Parser *hw_hid_getParser(hw_Device *dev, int create) {
+hw_hid_Parser *hw_hid_getParser(hw_Device *dev, int crt) {
     hw_hid_Parser *par = NULL;
     SafeList_enum(&_parserLst, parserNd) {
         hw_hid_Parser *parser = container(parserNd, hw_hid_Parser, lst);
@@ -38,7 +38,7 @@ hw_hid_Parser *hw_hid_getParser(hw_Device *dev, int create) {
             SafeList_exitEnum(&_parserLst);
         }
     }
-    if (par == NULL && create) {
+    if (par == NULL && crt) {
         par = mm_kmalloc(sizeof(hw_hid_Parser), mm_Attr_Shared, NULL);
         if (par == NULL) {
             printk(screen_err, "hw: hid: failed to create new parser.\n");

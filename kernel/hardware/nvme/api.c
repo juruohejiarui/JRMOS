@@ -67,7 +67,7 @@ int hw_nvme_initReq_identify(hw_nvme_Request *req, u32 tp, u32 nspIden, void *bu
 	return res_SUCC;
 }
 
-int hw_nvme_initReq_createSubQue(hw_nvme_Request *req, hw_nvme_SubQue *subQue) {
+int hw_nvme_initReq_crtSubQue(hw_nvme_Request *req, hw_nvme_SubQue *subQue) {
 	hw_nvme_SubQueEntry *entry = &req->input[0];
 	entry->opc = 0x01;
 	entry->prp[0] = mm_dmas_virt2Phys(subQue->entries);
@@ -77,7 +77,7 @@ int hw_nvme_initReq_createSubQue(hw_nvme_Request *req, hw_nvme_SubQue *subQue) {
 	return res_SUCC;
 }
 
-int hw_nvme_initReq_createCmplQue(hw_nvme_Request *req, hw_nvme_CmplQue *cmplQue) {
+int hw_nvme_initReq_crtCmplQue(hw_nvme_Request *req, hw_nvme_CmplQue *cmplQue) {
 	hw_nvme_SubQueEntry *entry = &req->input[0];
 	entry->opc = 0x05;
 	entry->prp[0] = mm_dmas_virt2Phys(cmplQue->entries);

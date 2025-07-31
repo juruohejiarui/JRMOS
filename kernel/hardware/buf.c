@@ -53,7 +53,7 @@ static void hw_buf_setDesc(hw_buf_Desc *desc, char *iden, int tp) {
 	desc->bufTp = tp;
 }
 
-hw_buf_ByteBuf *hw_buf_ByteBuf_create(char *iden, int size) {
+hw_buf_ByteBuf *hw_buf_ByteBuf_crt(char *iden, int size) {
 	hw_buf_ByteBuf *buf = mm_kmalloc(sizeof(hw_buf_ByteBuf) + size * sizeof(u8), mm_Attr_Shared, NULL);
 	buf->head = buf->tail = buf->load = 0;
 	buf->size = size;
@@ -63,7 +63,7 @@ hw_buf_ByteBuf *hw_buf_ByteBuf_create(char *iden, int size) {
 	return buf;
 }
 
-hw_buf_ListBuf *hw_buf_ListBuf_create(char *iden) {
+hw_buf_ListBuf *hw_buf_ListBuf_crt(char *iden) {
 	hw_buf_ListBuf *buf = mm_kmalloc(sizeof(hw_buf_ListBuf), mm_Attr_Shared, NULL);
 	SafeList_init(&buf->list);
 

@@ -273,9 +273,9 @@ int hw_nvme_respone(hw_nvme_Request *req, hw_nvme_CmplQueEntry *entry);
 #define hw_nvme_Request_Identify_type_NspLst	0x2
 int hw_nvme_initReq_identify(hw_nvme_Request *req, u32 tp , u32 nspIden, void *buf);
 
-int hw_nvme_initReq_createSubQue(hw_nvme_Request *req, hw_nvme_SubQue *subQue);
+int hw_nvme_initReq_crtSubQue(hw_nvme_Request *req, hw_nvme_SubQue *subQue);
 
-int hw_nvme_initReq_createCmplQue(hw_nvme_Request *req, hw_nvme_CmplQue *cmplQue);
+int hw_nvme_initReq_crtCmplQue(hw_nvme_Request *req, hw_nvme_CmplQue *cmplQue);
 
 hw_nvme_SubQue *hw_nvme_allocSubQue(hw_nvme_Host *host, u32 iden, u32 queSz, hw_nvme_CmplQue *trg);
 

@@ -45,7 +45,7 @@ __always_inline__ void hw_usb_xhci_portConnect(hw_usb_xhci_Host *host, u32 portI
 	// make new device management for this port
 	host->portDev[portIdx] = hw_usb_xhci_newDev(host, NULL, portIdx);
 	if (!host->portDev[portIdx]) {
-		printk(screen_err, "hw: xhci: host %p failed to create device for port %d\n", host, portIdx);
+		printk(screen_err, "hw: xhci: host %p failed to crt device for port %d\n", host, portIdx);
 		return;
 	}
 	printk(screen_log, "finish portConnect\n");

@@ -38,9 +38,58 @@ typedef struct fs_fat32_BootSector {
 	u16 bootSigEnd;
 } __attribute__ ((packed)) fs_fat32_BootSector;
 
+typedef struct fs_fat32_FSInfoSector {
+	u32 leadSig;
+	u8 reserved1[480];
+	u32 structSig;
+	u32 freeCnt;
+	u32 nxtFree;
+	u8 reserved2[12];
+	u32 trailSig;
+} __attribute__ ((packed)) fs_fat32_FSInfoSector;
+
+typedef struct fs_fat32_DirEntry {
+	u8 name[11];
+	u8 attr;
+	#define fs_fat32_DirEntry_attr_ReadOnly	0x01
+	#define fs_fat32_DirEntry_attr_Hidden	0x02
+	#define fs_fat32_DirEntry_attr_System	0x04
+	#define fs_fat32_DirEntry_attr_VolumeId	0x08
+	#define fs_fat32_DirEntry_attr_Dir		0x10
+	#define fs_fat32_DirEntry_attr_Archive	0x20
+	#define fs_fat32_DirEntry_attr_LongName	0x0f
+	u8 reserved;
+	u8 crtTimeTenth;
+	u16 crtTime;
+	u16 crtDate;
+	u16 lstAccData;
+	u16 fstClusHi;
+	u16 wrtTime;
+	u16 wrtData;
+	u16 fstClusLo;
+	u32 fileSz;
+} __attribute__((packed)) fs_fat32_DirEntry;
+
+typedef struct fs_fat32_LongDirEntry {
+	u8 ord;
+	u16 name1[5];
+	u8 attr;
+	u8 type;
+	u8 chksum;
+	u16 name2[6];
+	u16 fstClusLo;
+	u16 name3[2];
+} __attribute__ ((packed)) fs_fat32_LogDirEntry;
+
 typedef struct fs_fat32_Partition {
 	fs_fat32_BootSector bootSec;
-	fs_Partition par;
+	fs_fat32_FSInfoSector fsSec;
+
+	u64 fstDtSec;
+	u64 bytesPerClus;
+	u64 fstFat1Sec;
+	u64 fstFat2Sec;
 	
+	fs_Partition par;
 } fs_fat32_Partition;
 #endif

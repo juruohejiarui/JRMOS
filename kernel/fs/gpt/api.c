@@ -14,14 +14,17 @@ int fs_gpt_registerPar_efiSys(fs_gpt_Disk *disk, u32 idx, fs_gpt_ParEntry *entry
 		"\t\tbytesPerSec: %d\n"
 		"\t\tfatSz16:     %d\n"
 		"\t\tfatSz32:     %d\n"
-		"\t\tbootSigEnd:  %x\n",
-		bs->oemName, bs->bytesPerSec, bs->fatSz16, bs->fatSz32, bs->bootSigEnd);
+		"\t\tbootSigEnd:  %x\n"
+		"\t\tBytesPerSec: %x\n"
+		"\t\tSecPerClus:  %x\n",
+		bs->oemName, bs->bytesPerSec, bs->fatSz16, bs->fatSz32, bs->bootSigEnd,
+		bs->bytesPerSec, bs->secPerClus);
 	if (fs_fat32_chk(bs) != res_SUCC) {
 		printk(screen_err, "fs: gpt: %p partition %d is not a valid FAT32 partition\n", disk, idx);
 		mm_kfree(bs, mm_Attr_Shared);
 		return res_FAIL;
 	}
-	// create fat32 partition manager
+	// crt fat32 partition manager
 	fs_fat32_Partition *par = mm_kmalloc(sizeof(fs_fat32_Partition), mm_Attr_Shared, NULL);
 	if (fs_fat32_initPar(par, bs, &disk->disk, entry->stLba, entry->edLba) == res_FAIL) {
 		printk(screen_err, "fs: gpt: %p partition %d: failed to initialize.\n", disk, idx);

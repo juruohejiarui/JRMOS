@@ -178,7 +178,7 @@ typedef struct hw_hid_Parser hw_hid_Parser;
 
 void hw_hid_init();
 
-hw_hid_Parser *hw_hid_getParser(hw_Device *dev, int create);
+hw_hid_Parser *hw_hid_getParser(hw_Device *dev, int crt);
 
 int hw_hid_delParser(hw_hid_Parser *parser);
 

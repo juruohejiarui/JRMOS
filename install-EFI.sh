@@ -18,7 +18,7 @@ else
         sudo cp ./kernel/kernel.bin /mnt/
         # make /mnt/EFI/BOOT and copy if necessary
         if [ ! -d "/mnt/EFI/" ]; then
-            echo "install-EFI: EFI/BOOT not found"
+            echo "install-EFI: create EFI/BOOT/"
             sudo mkdir -p /mnt/EFI/BOOT/
             sudo cp ./BootLoader.efi /mnt/EFI/BOOT/BOOTX64.efi
         fi
