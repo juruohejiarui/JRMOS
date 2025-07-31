@@ -13,9 +13,9 @@ typedef struct hw_DiskDev {
 
 	u64 (*size)(struct hw_DiskDev *dev);
 
-	// read to buf and return how many bytes has been written to buffer
+	// read to buf and return how many lbas has been read from buffer
 	u64 (*read)(struct hw_DiskDev *dev, u64 off, u64 size, void *buf);
-	// write to device and return hwo many bytes has been written to buffer
+	// write to device and return hwo many lbas has been written to buffer
 	u64 (*write)(struct hw_DiskDev *dev, u64 off, u64 size, void *buf);
 } hw_DiskDev;
 

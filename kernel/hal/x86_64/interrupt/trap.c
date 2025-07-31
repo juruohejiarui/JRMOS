@@ -272,7 +272,7 @@ void hal_intr_doPageFault(u64 rsp, u64 errorCode) {
 			SafeList_insTail(&mapInfo->pgLst, &page->lst);
 			pAddr = mm_getPhyAddr(page);
 		}
-		if (mm_map(cr2 & Page_4KMask, pAddr, mapInfo->attr | mm_Attr_Exist) != res_SUCC) {
+		if (mm_map(cr2 & (mapInfo->attr & mm_Attr_Large ? Page_4KMask : Page_2MMask), pAddr, mapInfo->attr | mm_Attr_Exist) != res_SUCC) {
 			printk(screen_err, "trap: #%d: map unsuccessful\n");
 			hal_hw_hlt();
 		}

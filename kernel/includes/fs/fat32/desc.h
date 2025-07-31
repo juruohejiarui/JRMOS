@@ -2,6 +2,7 @@
 #define __FS_FAT32_DESC_H__
 
 #include <fs/desc.h>
+#include <lib/rbtree.h>
 
 typedef struct fs_fat32_BootSector {
 	u8 jmpBoot[3];
@@ -81,14 +82,47 @@ typedef struct fs_fat32_LongDirEntry {
 	u16 name3[2];
 } __attribute__ ((packed)) fs_fat32_LogDirEntry;
 
+typedef struct fs_fat32_ClusCacheNd {
+	void *clus;
+	RBNode freeRbNd;
+	ListNode freeLstNd;
+	// offset (Cluster)
+	u64 off;
+	/// @brief when there is program or service refers to this page, this cache can not be removed.
+	Atomic refCnt;
+
+	#define fat32_ClusCacheNd_MaxModiCnt 128
+	/// @brief when count of modify reach fs_fat32_ClusCacheNd_MaxModiCnt, this contents of this cache will be
+	/// written to disk.
+	Atomic modiCnt;
+
+	/// @brief only one program or service can modify this page cache.
+	SpinLock modiLck;
+} fs_fat32_ClusCacheNd;
+
+typedef struct fs_fat32_FatCacheNd {
+	fs_fat32_ClusCacheNd clus;
+	u32 *bitmap;
+	u32 *fat;
+} fs_fat32_FatCacheNd;
+
+typedef struct fs_fat32_Cache {
+	RBTree clusTr;
+	SafeList freeClusLst;
+	SpinLock lck;
+} fs_fat32_Cache;
+
 typedef struct fs_fat32_Partition {
 	fs_fat32_BootSector bootSec;
 	fs_fat32_FSInfoSector fsSec;
 
 	u64 fstDtSec;
 	u64 bytesPerClus;
+	u64 lbaPerClus;
 	u64 fstFat1Sec;
 	u64 fstFat2Sec;
+
+	fs_fat32_Cache cache;
 	
 	fs_Partition par;
 } fs_fat32_Partition;

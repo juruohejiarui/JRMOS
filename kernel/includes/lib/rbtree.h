@@ -13,14 +13,14 @@ typedef struct RBNode {
 
 struct RBTree;
 
-// the comparator for RBTree, return 1 if a < b, 0 if a > b; invalid for a == b
 typedef void (*RBTree_InsFunc)(struct RBTree *tree, RBNode *node, RBNode ***tgr, RBNode **par);
 
+// the comparator for RBTree, return 1 if a < b, 0 if a > b; invalid for a == b
 typedef int (*RBTree_Comparator)(RBNode *a, RBNode *b);
 
 typedef RBNode *(*RBTree_FindFunc)(struct RBTree *tree, void *data);
 
-// return 1 if node < data; 0 otherwise
+// return -1 if node < data; 0 if node == data; 1 otherwise
 typedef int (*RBTree_Match)(RBNode *node, void *data);
 
 typedef struct RBTree {
@@ -47,12 +47,13 @@ static void name(RBTree *tree, RBNode *node, RBNode ***tgr, RBNode **par) { \
 	*tgr = src, *par = lst; \
 }
 
+// find node s.t. <= requirement and closest to requirement
 #define RBTree_findDef(name, match) \
 static RBNode *name(RBTree *tree, void *data) { \
 	RBNode *node = tree->root, *bst = NULL; \
 	while (node) { \
 		register int res = match(node, data); \
-		if (res < 0) { \
+		if (res > 0) { \
 			bst = node; \
 			node = node->left; \
 		} else if (res > 0) { \
