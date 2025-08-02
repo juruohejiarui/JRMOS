@@ -4,6 +4,10 @@ DISK_PATH=disk.img
 uNames='uname -s'
 osName=$(uname -s)
 
+if [ ! -f ${DISK_PATH} ]; then
+    ./make_img.sh
+fi
+
 if [ "$osName" = "Darwin" ]; then
 	echo "install-EFI-img: under MacOS"
     sudo hdiutil attach -nomount ${DISK_PATH}

@@ -84,17 +84,17 @@ typedef struct fs_fat32_LongDirEntry {
 
 typedef struct fs_fat32_ClusCacheNd {
 	void *clus;
-	RBNode freeRbNd;
+	RBNode rbNd;
 	ListNode freeLstNd;
 	// offset (Cluster)
 	u64 off;
 	/// @brief when there is program or service refers to this page, this cache can not be removed.
-	Atomic refCnt;
+	u64 refCnt;
 
 	#define fat32_ClusCacheNd_MaxModiCnt 128
 	/// @brief when count of modify reach fs_fat32_ClusCacheNd_MaxModiCnt, this contents of this cache will be
 	/// written to disk.
-	Atomic modiCnt;
+	u64 modiCnt;
 
 	/// @brief only one program or service can modify this page cache.
 	SpinLock modiLck;
@@ -108,7 +108,8 @@ typedef struct fs_fat32_FatCacheNd {
 
 typedef struct fs_fat32_Cache {
 	RBTree clusTr;
-	SafeList freeClusLst;
+	ListNode freeClusLst; 
+	
 	SpinLock lck;
 } fs_fat32_Cache;
 
