@@ -25,8 +25,8 @@ u64 hal_hw_apic_supportFlag;
 intr_Ctrl hal_hw_apic_intrCtrl;
 
 int hal_hw_apic_map() {
-	if (mm_dmas_map(0xfec00000) == res_FAIL) return res_FAIL;
-	if (mm_dmas_map(0xfee00000) == res_FAIL) return res_FAIL;
+	if (mm_dmas_map(0xfec00000) & res_FAIL) return res_FAIL;
+	if (mm_dmas_map(0xfee00000) & res_FAIL) return res_FAIL;
 	ioApicMap.phyAddr = 0xfec00000;
 	ioApicMap.idx = mm_dmas_phys2Virt(ioApicMap.phyAddr);
 	ioApicMap.data = mm_dmas_phys2Virt(ioApicMap.phyAddr + 0x10);

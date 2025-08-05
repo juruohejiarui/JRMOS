@@ -20,7 +20,7 @@ typedef struct fs_fat32_BootSector {
 	u32 hiddSec;
 	u32 totSec32;
 	u32 fatSz32;
-	u16 extFalgs;
+	u16 extFlags;
 	u16 fsVer;
 	// root directory start cluster
 	u32 rootClus;
@@ -80,7 +80,7 @@ typedef struct fs_fat32_LongDirEntry {
 	u16 name2[6];
 	u16 fstClusLo;
 	u16 name3[2];
-} __attribute__ ((packed)) fs_fat32_LogDirEntry;
+} __attribute__ ((packed)) fs_fat32_LDirEntry;
 
 typedef struct fs_fat32_ClusCacheNd {
 	void *clus;
@@ -91,8 +91,8 @@ typedef struct fs_fat32_ClusCacheNd {
 	/// @brief when there is program or service refers to this page, this cache can not be removed.
 	u64 refCnt;
 
-	#define fat32_ClusCacheNd_MaxModiCnt 128
-	/// @brief when count of modify reach fs_fat32_ClusCacheNd_MaxModiCnt, this contents of this cache will be
+	#define fs_fat32_ClusCacheNd_MaxModiCnt 128
+	/// @brief when count of modify reach fs_fs_fat32_ClusCacheNd_MaxModiCnt, this contents of this cache will be
 	/// written to disk.
 	u64 modiCnt;
 
@@ -101,16 +101,22 @@ typedef struct fs_fat32_ClusCacheNd {
 } fs_fat32_ClusCacheNd;
 
 typedef struct fs_fat32_FatCacheNd {
-	fs_fat32_ClusCacheNd clus;
-	u32 *bitmap;
-	u32 *fat;
+	u32 *sec;
+	RBNode rbNd;
+	// offset (sector)
+	u32 off;	
 } fs_fat32_FatCacheNd;
 
 typedef struct fs_fat32_Cache {
 	RBTree clusTr;
-	ListNode freeClusLst; 
+	ListNode freeClusLst;
+	SpinLock clusLck;
+
+	RBTree fatTr;
+	#define fs_fat32_FatCache_MaxNum 64
+	u64 fatNum;
+	SpinLock fatLck;
 	
-	SpinLock lck;
 } fs_fat32_Cache;
 
 typedef struct fs_fat32_Partition {

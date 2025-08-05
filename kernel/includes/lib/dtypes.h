@@ -26,6 +26,8 @@ typedef double f64;
 
 #define res_SUCC	0x0
 #define res_FAIL	0x1
+#define res_BUSY 	0x2
+#define res_DAMAGED	0x4
 
 #define Page_4KShift	12
 #define Page_2MShift	21

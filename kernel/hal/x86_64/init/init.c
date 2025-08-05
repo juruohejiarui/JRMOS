@@ -57,7 +57,7 @@ void hal_init_init() {
 	screen_init();
 	
 	int res = mm_init();
-	if (res == res_FAIL) while (1) ;
+	if (res & res_FAIL) while (1) ;
 
 	res = mm_map_init();
 	if (res == res_FAIL) {
