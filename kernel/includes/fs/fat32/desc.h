@@ -71,7 +71,7 @@ typedef struct fs_fat32_DirEntry {
 	u32 fileSz;
 } __attribute__((packed)) fs_fat32_DirEntry;
 
-typedef struct fs_fat32_LongDirEntry {
+typedef struct fs_fat32_LDirEntry {
 	u8 ord;
 	u16 name1[5];
 	u8 attr;
@@ -117,7 +117,14 @@ typedef struct fs_fat32_Cache {
 	u64 fatNum;
 	SpinLock fatLck;
 	
+	u64 *bitmap;
+	
 } fs_fat32_Cache;
+
+typedef struct fs_fat32_File {
+	fs_File file;
+	RBTree clusTr;
+} fs_fat32_File;
 
 typedef struct fs_fat32_Partition {
 	fs_fat32_BootSector bootSec;

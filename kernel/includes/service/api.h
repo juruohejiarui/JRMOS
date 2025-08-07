@@ -5,7 +5,7 @@
 
 void service_init();
 
-int service_Host_init(char *name, task_TaskStruct *hostTsk, u64 ringSz);
+int service_Host_init(service_Host *host, char *name, task_TaskStruct *hostTsk, u64 ringSz);
 
 int service_Host_register(service_Host *host);
 

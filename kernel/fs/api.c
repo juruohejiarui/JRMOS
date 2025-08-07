@@ -8,7 +8,7 @@ void fs_Partition_init(fs_Partition *par, u64 st, u64 ed, u64 attr, fs_Disk *dis
 
 	// install this partition
 	par->status.value = par->openCnt.value = 0;
-	SafeList_insTail(&disk->partLst, &par->lst);
+	SafeList_insTail(&disk->partLst, &par->lstNd);
 }
 
 void fs_Disk_init(fs_Disk *disk, u64 attr) {
@@ -19,5 +19,5 @@ void fs_Disk_init(fs_Disk *disk, u64 attr) {
 
 void fs_Disk_addPar(fs_Disk *disk, fs_Partition *par) {
 	par->disk = disk;
-	SafeList_insTail(&disk->partLst, &par->lst);
+	SafeList_insTail(&disk->partLst, &par->lstNd);
 }

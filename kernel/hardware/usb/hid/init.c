@@ -175,7 +175,7 @@ int hw_usb_hid_config(hw_Device *dev) {
 
     mm_kfree(report, mm_Attr_Shared);
 
-    hw_hid_printParser(parser);
+    // hw_hid_printParser(parser);
 
     // decide parser type
     if (interDesc->bInterSubCls == 0x01)

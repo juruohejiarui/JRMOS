@@ -11,14 +11,12 @@ int fs_gpt_registerPar_efiSys(fs_gpt_Disk *disk, u32 idx, fs_gpt_ParEntry *entry
 	disk->disk.device->read(disk->disk.device, entry->stLba, 1, bs);
 	printk(screen_log, 
 		"\t\toemName:     %s\n"
-		"\t\tbytesPerSec: %d\n"
-		"\t\tfatSz16:     %d\n"
-		"\t\tfatSz32:     %d\n"
-		"\t\tbootSigEnd:  %x\n"
-		"\t\tBytesPerSec: %x\n"
-		"\t\tSecPerClus:  %x\n",
-		bs->oemName, bs->bytesPerSec, bs->fatSz16, bs->fatSz32, bs->bootSigEnd,
-		bs->bytesPerSec, bs->secPerClus);
+		"\t\tbytesPerSec: %#06x SecPerClus:  %#06x\n"
+		"\t\tfatSz16:     %#06x fatSz32:     %#06x\n"
+		"\t\tbootSigEnd:  %#06x BytesPerSec: %#06x\n", 
+		bs->oemName, bs->bytesPerSec, bs->secPerClus,
+		bs->fatSz16, bs->fatSz32, bs->bootSigEnd,
+		bs->bytesPerSec);
 	if (fs_fat32_chk(bs) != res_SUCC) {
 		printk(screen_err, "fs: gpt: %p partition %d is not a valid FAT32 partition\n", disk, idx);
 		mm_kfree(bs, mm_Attr_Shared);
@@ -114,10 +112,8 @@ void fs_gpt_scan(hw_DiskDev *dev) {
 				"\t#%d: \n"
 				"\t\tType:    %016lx %016lx\n"
 				"\t\tParGUID: %016lx %016lx\n"
-				"\t\tstLba:   %016lx\n"
-				"\t\tedLba:   %016lx\n"
-				"\t\tattr:    %016lx\n"
-				"\t\tparName: %S\n",
+				"\t\tstLba:   %016lx edLba:   %016lx\n"
+				"\t\tattr:    %016lx parName: %S\n",
 				i, 
 				parEntry->parTypeGuid[0], parEntry->parTypeGuid[1],
 				parEntry->uniParGuid[0], parEntry->uniParGuid[1],

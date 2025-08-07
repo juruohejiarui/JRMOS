@@ -23,9 +23,14 @@ else
             sudo cp ./BootLoader.efi /mnt/EFI/BOOT/BOOTX64.efi
         fi
 
-        if [ ! -d "mnt/test/" ]; then
+        if [ ! -d "/mnt/test/" ]; then
             echo "install-EFI: create test/"
             sudo mkdir -p /mnt/test/
+        fi
+
+        if [ ! -f "/mnt/test/test.txt" ]; then
+            echo "install-EFI: create test/test.txt"
+            sudo touch /mnt/test/test.txt
         fi
         sudo sync
         sudo umount /mnt/

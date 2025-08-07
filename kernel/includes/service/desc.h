@@ -14,7 +14,7 @@ typedef struct service_Request {
 } service_Request;
 
 typedef struct service_Host {
-	char name[256];
+	char name[512];
 	// crc32 of name
 	u32 nameHash;
 
