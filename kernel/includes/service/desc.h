@@ -11,9 +11,10 @@ typedef struct service_Request {
 	Atomic flags;
 	#define service_Request_flags_Pending 	0x1
 	#define service_Request_flags_Handled 	0x2
+	void *data;
 } service_Request;
 
-typedef struct service_Host {
+typedef struct service_Server {
 	char name[512];
 	// crc32 of name
 	u32 nameHash;
@@ -24,9 +25,10 @@ typedef struct service_Host {
 	// this host is a user host, which means the request is handled by user space
 	#define service_Request_flags_UserHost 0x1
 
-	task_TaskStruct *hostTsk;
+	// handler task
+	task_TaskStruct *tsk;
 	
-	Atomic openCnt;
+	Atomic connectCnt;
 
 	RBNode rbNd;
 	
@@ -34,6 +36,6 @@ typedef struct service_Host {
 	SpinLock lck;
 	u64 hdr, til, sz, load;
 	service_Request *reqs;
-} service_Host;
+} service_Server;
 
 #endif

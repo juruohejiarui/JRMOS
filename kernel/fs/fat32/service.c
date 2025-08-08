@@ -3,6 +3,6 @@
 #include <service/desc.h>
 
 typedef struct fs_fat32_ServiceHost {
-    service_Host host;
+    service_Server host;
     fs_fat32_Partition *par;
 } fs_fat32_ServiceHost;

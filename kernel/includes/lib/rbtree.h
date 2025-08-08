@@ -67,6 +67,9 @@ void RBTree_init(RBTree *tree, RBTree_InsFunc insert, RBTree_FindFunc find);
 
 void RBTree_ins(RBTree *tree, RBNode *node);
 
+__always_inline__ void RBTree_lck(RBTree *tree) { SpinLock_lock(&tree->lock); }
+__always_inline__ void RBTree_unlck(RBTree *tree) { SpinLock_unlock(&tree->lock); }
+
 __always_inline__ void RBTree_insLck(RBTree *tree, RBNode *node) {
 	SpinLock_lock(&tree->lock);
 	RBTree_ins(tree, node);
