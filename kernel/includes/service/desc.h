@@ -35,7 +35,7 @@ typedef struct service_Server {
 	// use ring to store request pointer, size of ring is specific for each service
 	SpinLock lck;
 	u64 hdr, til, sz, load;
-	service_Request *reqs;
+	service_Request **reqs;
 } service_Server;
 
 #endif

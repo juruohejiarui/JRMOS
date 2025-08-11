@@ -108,10 +108,6 @@ typedef struct fs_fat32_FatCacheNd {
 } fs_fat32_FatCacheNd;
 
 typedef struct fs_fat32_Cache {
-	RBTree clusTr;
-	ListNode freeClusLst;
-	SpinLock clusLck;
-
 	RBTree fatTr;
 	#define fs_fat32_FatCache_MaxNum 64
 	u64 fatNum;
@@ -124,7 +120,13 @@ typedef struct fs_fat32_Cache {
 typedef struct fs_fat32_File {
 	fs_File file;
 	RBTree clusTr;
+	ListNode freeClusLst;
 } fs_fat32_File;
+
+typedef struct fs_fat32_Dir {
+	fs_Dir dir;
+	RBTree clurTr;
+} fs_fat32_Dir;
 
 typedef struct fs_fat32_Partition {
 	fs_fat32_BootSector bootSec;
