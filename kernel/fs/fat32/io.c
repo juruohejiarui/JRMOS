@@ -12,7 +12,7 @@ int fs_fat32_readSec(fs_fat32_Partition *par, u64 off, u64 sz, void *buf) {
 }
 
 int fs_fat32_writeSec(fs_fat32_Partition *par, u64 off, u64 sz, void *buf) {
-	printk(screen_log, "fat32: write sector %017lx\n", off);
+	printk(screen_log, "fat32: write sector %016lx\n", off);
 	register hw_DiskDev *dev = par->par.disk->device;
 	if (dev->write(dev, par->par.st + off, sz, buf) != sz) {
 		printk(screen_err, "fat32: write sector %016lx failed\n", off);

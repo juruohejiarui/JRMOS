@@ -42,10 +42,6 @@ RBTree_insertDef(fs_fat32_ClusCacheNd_insert, fs_fat32_ClusCacheNd_cmp);
 RBTree_findDef(fs_fat32_ClusCacheNd_find, fs_fat32_ClusCacheNd_match);
 
 int fs_fat32_initParCache(fs_fat32_Partition *par) {
-	RBTree_init(&par->cache.clusTr, fs_fat32_ClusCacheNd_insert, fs_fat32_ClusCacheNd_find);
-	List_init(&par->cache.freeClusLst);
-	SpinLock_init(&par->cache.clusLck);
-
 	RBTree_init(&par->cache.fatTr, fs_fat32_FatCacheNd_insert, fs_fat32_FatCacheNd_find);
 	par->cache.fatNum = 0;
 	SpinLock_init(&par->cache.fatLck);

@@ -1,7 +1,7 @@
 #ifndef __FS_FAT32_DESC_H__
 #define __FS_FAT32_DESC_H__
 
-#include <fs/desc.h>
+#include <fs/vfs/desc.h>
 #include <lib/rbtree.h>
 
 typedef struct fs_fat32_BootSector {
@@ -118,13 +118,13 @@ typedef struct fs_fat32_Cache {
 } fs_fat32_Cache;
 
 typedef struct fs_fat32_File {
-	fs_File file;
+	fs_VFS_File file;
 	RBTree clusTr;
 	ListNode freeClusLst;
 } fs_fat32_File;
 
 typedef struct fs_fat32_Dir {
-	fs_Dir dir;
+	fs_VFS_Dir dir;
 	RBTree clurTr;
 } fs_fat32_Dir;
 
@@ -142,4 +142,8 @@ typedef struct fs_fat32_Partition {
 	
 	fs_Partition par;
 } fs_fat32_Partition;
+
+typedef struct fs_fat32_Driver {
+	fs_VFS_Driver drv;
+} fs_fat32_Driver;
 #endif
