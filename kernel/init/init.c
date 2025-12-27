@@ -1,4 +1,5 @@
 #include <init/init.h>
+#include <fs/api.h>
 #include <hardware/pci.h>
 #include <hardware/diskdev.h>
 #include <hardware/gpu.h>
@@ -6,6 +7,8 @@
 #include <screen/screen.h>
 
 void init_init() {	
+	fs_init();
+	
 	hw_driver_init();
 
 	hw_DiskDev_initMgr();

@@ -1,6 +1,7 @@
 #include <fs/gpt/api.h>
 #include <fs/fat32/api.h>
 #include <fs/api.h>
+#include <fs/vfs/api.h>
 #include <screen/screen.h>
 #include <mm/mm.h>
 #include <lib/string.h>
@@ -36,14 +37,21 @@ int fs_gpt_registerPar_efiSys(fs_gpt_Disk *disk, u32 idx, fs_gpt_ParEntry *entry
 
 int fs_gpt_registerPar(fs_gpt_Disk *disk, u32 idx) {
 	fs_gpt_ParEntry *entry = &disk->entries[idx];
-	// try to determine the file system
-	if (fs_gpt_matchGuid(entry->parTypeGuid, fs_gpt_parTypeGuid_EfiSysPar0, fs_gpt_parTypeGuid_EfiSysPar1)) {
-		printk(screen_log, "\t\tEFI System\n");
-		return fs_gpt_registerPar_efiSys(disk, idx, entry);
-	} else if (fs_gpt_matchGuid(entry->parTypeGuid, fs_gpt_parTypeGuid_LinuxFSDt0, fs_gpt_parTypeGuid_LinuxFSDt1))
-		printk(screen_log, "\t\tLinux Filesystem\n");
-	else if (fs_gpt_matchGuid(entry->parTypeGuid, fs_gpt_parTypeGuid_MsBasicDt0, fs_gpt_parTypeGuid_MsBasicDt1))
-		printk(screen_log, "\t\tMicrosoft Basic Data\n");
+	fs_Partition *par = NULL;
+	
+	SafeList_enum(&fs_vfs_drvLst, drvNd) {
+		fs_vfs_Driver *drv = container(drvNd, fs_vfs_Driver, drvLstNd);
+		if (drv->chkGpt(disk, entry)) {
+			par = fs_vfs_apply2GptPar(drv, disk, entry);
+			SafeList_exitEnum(&fs_vfs_drvLst);
+		}
+	}
+
+	if (!par) {
+		printk(screen_log, "fs: %p: failed to apply VFS to partition %d\n", disk, idx);
+		// return res_FAIL;
+	}
+	return res_SUCC;
 }
 
 void fs_gpt_scan(hw_DiskDev *dev) {
@@ -123,7 +131,7 @@ void fs_gpt_scan(hw_DiskDev *dev) {
 
 		memcpy(parEntry, &disk->entries[i], sizeof(fs_gpt_ParEntry));
 		if (fs_gpt_registerPar(disk, i) != res_SUCC) {
-			printk(screen_err, "fs: gpt: failed to register partition %d\n", i);
+			printk(screen_err, "fs: gpt: failed to register partition %d on disk %p\n", i, disk);
 			goto scan_Fail;
 		}
 	}

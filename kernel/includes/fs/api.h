@@ -2,6 +2,7 @@
 #define __FS_API_H__
 
 #include <fs/desc.h>
+#include <task/api.h>
 
 __always_inline__ u64 fs_Partition_sz(fs_Partition *par) { return par->ed - par->st + 1; }
 __always_inline__ u64 fs_Partition_read(fs_Partition *par, u64 off, u64 sz, void *buf) {
@@ -22,5 +23,6 @@ void fs_Disk_addPar(fs_Disk *disk, fs_Partition *par);
 int fs_Disk_install(fs_Disk *disk);
 
 int fs_Disk_uninstall(fs_Disk *disk);
+
 
 #endif

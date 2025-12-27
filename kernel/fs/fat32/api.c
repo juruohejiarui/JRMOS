@@ -15,8 +15,6 @@ int fs_fat32_chk(fs_fat32_BootSector *bs) {
 	return res_SUCC;
 }
 
-
-
 int fs_fat32_initPar(fs_fat32_Partition *par, fs_fat32_BootSector *bs, fs_Disk *disk, u64 stLba, u64 edLba) {
 	memcpy(bs, &par->bootSec, sizeof(fs_fat32_BootSector));
 	par->par.st = stLba;
