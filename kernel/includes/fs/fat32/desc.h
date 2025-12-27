@@ -143,7 +143,6 @@ typedef struct fs_fat32_Partition {
 	fs_Partition par;
 } fs_fat32_Partition;
 
-typedef struct fs_fat32_Driver {
-	fs_vfs_Driver drv;
-} fs_fat32_Driver;
+extern fs_vfs_Driver fs_fat32_drv;
+
 #endif

@@ -7,50 +7,24 @@
 #include <lib/string.h>
 #include <lib/crc32.h>
 
-int fs_gpt_registerPar_efiSys(fs_gpt_Disk *disk, u32 idx, fs_gpt_ParEntry *entry) {
-	fs_fat32_BootSector *bs = mm_kmalloc(hw_diskdev_lbaSz, mm_Attr_Shared, NULL);
-	disk->disk.device->read(disk->disk.device, entry->stLba, 1, bs);
-	printk(screen_log, 
-		"\t\toemName:     %s\n"
-		"\t\tbytesPerSec: %#06x SecPerClus:  %#06x\n"
-		"\t\tfatSz16:     %#06x fatSz32:     %#06x\n"
-		"\t\tbootSigEnd:  %#06x BytesPerSec: %#06x\n", 
-		bs->oemName, bs->bytesPerSec, bs->secPerClus,
-		bs->fatSz16, bs->fatSz32, bs->bootSigEnd,
-		bs->bytesPerSec);
-	if (fs_fat32_chk(bs) != res_SUCC) {
-		printk(screen_err, "fs: gpt: %p partition %d is not a valid FAT32 partition\n", disk, idx);
-		mm_kfree(bs, mm_Attr_Shared);
-		return res_FAIL;
-	}
-	// crt fat32 partition manager
-	fs_fat32_Partition *par = mm_kmalloc(sizeof(fs_fat32_Partition), mm_Attr_Shared, NULL);
-	if (fs_fat32_initPar(par, bs, &disk->disk, entry->stLba, entry->edLba) == res_FAIL) {
-		printk(screen_err, "fs: gpt: %p partition %d: failed to initialize.\n", disk, idx);
-		mm_kfree(bs, mm_Attr_Shared);
-		mm_kfree(par, mm_Attr_Shared);
-		return res_FAIL;
-	}
-	mm_kfree(bs, mm_Attr_Shared);
-	return res_SUCC;
-}
-
 int fs_gpt_registerPar(fs_gpt_Disk *disk, u32 idx) {
 	fs_gpt_ParEntry *entry = &disk->entries[idx];
 	fs_Partition *par = NULL;
 	
 	SafeList_enum(&fs_vfs_drvLst, drvNd) {
 		fs_vfs_Driver *drv = container(drvNd, fs_vfs_Driver, drvLstNd);
-		if (drv->chkGpt(disk, entry)) {
-			par = fs_vfs_apply2GptPar(drv, disk, entry);
+		if (drv->chkGpt(&disk->disk, entry) == res_SUCC) {
+			par = drv->installGptPar(&disk->disk, entry);
 			SafeList_exitEnum(&fs_vfs_drvLst);
 		}
 	}
 
 	if (!par) {
 		printk(screen_log, "fs: %p: failed to apply VFS to partition %d\n", disk, idx);
-		// return res_FAIL;
+		return res_SUCC;
 	}
+
+	fs_Disk_addPar(&disk->disk, par);
 	return res_SUCC;
 }
 

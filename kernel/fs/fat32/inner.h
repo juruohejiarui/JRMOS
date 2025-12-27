@@ -1,7 +1,8 @@
 #ifndef __FS_FAT32_INNER_H__
 #define __FS_FAT32_INNER_H__
 
-#include <fs/fat32/desc.h>
+#include <fs/fat32/api.h>
+
 __always_inline__ int fs_fat32_ClusCacheNd_cmp(RBNode *a, RBNode *b) {
 	register fs_fat32_ClusCacheNd *ta = container(a, fs_fat32_ClusCacheNd, rbNd),
 		*tb = container(b, fs_fat32_ClusCacheNd, rbNd);

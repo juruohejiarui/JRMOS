@@ -10,7 +10,7 @@ int fs_vfs_init() {
 
 int fs_vfs_registerDriver(fs_vfs_Driver *drv) {
     SafeList_insTail(&fs_vfs_drvLst, &drv->drvLstNd);
-    return drv->install();
+    return drv->install ? drv->install() : res_SUCC;
 }
 
 int fs_vfs_unregisterDriver(fs_vfs_Driver *drv) {

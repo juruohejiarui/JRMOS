@@ -1,5 +1,9 @@
 #include "inner.h"
+#include <lib/string.h>
+#include <fs/vfs/api.h>
 #include <screen/screen.h>
+
+fs_vfs_Driver fs_fat32_drv;
 
 int fs_fat32_initParInfo(fs_fat32_Partition *par) {
 	// read FSInfo sector
@@ -7,7 +11,7 @@ int fs_fat32_initParInfo(fs_fat32_Partition *par) {
 	if (res != 1) return res_FAIL;
 
 	printk(screen_log, 
-		"fat32: %p: fs struct:\n"
+		"fs: fat32: %p: fs struct:\n"
 		"    leadSig: %08x"
 		"    struSig: %08x\n"
 		"    freeCnt: %08x"
@@ -25,7 +29,7 @@ int fs_fat32_initParInfo(fs_fat32_Partition *par) {
 	par->lbaPerClus = par->bytesPerClus / hw_diskdev_lbaSz;
 
 	printk(screen_log, 
-		"fat32: %p: info: \n"
+		"fs: fat32: %p: info: \n"
 		"    fstDtSec:    %016lx fstFat1Sec: %016lx\n"
 		"    fstFat2Sec:  %016lx bytesPerSec:%016lx\n"
 		"    bytesPerClus:%016lx lbaPerClus: %016lx\n",
@@ -47,4 +51,11 @@ int fs_fat32_initParCache(fs_fat32_Partition *par) {
 	SpinLock_init(&par->cache.fatLck);
 
     return res_SUCC;
+}
+
+int fs_fat32_init() {
+	memset(&fs_fat32_drv, NULL, sizeof(fs_vfs_Driver));
+	fs_fat32_drv.chkGpt = fs_fat32_chkGpt;
+	fs_fat32_drv.installGptPar = fs_fat32_installGptPar;
+	fs_vfs_registerDriver(&fs_fat32_drv);
 }

@@ -25,6 +25,8 @@ typedef struct fs_vfs_Entry {
 struct fs_vfs_File;
 struct fs_vfs_Dir;
 struct fs_vfs_Driver;
+struct fs_gpt_ParEntry;
+struct fs_Disk;
 
 typedef struct fs_vfs_FileAPI {
     int (*seek)(struct fs_vfs_File *file, u64 ptr);

@@ -7,11 +7,12 @@
 #include <screen/screen.h>
 
 void init_init() {	
-	fs_init();
 	
 	hw_driver_init();
 
 	hw_DiskDev_initMgr();
+
+	fs_init();
 
 	if (hw_pci_init() == res_FAIL) {
 		printk(screen_err, "init: failed to initialize pci.\n");

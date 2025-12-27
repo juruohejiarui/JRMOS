@@ -10,7 +10,4 @@ int fs_vfs_init();
 int fs_vfs_registerDriver(fs_vfs_Driver *drv);
 
 int fs_vfs_unregisterDriver(fs_vfs_Driver *drv);
-
-fs_Partition *fs_vfs_apply2GptPar(fs_vfs_Driver *drv, fs_Disk *disk, fs_gpt_ParEntry *entry);
-
 #endif

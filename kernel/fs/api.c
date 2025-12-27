@@ -1,10 +1,12 @@
 #include <fs/api.h>
+#include <fs/fat32/api.h>
 #include <fs/vfs/api.h>
 #include <screen/screen.h>
 
 void fs_init() {
 	printk(screen_log, "fs_init()\n");
 	fs_vfs_init();
+	fs_fat32_init();
 }
 
 void fs_Partition_init(fs_Partition *par, u64 st, u64 ed, u64 attr, fs_Disk *disk) {
@@ -27,15 +29,4 @@ void fs_Disk_init(fs_Disk *disk, u64 attr) {
 void fs_Disk_addPar(fs_Disk *disk, fs_Partition *par) {
 	par->disk = disk;
 	SafeList_insTail(&disk->parLst, &par->diskParLstNd);
-
-	SafeList_enum(&fs_vfs_drvLst, drvNd) {
-		fs_vfs_Driver *drv = container(drvNd, fs_vfs_Driver, drvLstNd);
-		if (drv->chk(drv, par)) {
-			int res = drv->installPar(drv, par);
-			if (res != res_SUCC)
-				printk(screen_err, "FS: failed to apply driver %p to partition %p on disk %p\n",
-					drv, par, disk);
-			SafeList_exitEnum(&fs_vfs_drvLst);
-		}
-	}
 }
