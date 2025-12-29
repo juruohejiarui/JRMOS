@@ -48,10 +48,15 @@ __always_inline__ int memcmp(void *fir, void *sec, i64 size) {
 #endif
 
 #ifndef HAL_STRLEN
-__always_inline__ int strlen(u8 *str) {
+__always_inline__ u64 strlen(u8 *str) {
 	i64 res;
 	for (res = 0; str[res] != '\0'; res++) ;
 	return res;
+}
+__always_inline__ u64 strlen16(u16 *str) {
+	i64 res;
+	for (res = 0; str[res] != 0; res++) ;
+	return res; 
 }
 #endif
 

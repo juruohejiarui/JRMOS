@@ -59,7 +59,9 @@ typedef struct fs_fat32_DirEntry {
 	#define fs_fat32_DirEntry_attr_Dir		0x10
 	#define fs_fat32_DirEntry_attr_Archive	0x20
 	#define fs_fat32_DirEntry_attr_LongName	0x0f
-	u8 reserved;
+	u8 nameCase;
+	#define fs_fat32_DirEntry_nameCase_LowName		0x8
+	#define fs_fat32_DirEntry_nameCase_LowExtName	0x10
 	u8 crtTimeTenth;
 	u16 crtTime;
 	u16 crtDate;
@@ -84,8 +86,7 @@ typedef struct fs_fat32_LDirEntry {
 
 typedef struct fs_fat32_ClusCacheNd {
 	void *clus;
-	RBNode rbNd;
-	ListNode freeLstNd;
+	RBNode clusCacheNd;
 	// offset (Cluster)
 	u64 off;
 	/// @brief when there is program or service refers to this page, this cache can not be removed.
@@ -112,23 +113,20 @@ typedef struct fs_fat32_Cache {
 	#define fs_fat32_FatCache_MaxNum 64
 	u64 fatNum;
 	SpinLock fatLck;
-	
-	u64 *bitmap;
-	
+
+	RBTree clusCacheTr;
 } fs_fat32_Cache;
 
 typedef struct fs_fat32_File {
 	fs_vfs_File file;
-	RBTree clusTr;
-	ListNode freeClusLst;
+
 } fs_fat32_File;
 
 typedef struct fs_fat32_Dir {
 	fs_vfs_Dir dir;
-	RBTree clurTr;
 } fs_fat32_Dir;
 
-typedef struct fs_fat32_Partition {
+typedef struct fs_fat32_Partition { 
 	fs_fat32_BootSector bootSec;
 	fs_fat32_FSInfoSector fsSec;
 
@@ -142,6 +140,12 @@ typedef struct fs_fat32_Partition {
 	
 	fs_Partition par;
 } fs_fat32_Partition;
+
+typedef struct fs_fat32_Entry {
+	fs_vfs_Entry vfsEntry;
+	fs_fat32_DirEntry dirEntry;
+	fs_fat32_LDirEntry lDirEntry;
+} fs_fat32_Entry;
 
 extern fs_vfs_Driver fs_fat32_drv;
 

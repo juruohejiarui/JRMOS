@@ -37,6 +37,9 @@ struct task_ThreadStruct {
 
 	SafeList tskList;
 
+	SafeList openFileLst;
+	SafeList openDirLst;
+
 	hal_task_ThreadStruct hal;
 } __attribute__ ((packed));
 

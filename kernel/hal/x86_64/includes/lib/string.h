@@ -88,6 +88,19 @@ __always_inline__ i64 strlen(u8 *str) {
 	return res;
 }
 
+__always_inline__ i64 strlen16(u16 *str) {
+	register i64 res;
+	__asm__ volatile (
+		"cld		\n\t"
+		"repne		\n\t"
+		"scasw		\n\t"
+		"notq %0	\n\t"
+		"decq %0	\n\t"
+		: "=c"(res)
+		: "D"(str), "a"(0), "0"(0xffffffffffffffff)
+	)
+}
+
 
 __always_inline__ int strcmp(char *a, char *b) {
 	register int _res;
