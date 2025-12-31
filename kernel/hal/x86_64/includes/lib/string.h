@@ -84,6 +84,7 @@ __always_inline__ i64 strlen(u8 *str) {
 		"decq %0	\n\t"
 		: "=c"(res)
 		: "D"(str), "a"(0), "0"(0xffffffffffffffff)
+		: "cc"
 	);
 	return res;
 }
@@ -98,7 +99,9 @@ __always_inline__ i64 strlen16(u16 *str) {
 		"decq %0	\n\t"
 		: "=c"(res)
 		: "D"(str), "a"(0), "0"(0xffffffffffffffff)
-	)
+		: "cc"
+	);
+	return res;
 }
 
 
@@ -125,6 +128,31 @@ __always_inline__ int strcmp(char *a, char *b) {
 	);
 	return _res;
 }
+
+__always_inline__ int strcmp16(u16 *a, u16 *b) {
+	register int _res;
+	__asm__ volatile (
+		"cld				\n\t"
+		"1: 				\n\t"
+		"lodsw				\n\t"
+		"scasw				\n\t"
+		"jne 2f				\n\t"
+		"testw %%ax, %%ax	\n\t"
+		"jne 1b				\n\t"
+		"xorl %%eax, %%eax	\n\t"
+		"jmp 3f				\n\t"
+		"2:					\n\t"
+		"movl $1, %%eax		\n\t"
+		"jl 3f				\n\t"
+		"negl %%eax			\n\t"
+		"3:					\n\t"
+		: "=a"(_res)
+		: "D"(a), "S"(b)
+		:
+	);
+	return _res;
+}
+
 
 __always_inline__ int strncmp(char *a, char *b, i64 size) {
 	register int _res;

@@ -10,4 +10,11 @@ int fs_vfs_init();
 int fs_vfs_registerDriver(fs_vfs_Driver *drv);
 
 int fs_vfs_unregisterDriver(fs_vfs_Driver *drv);
+
+fs_vfs_Entry *fs_vfs_lookup(u16 *path);
+
+fs_vfs_Dir *fs_vfs_openDir(fs_vfs_Entry *ent);
+
+int fs_vfs_closeDir(fs_vfs_Dir *dir);
+
 #endif

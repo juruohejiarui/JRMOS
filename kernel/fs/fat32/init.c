@@ -4,6 +4,8 @@
 #include <screen/screen.h>
 
 fs_vfs_Driver fs_fat32_drv;
+fs_vfs_File fs_fat32_fileApi;
+fs_vfs_DirAPI fs_fat32_dirApi;
 
 int fs_fat32_initParInfo(fs_fat32_Partition *par) {
 	// read FSInfo sector
@@ -39,17 +41,59 @@ int fs_fat32_initParInfo(fs_fat32_Partition *par) {
 	return res_SUCC;
 }
 
+__always_inline__ int fs_fat32_ClusCacheNd_cmp(RBNode *a, RBNode *b) {
+	register fs_fat32_ClusCacheNd *ta = container(a, fs_fat32_ClusCacheNd, clusCacheNd),
+		*tb = container(b, fs_fat32_ClusCacheNd, clusCacheNd);
+	return ta->off < tb->off;
+}
+
+__always_inline__ int fs_fat32_ClusCacheNd_match(RBNode *a, void *b) {
+	register fs_fat32_ClusCacheNd *ta = container(a, fs_fat32_ClusCacheNd, clusCacheNd);
+	register u64 tb = *(u64 *)b;
+	return ta->off == tb ? 0 : (ta->off < tb ? -1 : 1);
+}
+
+__always_inline__ int fs_fat32_FatCacheNd_cmp(RBNode *a, RBNode *b) {
+	register fs_fat32_FatCacheNd *ta = container(a, fs_fat32_FatCacheNd, rbNd),
+		*tb = container(b, fs_fat32_FatCacheNd, rbNd);
+	return ta->off < tb->off;
+}
+
+__always_inline__ int fs_fat32_FatCacheNd_match(RBNode *a, void *b) {
+	register fs_fat32_FatCacheNd *ta = container(a, fs_fat32_FatCacheNd, rbNd);
+	register u32 tb = *(u32 *)b;
+	return ta->off == tb ? 0 : (ta->off < tb ? -1 : 1);
+}
+
+__always_inline__ int fs_fat32_EntryCache_cmp(RBNode *a, RBNode *b) {
+	register fs_fat32_Entry *ta = container(a, fs_fat32_Entry, cacheNd), *tb = container(a, fs_fat32_Entry, cacheNd);
+	return strcmp16(ta->vfsEntry.path, tb->vfsEntry.path);
+}
+
+__always_inline__ int fs_fat32_EntryCache_match(RBNode *a, void *b) {
+	register fs_fat32_Entry *ta = container(a, fs_fat32_Entry, cacheNd);
+	return strcmp16(ta->vfsEntry.path, b);
+}
+
 RBTree_insertDef(fs_fat32_FatCacheNd_insert, fs_fat32_FatCacheNd_cmp);
 RBTree_findDef(fs_fat32_FatCacheNd_find, fs_fat32_FatCacheNd_match);
 
 RBTree_insertDef(fs_fat32_ClusCacheNd_insert, fs_fat32_ClusCacheNd_cmp);
 RBTree_findDef(fs_fat32_ClusCacheNd_find, fs_fat32_ClusCacheNd_match);
 
+RBTree_insertDef(fs_fat32_EntryCache_insert, fs_fat32_EntryCache_cmp);
+RBTree_findDef(fs_fat32_EntryCache_find, fs_fat32_EntryCache_match)
+
 int fs_fat32_initParCache(fs_fat32_Partition *par) {
 	RBTree_init(&par->cache.fatTr, fs_fat32_FatCacheNd_insert, fs_fat32_FatCacheNd_find);
-	par->cache.fatNum = 0;
-	SpinLock_init(&par->cache.fatLck);
+	RBTree_init(&par->cache.clusCacheTr, fs_fat32_ClusCacheNd_insert, fs_fat32_ClusCacheNd_find);
+	RBTree_init(&par->cache.entryTr, fs_fat32_EntryCache_insert, fs_fat32_EntryCache_find);
 
+	List_init(&par->cache.freeClusCacheLst);
+	List_init(&par->cache.freeEntryLst);
+	par->cache.fatNum = 0;
+	par->cache.freeClusCacheNum = 0;
+	par->cache.freeEntryNum = 0;
     return res_SUCC;
 }
 
@@ -58,11 +102,19 @@ int fs_fat32_init() {
 	memcpy("fat32", fs_fat32_drv.name, sizeof("fat32"));
 	fs_fat32_drv.lookup = fs_fat32_lookup;
 
+	fs_fat32_drv.openDir = fs_fat32_openDir;
+	
+	fs_fat32_drv.closeDir = fs_fat32_closeDir;
+
 	fs_fat32_drv.releaseEntry = fs_fat32_releaseEntry;
 
 	fs_fat32_drv.chkGpt = fs_fat32_chkGpt;
 
 	fs_fat32_drv.installGptPar = fs_fat32_installGptPar;
+
+	fs_fat32_drv.getRootEntry = fs_fat32_getRootEntry;
+
+	fs_fat32_dirApi.nxt = (void *)fs_fat32_DirAPI_nxt;
 
 	fs_vfs_registerDriver(&fs_fat32_drv);
 }

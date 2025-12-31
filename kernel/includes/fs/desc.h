@@ -13,6 +13,8 @@ typedef struct fs_Disk {
 
     SafeList parLst;
 
+    ListNode diskLstNd;
+
     hw_DiskDev *device;
 } fs_Disk;
 
@@ -37,9 +39,9 @@ typedef struct fs_Partition {
 
     // the vfs driver of this partition
     fs_vfs_Driver *drv;
-    // the vfs root of this partition
-    fs_vfs_Entry *root;
-    char name[fs_vfs_maxNameLength];
+    u16 name[fs_vfs_maxPartitionName];
 } fs_Partition;
+
+SafeList fs_diskLst;
 
 #endif

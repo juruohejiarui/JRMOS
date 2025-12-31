@@ -282,7 +282,7 @@ void putchar(u64 col, char ch) {
     int i;
     if (ch == '\n') {
         position.yPos++, position.xPos = 0;
-        if (position.yPos >= min(32, position.yRes / screen_charHeight)) {
+        if (position.yPos >= min(72, position.yRes / screen_charHeight)) {
             _scroll();
 			position.yPos--;
         }

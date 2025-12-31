@@ -1,6 +1,7 @@
 #include "inner.h"
 #include <screen/screen.h>
 #include <mm/mm.h>
+#include <lib/string.h>
 
 int fs_fat32_readSec(fs_fat32_Partition *par, u64 off, u64 sz, void *buf) {
 	register hw_DiskDev *dev = par->par.disk->device;
@@ -22,53 +23,69 @@ int fs_fat32_writeSec(fs_fat32_Partition *par, u64 off, u64 sz, void *buf) {
 }
 
 fs_fat32_ClusCacheNd *fs_fat32_getClusCacheNd(fs_fat32_Partition *par, u64 off) {
+	fs_fat32_ClusCacheNd *cacheNd;
+	if (off == fs_fat32_ClusEnd) return NULL;
 	RBTree_lck(&par->cache.clusCacheTr);
-	RBNode *nd = RBTree_find(&par->cache.clusCacheTr, &off);
-	fs_fat32_ClusCacheNd *cache;
-	// doest not exist this cache, create node
-	if (nd == NULL || (cache = container(nd, fs_fat32_ClusCacheNd, clusCacheNd))->off != off) {
-		// allocate cache
-		// read from disk
+	RBNode *tmp = RBTree_find(&par->cache.clusCacheTr, &off);
+	if (tmp && (cacheNd = container(tmp, fs_fat32_ClusCacheNd, clusCacheNd))->off == off) {
+		if (!List_isEmpty(&cacheNd->freeClusCacheNd)) 
+			List_del(&cacheNd->freeClusCacheNd),
+			List_init(&cacheNd->freeClusCacheNd);
+	} else {
+		cacheNd = mm_kmalloc(sizeof(fs_fat32_ClusCacheNd), mm_Attr_Shared, NULL);
+		memset(cacheNd, 0, sizeof(fs_fat32_ClusCacheNd));
 		void *clus = mm_kmalloc(hw_diskdev_lbaSz * par->lbaPerClus, mm_Attr_Shared, NULL);
-		cache = mm_kmalloc(sizeof(fs_fat32_ClusCacheNd), mm_Attr_Shared, NULL);
-		if (clus == NULL || cache == NULL) {
+		if (clus == NULL || cacheNd == NULL) {
 			if (clus != NULL) mm_kfree(clus, mm_Attr_Shared);
-			if (cache != NULL) mm_kfree(cache, mm_Attr_Shared);
+			if (cacheNd != NULL) mm_kfree(cacheNd, mm_Attr_Shared);
+			RBTree_unlck(&par->cache.clusCacheTr);
 			printk(screen_err, "fat32: getClusCacheNd: failed to allocate memory for cluster cache.\n");
 			return NULL;
 		}
+		cacheNd->clus = clus;
+		SpinLock_init(&cacheNd->useLck);
+		
+		// read from disk
 		if (fs_fat32_readSec(par, (off - 2) * par->lbaPerClus + par->fstDtSec, par->lbaPerClus, clus) & res_FAIL) {
-			printk(screen_err, "fat32: getClusCacheNd: failed to read cluster %016lx.\n", off);
 			mm_kfree(clus, mm_Attr_Shared);
-			mm_kfree(cache, mm_Attr_Shared);
+			mm_kfree(cacheNd, mm_Attr_Shared);
 			RBTree_unlck(&par->cache.clusCacheTr);
+			printk(screen_err, "fat32: getClusCacheNd: failed to read cluster %016lx.\n", off);
 			return NULL;
 		}
-		// set up cache information
-		SpinLock_init(&cache->modiLck);
-		cache->off = off;
-		cache->modiCnt = 0;
-		cache->clus = clus;
-		// add to cache tree
-		RBTree_ins(&par->cache.clusCacheTr, &cache->clusCacheNd);
+
+		RBTree_ins(&par->cache.clusCacheTr, &cacheNd->clusCacheNd);
 	}
+	Atomic_inc(&cacheNd->waitCnt);
 	RBTree_unlck(&par->cache.clusCacheTr);
-	return cache;
+	SpinLock_lock(&cacheNd->useLck);
+	Atomic_dec(&cacheNd->waitCnt);
+	return cacheNd;
 }
 
 
 // should be called whenever cache is modified.
-int fs_fat32_endModiClusCacheNd(fs_fat32_Partition *par, fs_fat32_ClusCacheNd *nd, int force) {
-	int res = res_SUCC;
+int fs_fat32_releaseClusCacheNd(fs_fat32_Partition *par, fs_fat32_ClusCacheNd *nd, int modi) {
 	RBTree_lck(&par->cache.clusCacheTr);
-	SpinLock_lock(&nd->modiLck);
-	nd->modiCnt++;
-	if (nd->modiCnt > fs_fat32_ClusCacheNd_MaxModiCnt || force) {
+	int free = (nd->waitCnt.value == 0);
+	int res = res_SUCC;
+	nd->modiCnt += (modi);
+	if (nd->modiCnt >= fs_fat32_ClusCacheNd_MaxModiCnt) {
 		nd->modiCnt -= fs_fat32_ClusCacheNd_MaxModiCnt;
-		res |= fs_fat32_File_flushClusCacheNd(par, nd);
-		// delete this cache node
-		RBTree_del(&par->cache.clusCacheTr, &nd->clusCacheNd);
-	} else SpinLock_unlock(&nd->modiLck);
+		res = fs_fat32_flushClusCacheNd(par, nd);
+	}
+	SpinLock_unlock(&nd->useLck);
+	if (free) {
+		List_insTail(&par->cache.freeClusCacheLst, &nd->freeClusCacheNd);
+		if (par->cache.freeClusCacheNum >= fs_fat32_FreeClusCache_MaxNum) {
+			fs_fat32_ClusCacheNd *freeNd = container(par->cache.freeClusCacheLst.next, fs_fat32_ClusCacheNd, freeClusCacheNd);
+			List_del(&freeNd->freeClusCacheNd);
+			
+			fs_fat32_flushClusCacheNd(par, nd);
+			mm_kfree(&freeNd->clus, mm_Attr_Shared);
+			mm_kfree(&freeNd, mm_Attr_Shared);
+		} else par->cache.freeClusCacheNum++;
+	}
 	RBTree_unlck(&par->cache.clusCacheTr);
 	return res;
 }
@@ -112,37 +129,37 @@ u32 fs_fat32_getNxtClus(fs_fat32_Partition *par, u32 clus) {
 	// read FAT1
 	u64 off = (clus * sizeof(u32)) / hw_diskdev_lbaSz;
 	u64 idx = (clus * sizeof(u32)) % hw_diskdev_lbaSz / sizeof(u32);
-	SpinLock_lock(&par->cache.fatLck);
+	RBTree_lck(&par->cache.fatTr);
 	// read fat1 sector
 	fs_fat32_FatCacheNd *cache = _crtFatCache(par, off);
 	if (cache == NULL) goto getNxtClus_fail;
 	u32 res = cache->sec[idx];
-	SpinLock_unlock(&par->cache.fatLck);
-	return res;
+	RBTree_unlck(&par->cache.fatTr);
+	return res & 0xfffffff8 ? fs_fat32_ClusEnd : res;
 	getNxtClus_fail:
-	SpinLock_unlock(&par->cache.fatLck);
-	return ~0x0u;
+	RBTree_unlck(&par->cache.fatTr);
+	return fs_fat32_ClusEnd;
 }
 
 int fs_fat32_setNxtClus(fs_fat32_Partition *par, u32 clus, u32 nxt) {
     u64 off = (clus * sizeof(u32)) / hw_diskdev_lbaSz;
 	u64 idx = (clus * sizeof(u32)) % hw_diskdev_lbaSz / sizeof(u32);
 
-    SpinLock_lock(&par->cache.fatLck);
+    RBTree_lck(&par->cache.fatTr);
 	
 	// read fat1 sector
 	fs_fat32_FatCacheNd *cache = _crtFatCache(par, off);
 	if (cache == NULL) goto setNxtClus_fail;
 	cache->sec[idx / 4] = nxt;
-	SpinLock_unlock(&par->cache.fatLck);
+	RBTree_unlck(&par->cache.fatTr);
 	return res_SUCC;
 	setNxtClus_fail:
-	SpinLock_unlock(&par->cache.fatLck);
+	RBTree_unlck(&par->cache.fatTr);
 	return res_FAIL | res_DAMAGED;
 }
 
 u32 fs_fat32_allocClus(fs_fat32_Partition *par) {
-	SpinLock_lock(&par->cache.fatLck);
+	RBTree_lck(&par->cache.fatTr);
 	u32 res = 0;
 	int i;
 	// first, use cache
@@ -160,7 +177,7 @@ u32 fs_fat32_allocClus(fs_fat32_Partition *par) {
 	goto allocClus_Scan;
 	allocClus_FindInCache:
 	cache->sec[i] = 0x0ffffff8;
-	SpinLock_unlock(&par->cache.fatLck);
+	RBTree_unlck(&par->cache.fatTr);
 	goto allocClus_End;
 	allocClus_Scan:
 	// otherwise, scan the whole fat

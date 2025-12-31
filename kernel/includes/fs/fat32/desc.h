@@ -4,6 +4,9 @@
 #include <fs/desc.h>
 #include <lib/rbtree.h>
 
+#define fs_fat32_ClusEnd (~0x0u)
+#define fs_fat32_DeleteFlag	0xe5
+
 typedef struct fs_fat32_BootSector {
 	u8 jmpBoot[3];
 	u8 oemName[8];
@@ -87,10 +90,9 @@ typedef struct fs_fat32_LDirEntry {
 typedef struct fs_fat32_ClusCacheNd {
 	void *clus;
 	RBNode clusCacheNd;
+	ListNode freeClusCacheNd;
 	// offset (Cluster)
 	u64 off;
-	/// @brief when there is program or service refers to this page, this cache can not be removed.
-	u64 refCnt;
 
 	#define fs_fat32_ClusCacheNd_MaxModiCnt 128
 	/// @brief when count of modify reach fs_fs_fat32_ClusCacheNd_MaxModiCnt, this contents of this cache will be
@@ -98,7 +100,8 @@ typedef struct fs_fat32_ClusCacheNd {
 	u64 modiCnt;
 
 	/// @brief only one program or service can modify this page cache.
-	SpinLock modiLck;
+	SpinLock useLck;
+	Atomic waitCnt;
 } fs_fat32_ClusCacheNd;
 
 typedef struct fs_fat32_FatCacheNd {
@@ -109,22 +112,50 @@ typedef struct fs_fat32_FatCacheNd {
 } fs_fat32_FatCacheNd;
 
 typedef struct fs_fat32_Cache {
+	RBTree entryTr;
+	#define fs_fat32_FreeEntryCache_MaxNum 64
+	ListNode freeEntryLst;
+	u64 freeEntryNum;
+
+
 	RBTree fatTr;
 	#define fs_fat32_FatCache_MaxNum 64
 	u64 fatNum;
-	SpinLock fatLck;
 
 	RBTree clusCacheTr;
+	#define fs_fat32_FreeClusCache_MaxNum	64
+	ListNode freeClusCacheLst;
+	u64 freeClusCacheNum;
 } fs_fat32_Cache;
 
 typedef struct fs_fat32_File {
 	fs_vfs_File file;
+	
+	SpinLock lck;
 
+	u64 clusId, clusOff;
 } fs_fat32_File;
 
 typedef struct fs_fat32_Dir {
 	fs_vfs_Dir dir;
+
+	SpinLock lck;
+
+    u64 clusId, clusOff;
 } fs_fat32_Dir;
+
+typedef struct fs_fat32_Entry {
+	fs_vfs_Entry vfsEntry;
+	fs_fat32_DirEntry dirEntry;
+
+	// node on fs_fat32_Cache->entryTr
+    RBNode cacheNd;
+	
+	// node on fs_fat32_Cache->freeEntryLst
+	ListNode freeCacheNd;
+
+	u64 ref;
+} fs_fat32_Entry;
 
 typedef struct fs_fat32_Partition { 
 	fs_fat32_BootSector bootSec;
@@ -136,16 +167,12 @@ typedef struct fs_fat32_Partition {
 	u64 fstFat1Sec;
 	u64 fstFat2Sec;
 
+	fs_fat32_Entry *root;
+
 	fs_fat32_Cache cache;
 	
 	fs_Partition par;
 } fs_fat32_Partition;
-
-typedef struct fs_fat32_Entry {
-	fs_vfs_Entry vfsEntry;
-	fs_fat32_DirEntry dirEntry;
-	fs_fat32_LDirEntry lDirEntry;
-} fs_fat32_Entry;
 
 extern fs_vfs_Driver fs_fat32_drv;
 

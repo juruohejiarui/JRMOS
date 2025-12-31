@@ -199,6 +199,9 @@ task_ThreadStruct *task_newThread(u64 attr) {
 
     SafeList_init(&thread->tskList);
 
+    SafeList_init(&thread->fileLst);
+    SafeList_init(&thread->dirLst);
+
     hal_task_newThread(thread, attr);
 
     return thread;

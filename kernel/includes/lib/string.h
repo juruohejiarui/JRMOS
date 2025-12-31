@@ -60,4 +60,29 @@ __always_inline__ u64 strlen16(u16 *str) {
 }
 #endif
 
+__always_inline__ int isLetter(u8 ch) {
+	return ('a' <= ch && ch <= 'z') || ('A' <= ch && ch <= 'Z');
+}
+
+__always_inline__ int isLetter16(u16 ch) {
+	register u8 h = (ch >> 8), l = (ch & 0xff);
+	return (h == 0) && isLetter(l); 
+}
+
+__always_inline__ u8 toUpper(u8 ch) {
+	return !isLetter(ch) || ('A' <= ch && ch <= 'Z') ? ch : ch - 'a' + 'A';
+}
+__always_inline__ u8 toLower(u8 ch) {
+	return !isLetter(ch) || ('a' <= ch && ch <= 'z') ? ch : ch - 'A' + 'a';
+}
+
+__always_inline__ u64 toStr16(u8 *src, u16 *dst) {
+	u64 len = 0;
+	for (; *src != '\0'; src++, len++, dst += 2) {
+		*dst = '\0';
+		*(dst + 1) = *src;
+	}
+	*dst = *(dst + 1) = 0;
+	return len;
+}
 #endif
