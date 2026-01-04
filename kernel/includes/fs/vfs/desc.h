@@ -1,14 +1,13 @@
 #ifndef __FS_vfs_DESC_H__
 #define __FS_vfs_DESC_H__
 
-#include <lib/dtypes.h>
-#include <lib/list.h>
+#include <task/structs.h>
 
 #define fs_vfs_Separator    '/'
 
 #define fs_vfs_maxPathLen       2048
 #define fs_vfs_maxNameLen       256
-#define fs_vfs_maxPartitionName 32
+#define fs_vfs_maxParNameLen    32
 
 #define fs_vfs_EntryAttr_flags_Readable     0x1
 #define fs_vfs_EntryAttr_flags_Writeable    0x2
@@ -16,12 +15,12 @@
 #define fs_vfs_EntryAttr_flags_System       0x8
 #define fs_vfs_EntryAttr_flags_IsDir        0x10
 
-struct fs_vfs_File;
-struct fs_vfs_Dir;
-struct fs_vfs_Driver;
-struct fs_gpt_ParEntry;
-struct fs_Disk;
-struct fs_Partition;
+typedef struct fs_vfs_File fs_vfs_File;
+typedef struct fs_vfs_Dir fs_vfs_Dir;
+typedef struct fs_vfs_Driver fs_vfs_Driver;
+typedef struct fs_gpt_ParEntry fs_vfs_ParEntry;
+typedef struct fs_Disk fs_Disk;
+typedef struct fs_Partition fs_Partition;
 
 // # fs_vfs_Entry
 // ## Inherent
@@ -41,7 +40,7 @@ typedef struct fs_vfs_Entry {
 
     u64 flags;
 
-    struct fs_partition *par;
+    struct fs_Partition *par;
 } fs_vfs_Entry;
 
 typedef struct fs_vfs_FileAPI {
@@ -51,7 +50,7 @@ typedef struct fs_vfs_FileAPI {
 } fs_vfs_FileAPI;
 
 typedef struct fs_vfs_DirAPI {
-    fs_vfs_Entry (*nxt)(struct fs_vfs_Dir *dir);
+    fs_vfs_Entry *(*nxt)(struct fs_vfs_Dir *dir);
 } fs_vfs_DirAPI;
 
 // should be created with kmalloc(..., 0, drv->closeFile)
@@ -62,17 +61,22 @@ typedef struct fs_vfs_File {
 	struct fs_Partition *par;
 
     ListNode tskLstNd, parLstNd;
+
     u64 ptr;
+
+    task_TaskStruct *tsk;
 } fs_vfs_File;
 
 // should be created with kmalloc(..., 0, drv->closeDir)
-typedef struct fs_Dir {
+typedef struct fs_vfs_Dir {
     fs_vfs_Entry *ent;
     fs_vfs_DirAPI *api;
     
 	struct fs_Partition *par;
 
     ListNode tskLstNd, parLstNd;
+
+    task_ThreadStruct *thread;
 } fs_vfs_Dir;
 
 typedef struct fs_vfs_Driver fs_vfs_Driver;

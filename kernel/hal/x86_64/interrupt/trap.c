@@ -35,7 +35,7 @@ static int _lookupKallsyms(u64 address, int level)
 			printk(screen_err, "  ");
 		printk(screen_err, "+---> ");
 
-		printk(YELLOW,BLACK,"address:%p    (+) %04d function:%s\n",address,address - dbg_kallsyms_addr[index], &string[dbg_kallsyms_idx[index]]);
+		printk(screen_log, "address:%p    (+) %04d function:%s\n",address,address - dbg_kallsyms_addr[index], &string[dbg_kallsyms_idx[index]]);
 		return 0;
 	}
 	else

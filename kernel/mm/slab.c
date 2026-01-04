@@ -37,7 +37,7 @@ __always_inline__ int _addRecord(void *addr, u64 size, void (*destructor)(void *
     record->destructor = destructor;
     record->ptr = addr;
     record->size = size;
-    RBTree_insLck(&task_current->thread->mem.slabRecord, &record->rbNode);
+    RBTree_insLck(&task_current->thread->mem.slabRecord, &record->rbNd);
     return res_SUCC;
 }
 
@@ -45,7 +45,7 @@ int _delRecord(void *addr) {
     RBNode *node = task_current->thread->mem.slabRecord.root;
     mm_SlabRecord *record = NULL;
     while (node) {
-        record = container(node, mm_SlabRecord, rbNode);
+        record = container(node, mm_SlabRecord, rbNd);
         if (record->ptr == addr) break;
         else if (record->ptr < addr) node = node->right;
         else node = node->left;
@@ -282,5 +282,24 @@ int mm_kfree(void *addr, u32 attr) {
 
     SpinLock_unlock(&_SlabLck);
     if (intrState) intr_unmask();
+    return res;
+}
+
+int mm_slab_clear(task_MemStruct *mem) {
+    int res = res_SUCC;
+    while (mem->slabRecord.root) {
+        register mm_SlabRecord *record = container(mem->slabRecord.root, mm_SlabRecord, rbNd);
+        RBTree_delLck(&mem->slabRecord, &record->rbNd);
+        
+        record->destructor(record->ptr);
+
+        printk(screen_succ, "mm: slab: remove private block %p\n",record->ptr);
+        
+        res |= mm_kfree(record->ptr, mm_Attr_Shared);
+        res |= mm_kfree(record, mm_Attr_Shared);
+
+    }
+
+    printk(screen_log, "finish clear slab of mem %p\n", mem);
     return res;
 }

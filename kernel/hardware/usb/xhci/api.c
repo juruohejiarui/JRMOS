@@ -149,8 +149,7 @@ void hw_usb_xhci_InsReq(hw_usb_xhci_Host *host, hw_usb_xhci_Ring *ring, hw_usb_x
 
 // insert the request, write the doorbell register, then wait for the reply
 void hw_usb_xhci_request(hw_usb_xhci_Host *host, hw_usb_xhci_Ring *ring, hw_usb_xhci_Request *req, hw_usb_xhci_Device *dev, u32 doorbell) {
-    req->flags &= ~task_Request_Flag_Finish;
-    
+    task_Request_init(&req->req, task_Request_flags_Abort);
     if (dev != NULL) {
         for (int i = 0; i < req->inputSz; i++)
             hw_usb_xhci_TRB_setIntrTarget(&req->input[i], dev->intrTrg);
@@ -167,7 +166,7 @@ hw_usb_xhci_Request *hw_usb_xhci_makeRequest(u32 size, u32 flags) {
         printk(screen_err, "hw: xhci: alloc request failed\n");
         return NULL;
     }
-    task_Request_init(&req->req, (flags & hw_usb_xhci_Request_flags_Abort ? task_Request_Flag_Abort : 0));
+    task_Request_init(&req->req, (flags & hw_usb_xhci_Request_flags_Abort ? task_Request_flags_Abort : 0));
     memset(req->input, 0, size * sizeof(hw_usb_xhci_TRB));
     req->flags = flags;
     req->inputSz = size;

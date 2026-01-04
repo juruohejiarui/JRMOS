@@ -20,12 +20,15 @@ int mm_slab_init();
 void mm_slab_dbg();
 
 __always_inline__ int mm_slabRecord_comparator(RBNode *a, RBNode *b) {
-    mm_SlabRecord *ta = container(a, mm_SlabRecord, rbNode),
-        *tb = container(b, mm_SlabRecord, rbNode);
+    mm_SlabRecord *ta = container(a, mm_SlabRecord, rbNd),
+        *tb = container(b, mm_SlabRecord, rbNd);
     return ta->ptr < tb->ptr;
 }
 
 RBTree_insertDef(mm_slabRecord_insert, mm_slabRecord_comparator);
+
+typedef struct task_MemStruct task_MemStruct;
+int mm_slab_clear(task_MemStruct *mem);
 
 void *mm_kmalloc(u64 size, u32 attr, void (*destructor)(void *));
 int mm_kfree(void *addr, u32 attr);

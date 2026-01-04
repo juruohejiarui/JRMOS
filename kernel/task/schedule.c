@@ -1,4 +1,5 @@
 #include <task/api.h>
+#include <task/request.h>
 #include <mm/mm.h>
 #include <mm/mgr.h>
 #include <mm/buddy.h>
@@ -7,6 +8,7 @@
 #include <cpu/api.h>
 #include <lib/bit.h>
 #include <lib/algorithm.h>
+#include <fs/vfs/api.h>
 
 static task_MgrStruct task_mgr;
 
@@ -66,7 +68,7 @@ void task_sche_init() {
 }
 
 void task_sche_yield() {
-    task_current->vRuntime += max(1, task_sche_cfsTbl[task_current->priority] >> 1);
+    task_current->vRuntime += task_sche_cfsTbl[task_current->priority];
     task_current->state |= task_state_NeedSchedule;
     hal_task_sche_yield();
 }
@@ -116,7 +118,9 @@ void task_sche_preempt(task_TaskStruct *task) {
 void task_sche_waitReq() {
 	Atomic_inc(&task_current->reqWait);
 	// try to yield, scheduler will put current task to sleep task list
-	while (task_current->reqWait.value > 0) task_sche_yield();
+	while (task_current->reqWait.value > 0)
+        task_sche_yield();
+
 }
 
 void task_sche_finishReq(task_TaskStruct *task) {
@@ -178,7 +182,6 @@ void task_sche() {
     return ;
 
     needSche:
-    // printk(screen_log, "...");
     task_sche_hangCur();
     nxtTsk->state = task_state_Running;
     SpinLock_unlock(cpu_getvar(scheLck));
@@ -223,19 +226,22 @@ int task_delSubTask(task_TaskStruct *subTsk) {
 }
 
 int task_freeThread(task_ThreadStruct *thread) {
+    int res;
+    // close files and dirs
     mm_mgr_free(&thread->mem);
-    if (hal_task_freeThread(thread) == res_FAIL) return res_FAIL;
+    if ((res = hal_task_freeThread(thread)) != res_SUCC) return res | res_DAMAGED;
     mm_kfree(thread, mm_Attr_Shared);
     return res_SUCC;
 }
 
 int task_freeTask(task_TaskStruct *tsk) {
+    // printk(screen_log, "  ->%d\n", intr_state());
+    if (hal_task_freeTask(tsk) == res_FAIL) return res_FAIL;
+    
     if (task_delSubTask(tsk) == res_FAIL) {
         printk(screen_err, "task: failed to delete subtask #%ld from thread.\n", tsk->pid);
         return res_FAIL;
     }
-    // printk(screen_log, "  ->%d\n", intr_state());
-    if (hal_task_freeTask(tsk) == res_FAIL) return res_FAIL;
     return mm_kfree(tsk, mm_Attr_Shared);
 }
 
@@ -320,6 +326,7 @@ void task_exit(u64 res) {
     hal_task_exit(res);
     task_current->priority = task_Priority_Lowest;
     task_current->state = task_state_NeedFree;
+    
     while (1) task_sche_yield();
 }
 

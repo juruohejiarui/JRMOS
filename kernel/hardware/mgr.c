@@ -40,7 +40,7 @@ void hw_driver_register(hw_Driver *drv) {
 void hw_driver_unregister(hw_Driver *drv) {
     SafeList_del(&hw_drvLst, &drv->lst);
     if (drv->uninstall != NULL) {
-        SafeList_enum(&drv->devLst, devNd) {
+        SafeList_enumWithDel(&drv->devLst, devNd) {
             hw_Device *dev = container(devNd, hw_Device, lst);
             drv->uninstall(dev);
         }

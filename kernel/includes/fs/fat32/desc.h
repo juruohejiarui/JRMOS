@@ -128,6 +128,19 @@ typedef struct fs_fat32_Cache {
 	u64 freeClusCacheNum;
 } fs_fat32_Cache;
 
+typedef struct fs_fat32_Entry {
+	fs_vfs_Entry vfsEntry;
+	fs_fat32_DirEntry dirEntry;
+
+	// node on fs_fat32_Cache->entryTr
+    RBNode cacheNd;
+	
+	// node on fs_fat32_Cache->freeEntryLst
+	ListNode freeCacheNd;
+
+	u64 ref;
+} fs_fat32_Entry;
+
 typedef struct fs_fat32_File {
 	fs_vfs_File file;
 	
@@ -142,20 +155,9 @@ typedef struct fs_fat32_Dir {
 	SpinLock lck;
 
     u64 clusId, clusOff;
-} fs_fat32_Dir;
-
-typedef struct fs_fat32_Entry {
-	fs_vfs_Entry vfsEntry;
-	fs_fat32_DirEntry dirEntry;
-
-	// node on fs_fat32_Cache->entryTr
-    RBNode cacheNd;
 	
-	// node on fs_fat32_Cache->freeEntryLst
-	ListNode freeCacheNd;
-
-	u64 ref;
-} fs_fat32_Entry;
+	fs_fat32_Entry *curEnt;
+} fs_fat32_Dir;
 
 typedef struct fs_fat32_Partition { 
 	fs_fat32_BootSector bootSec;

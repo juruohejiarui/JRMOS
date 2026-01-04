@@ -20,9 +20,10 @@ int fs_fat32_initParInfo(fs_fat32_Partition *par) {
 		"    nxtFree: %08x\n"
 		"    trailSig:%08x"
 		"    rsvdSec: %08x\n"
-		"    numFats: %08x\n",
+		"    numFats: %08x"
+		"    rootCLus:%08x\n",
 		par, par->fsSec.leadSig, par->fsSec.structSig, par->fsSec.freeCnt, par->fsSec.nxtFree, par->fsSec.trailSig,
-		par->bootSec.rsvdSecCnt, par->bootSec.numFats);
+		par->bootSec.rsvdSecCnt, par->bootSec.numFats, par->bootSec.rootClus);
 
 	par->fstDtSec = par->bootSec.rsvdSecCnt + par->bootSec.fatSz32 * par->bootSec.numFats;
 	par->fstFat1Sec = par->bootSec.rsvdSecCnt;
@@ -94,10 +95,12 @@ int fs_fat32_initParCache(fs_fat32_Partition *par) {
 	par->cache.fatNum = 0;
 	par->cache.freeClusCacheNum = 0;
 	par->cache.freeEntryNum = 0;
+
     return res_SUCC;
 }
 
 int fs_fat32_init() {
+	printk(screen_log, "fs_fat32_init()");
 	memset(&fs_fat32_drv, 0, sizeof(fs_vfs_Driver));
 	memcpy("fat32", fs_fat32_drv.name, sizeof("fat32"));
 	fs_fat32_drv.lookup = fs_fat32_lookup;
@@ -114,7 +117,7 @@ int fs_fat32_init() {
 
 	fs_fat32_drv.getRootEntry = fs_fat32_getRootEntry;
 
-	fs_fat32_dirApi.nxt = (void *)fs_fat32_DirAPI_nxt;
+	fs_fat32_dirApi.nxt = fs_fat32_DirAPI_nxt;
 
 	fs_vfs_registerDriver(&fs_fat32_drv);
 }

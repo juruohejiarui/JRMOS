@@ -78,11 +78,10 @@ __always_inline__ u8 toLower(u8 ch) {
 
 __always_inline__ u64 toStr16(u8 *src, u16 *dst) {
 	u64 len = 0;
-	for (; *src != '\0'; src++, len++, dst += 2) {
-		*dst = '\0';
-		*(dst + 1) = *src;
+	for (; *src != '\0'; src++, dst++, len++) {
+		*dst = *src;
 	}
-	*dst = *(dst + 1) = 0;
+	*dst = '\0';
 	return len;
 }
 #endif

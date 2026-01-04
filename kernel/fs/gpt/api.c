@@ -25,6 +25,10 @@ int fs_gpt_registerPar(fs_gpt_Disk *disk, u32 idx) {
 	}
 
 	fs_Disk_addPar(&disk->disk, par);
+
+	fs_vfs_assignName(par);
+
+	printk(screen_log, "fs: %p: set name of partition %d to %S\n", disk, idx, par->name);
 	return res_SUCC;
 }
 
@@ -62,7 +66,6 @@ void fs_gpt_scan(hw_DiskDev *dev) {
 	if (memcmp(hdr->signature, "EFI PART", 8) != 0) {
 		printk(screen_err, "fs: gpt: invalid signature: %s\n", hdr->signature);
 		goto scan_Fail;
-
 	}
 
 	if (crc32 != hdr->hdrCrc32) {
@@ -109,7 +112,6 @@ void fs_gpt_scan(hw_DiskDev *dev) {
 			goto scan_Fail;
 		}
 	}
-
 
 	scan_Fail:
 	mm_kfree(entries, mm_Attr_Shared);

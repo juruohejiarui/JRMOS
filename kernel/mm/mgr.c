@@ -53,11 +53,7 @@ int mm_mgr_free(task_MemStruct *mem) {
         _delMap(blk);
     }
 
-    while (mem->slabRecord.root) {
-        register mm_SlabRecord *record = container(mem->slabRecord.root, mm_SlabRecord, rbNode);
-        res |= mm_kfree(record->ptr, 0);
-    }
-    return res;
+    return mm_slab_clear(mem);
 }
 
 // find the block with minimum ``blk->ed`` such that ``blk->ed > addr``

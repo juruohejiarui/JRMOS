@@ -48,7 +48,7 @@ hw_nvme_Request *hw_nvme_makeReq(int inputSz) {
 		printk(screen_err, "hw: nvme: failed to allocate request, size=%d\n", inputSz);
 		return NULL;
 	}
-	task_Request_init(&req->req, task_Request_Flag_Abort);
+	task_Request_init(&req->req, task_Request_flags_Abort);
 	memset(req->input, 0, sizeof(hw_nvme_SubQueEntry) * inputSz);
 	req->inputSz = inputSz;
 	return req;
@@ -108,6 +108,7 @@ __always_inline__ int hw_nvme_tryInsReq(hw_nvme_SubQue *subQue, hw_nvme_Request 
 }
 
 int hw_nvme_request(hw_nvme_Host *host, hw_nvme_SubQue *subQue, hw_nvme_Request *req) {
+	task_Request_init(&req->req, task_Request_flags_Abort);
 	while (hw_nvme_tryInsReq(subQue, req) != res_SUCC) ;
 
 	hw_nvme_writeSubDb(host, subQue);
@@ -190,6 +191,7 @@ static int _getSpareReq(hw_nvme_Dev *dev) {
 			}
 		}
 		SpinLock_unlock(&dev->lck);
+		if (idx != -1) break;
 		task_sche_yield();
 	}
 	return idx;
@@ -236,7 +238,6 @@ u64 hw_nvme_devRead(hw_DiskDev *dev, u64 offset, u64 size, void *buf) {
 		}
 		res += blkSz;
 	}
-
 	// release request
 	_releaseReq(nvmeDev, reqIdx);
 	return res;

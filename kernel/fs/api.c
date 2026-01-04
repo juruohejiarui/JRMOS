@@ -16,13 +16,11 @@ void fs_Partition_init(fs_Partition *par, u64 st, u64 ed, u64 attr, fs_Disk *dis
 	par->attr = attr;
 	par->disk = disk;
 
-	// install this partition
-	par->status.value = par->openCnt.value = 0;
+	par->status.value = 0;
 	SafeList_init(&par->fileLst);
 	SafeList_init(&par->dirLst);
 
 	SafeList_insTail(&disk->parLst, &par->diskParLstNd);
-	
 }
 
 void fs_Disk_init(fs_Disk *disk, u64 attr) {

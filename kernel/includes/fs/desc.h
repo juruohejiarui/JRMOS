@@ -25,7 +25,6 @@ typedef struct fs_Partition {
     u64 st, ed;
     u64 attr;
     Atomic status;
-    Atomic openCnt;
 
     SafeList dirLst, fileLst;
 
@@ -39,7 +38,7 @@ typedef struct fs_Partition {
 
     // the vfs driver of this partition
     fs_vfs_Driver *drv;
-    u16 name[fs_vfs_maxPartitionName];
+    u16 name[fs_vfs_maxParNameLen];
 } fs_Partition;
 
 SafeList fs_diskLst;

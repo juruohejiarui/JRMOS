@@ -41,6 +41,7 @@ C_FLAGS= \
 	-Wno-address-of-packed-member \
 	-mno-red-zone \
 	-fmerge-constants \
+	-g \
 
 GEN_C_FLAGS= \
 	--std=$(C_STD) \

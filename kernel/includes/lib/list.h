@@ -87,9 +87,16 @@ __always_inline__ void SafeList_insTail(SafeList *list, ListNode *node) {
 
 // parameter "list" must be a constant pointer
 #define SafeList_enum(list, node_name) \
-	for (ListNode *node_name = (SpinLock_lockMask(&(list)->lck), (list)->head.next) ; \
-		(node_name != &(list)->head) ? 1 : (SpinLock_unlockMask(&(list)->lck), 0); \
+	for (ListNode *node_name = (SpinLock_lockMask(&(list)->lck), (list)->head.next); \
+		node_name != &(list)->head ? 1 : (SpinLock_unlockMask(&(list)->lck), 0); \
 		node_name = node_name->next)
+
+// parameter "list" must be a constant pointer
+// used when you need to modify the list structure with SafeList_del
+#define SafeList_enumWithDel(list, node_name) \
+	for (ListNode *node_name = (SpinLock_lockMask(&(list)->lck), (list)->head.next), *__nxt = node_name->next; \
+		 node_name != &(list)->head ? 1 : (SpinLock_unlockMask(&(list)->lck), 0); \
+		 node_name = node_name->next, __nxt = node_name->next)
 
 #define SafeList_exitEnum(list) \
 	{ \

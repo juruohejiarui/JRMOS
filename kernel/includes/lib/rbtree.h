@@ -53,11 +53,11 @@ static RBNode *name(RBTree *tree, void *data) { \
 	RBNode *node = tree->root, *bst = NULL; \
 	while (node) { \
 		register int res = match(node, data); \
-		if (res > 0) { \
+		if (res < 0) { \
 			bst = node; \
-			node = node->left; \
-		} else if (res > 0) { \
 			node = node->right; \
+		} else if (res > 0) { \
+			node = node->left; \
 		} else return node; \
 	} \
 	return bst; \

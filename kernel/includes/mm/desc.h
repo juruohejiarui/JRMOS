@@ -99,7 +99,7 @@ typedef struct mm_MemStruct {
 typedef struct mm_SlabRecord {
 	void *ptr;
 	u64 size;
-	RBNode rbNode;
+	RBNode rbNd;
 	void (*destructor)(void *ptr);
 } mm_SlabRecord;
 

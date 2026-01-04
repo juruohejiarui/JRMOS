@@ -48,7 +48,7 @@ int fs_fat32_chkGpt(fs_Disk *disk, fs_gpt_ParEntry *entry) {
 }
 
 static fs_fat32_Entry *_allocEntry(fs_fat32_Partition *par, fs_fat32_DirEntry *dirEntry) {
-	fs_fat32_Entry *entry = mm_kmalloc(sizeof(fs_fat32_Entry), 0, (void *)fs_fat32_drv.releaseEntry);
+	fs_fat32_Entry *entry = mm_kmalloc(sizeof(fs_fat32_Entry), mm_Attr_Shared, NULL);
 	memcpy(dirEntry, &entry->dirEntry, sizeof(fs_fat32_DirEntry));
 
 	entry->vfsEntry.par = (void *)&par->par;
@@ -82,18 +82,18 @@ static int _parseSEnt(fs_fat32_DirEntry *sEnt, u16 *buf) {
 		for (int i = 0; i < 8; i++) buf8[i] = toLower(buf8[i]);
 	else
 		for (int i = 0; i < 8; i++) buf8[i] = toUpper(buf8[i]);
-	while (*(buf8 + len - 1) == ' ') len--;
+	while (*(buf8 + len - 1) == ' ' || *(buf8 + len - 1) == '\0') len--;
 
 	buf8[len++] = '.';
 
-	memcpy(sEnt->name, buf8 + len, 3);
+	memcpy(sEnt->name + 8, buf8 + len, 3);
 	// convert file ext name
 	if (sEnt->nameCase & fs_fat32_DirEntry_nameCase_LowExtName)
 		for (int i = 0; i < 3; i++) buf8[i + len] = toLower(buf8[i + len]);
 	else
 		for (int i = 0; i < 3; i++) buf8[i + len] = toUpper(buf8[i + len]);
 	len += 3;
-	while (*(buf8 + len - 1) == ' ' || *(buf8 + len - 1) == '.') len--;
+	while (*(buf8 + len - 1) == ' ' || *(buf8 + len - 1) == '\0' || *(buf8 + len - 1) == '.') len--;
 
 	// convert to utf-16
 	for (int t = len - 1; t >= 0; t--)
@@ -112,21 +112,27 @@ static int _parseLEnt(fs_fat32_DirEntry *sEnt, fs_fat32_LDirEntry *lEnts, int lE
 		memcpy(lEnts[i].name3, buf + len, sizeof(lEnts[i].name3));
 		len += sizeof(lEnts[i].name3) / sizeof(u16);
 	}
-	while (buf[len - 1] == 0 || buf[len - 1] == 0xffff) len--;
+	while (buf[len - 1] == 0 || buf[len - 1] == 0xffff && len) len--;
+	return len;
 }
 
 static int _parseName(fs_fat32_DirEntry *sEnt, fs_fat32_LDirEntry *lEnts, int lEntNum, u16 *buf) {
-	if (_chkLEnts(sEnt, lEnts, lEntNum)) return _parseLEnt(sEnt, lEnts, lEntNum, buf);
+	if (lEntNum > 0 && _chkLEnts(sEnt, lEnts, lEntNum)) return _parseLEnt(sEnt, lEnts, lEntNum, buf);
 	else return _parseSEnt(sEnt, buf);
 }
 
 // This function should be called when cache->entryTr is locked
 // when a cache is found, reference to this entry increase
 fs_fat32_Entry *_findEntryCache(fs_fat32_Partition *par, u16 *path) {
+	// printk(screen_log, "fs: fat32: search entry cache: %S\n", path);
 	RBNode *nd = RBTree_find(&par->cache.entryTr, path);
 	fs_fat32_Entry *entry;
+	// printk(screen_log, "->cache node:%p path:%S\n", nd, container(nd, fs_fat32_Entry, cacheNd)->vfsEntry.path);
 	if (nd && !strcmp16((entry = container(nd, fs_fat32_Entry, cacheNd))->vfsEntry.path, path)) {
-		if (entry->ref++ == 0) List_del(&entry->freeCacheNd), par->cache.freeEntryNum--;
+		// printk(screen_log, "fs: fat32: matched.\n");
+		if (entry->ref++ == 0) 
+			// printk(screen_log, "fs: fat32: remove from free list.\n");
+			List_del(&entry->freeCacheNd), par->cache.freeEntryNum--;
 		return entry;
 	} else return NULL;
 }
@@ -154,7 +160,6 @@ fs_vfs_Entry *fs_fat32_lookup(fs_vfs_Entry *cur, u16 *name) {
 		curClus = fs_fat32_DirEntry_getFstClus(&fat32Cur->dirEntry);
 	}
 	
-	RBTree_lck(&par->cache.entryTr);
 
 	static u16 path[fs_vfs_maxPathLen];
 	int pathLen = strlen16(cur->path);
@@ -164,16 +169,24 @@ fs_vfs_Entry *fs_fat32_lookup(fs_vfs_Entry *cur, u16 *name) {
 	memcpy(cur->path, path, pathLen * sizeof(u16));
 	path[pathLen] = fs_vfs_Separator;
 	memcpy(name, path + pathLen + 1, nameLen * sizeof(u16));
+	path[pathLen + 1 + nameLen] = '\0';
 
+	// printk(screen_log, "fs: fat32: lookup %S in path %S nameLen=%d\n", name, cur->path, nameLen);
+	// printk(screen_log, "fs: fat32: fullpath:%S\n", path);
+
+	RBTree_lck(&par->cache.entryTr);
 	// search entry cache
 	resEnt = _findEntryCache(par, path);
+	RBTree_unlck(&par->cache.entryTr);
 	if (resEnt) {
-		RBTree_unlck(&par->cache.entryTr);
 		return &resEnt->vfsEntry;
 	}
 
+	// printk(screen_log, "fs: fat32: no entry cache.\n");
+
 	u32 off = 0;
 	fs_fat32_ClusCacheNd *clusCache = fs_fat32_getClusCacheNd(par, curClus);
+	// printk(screen_log, "fs: fat32: get clus cache %p\n", clusCache);
 
 	int lEntNum = 0;
 
@@ -189,7 +202,7 @@ fs_vfs_Entry *fs_fat32_lookup(fs_vfs_Entry *cur, u16 *name) {
 		for (off = 0; off < par->bytesPerClus; off += sizeof(fs_fat32_LDirEntry)) {
 			fs_fat32_LDirEntry *lEnt = (void *)(clusCache->clus + off);
 			if (_isDeletedEnt(lEnt)) continue;
-			if (lEnt->attr = fs_fat32_DirEntry_attr_LongName) {
+			if (lEnt->attr == fs_fat32_DirEntry_attr_LongName) {
 				int ord = lEnt->ord & 0x3f;
 				memcpy(lEnt, &lEnts[ord], sizeof(fs_fat32_LDirEntry));
 				if (lEnt->ord & 0x40) lEntNum = ord;
@@ -200,8 +213,12 @@ fs_vfs_Entry *fs_fat32_lookup(fs_vfs_Entry *cur, u16 *name) {
 				
 				bufLen = _parseName(sEnt, lEnts, lEntNum, buf);
 
-				if (bufLen == nameLen && memcmp(name, buf, bufLen * sizeof(u16)))
+				// printk(screen_log, "fs: fat32: get name:\"%S\" len=%d\t", buf, bufLen);
+
+				if (bufLen == nameLen && !memcmp(name, buf, bufLen * sizeof(u16)))
 					goto lookup_findNode;
+				
+				lEntNum = 0;
 			}
 		}
 		fs_fat32_releaseClusCacheNd(par, clusCache, 0);
@@ -212,16 +229,21 @@ fs_vfs_Entry *fs_fat32_lookup(fs_vfs_Entry *cur, u16 *name) {
 	return NULL;
 
 	lookup_findNode:
+
+	RBTree_lck(&par->cache.entryTr);
 	// make entry
 	resEnt = _allocEntry(par, sEnt);
 	
+	fs_fat32_releaseClusCacheNd(par, clusCache, 0);
+	
 	// set path
-	memcpy(path, resEnt->vfsEntry.path, (nameLen + pathLen + 1) * sizeof(u16));
+	memcpy(path, resEnt->vfsEntry.path, (nameLen + pathLen + 2) * sizeof(u16));
 
 	// add to entry cache tree
 	_insNewEntryCache(par, resEnt);
 	
 	RBTree_unlck(&par->cache.entryTr);
+
 	return &resEnt->vfsEntry;
 }
 
@@ -238,40 +260,59 @@ fs_vfs_Dir *fs_fat32_openDir(fs_vfs_Entry *ent) {
 
 	fs_fat32_Dir *dir = mm_kmalloc(sizeof(fs_fat32_Dir), 0, (void *)fs_fat32_drv.closeDir);
 	dir->dir.api = &fs_fat32_dirApi;
-	dir->dir.par = (void *)par;
+	dir->dir.par = &par->par;
 	dir->dir.ent = ent;
+	dir->dir.thread = task_current->thread;
 
 	dir->clusId = fs_fat32_DirEntry_getFstClus(&fat32Ent->dirEntry);
 	dir->clusOff = 0;
+	dir->curEnt = NULL;
 	
 	SpinLock_init(&dir->lck);
+
+	// printk(screen_log, "fs: fat32: open dir %S clus:%lx\n", ent->path, dir->clusId);
+
+	SafeList_insTail(&par->par.dirLst, &dir->dir.parLstNd);
+    SafeList_insTail(&task_current->thread->dirLst, &dir->dir.tskLstNd);
 
 	return &dir->dir;
 }
 
 int fs_fat32_closeDir(fs_vfs_Dir *dir) {
+	// printk(screen_log, "fs: fat32: close dir %p\n", dir);
 	fs_fat32_Dir *fat32Dir = container(dir, fs_fat32_Dir, dir);
 	SpinLock_lock(&fat32Dir->lck);
+
+	if (fat32Dir->curEnt) fs_fat32_releaseEntry(&fat32Dir->curEnt->vfsEntry);
+
 	fs_fat32_Entry *ent = container(fat32Dir->dir.ent, fs_fat32_Entry, vfsEntry);
 	fs_fat32_Partition *par = container(dir->par, fs_fat32_Partition, par);
+
+	SafeList_del(&par->par.dirLst, &dir->parLstNd);
+    SafeList_del(&fat32Dir->dir.thread->dirLst, &dir->tskLstNd);
+
+	// printk(screen_log, "fs: fat32: finish close dir %p\n", dir);
 
 	return fs_fat32_releaseEntry(&ent->vfsEntry);
 }
 
 int fs_fat32_releaseEntry(fs_vfs_Entry *entry) {
+	// printk(screen_log, "fs: fat32: release entry %p\n", entry);
 	fs_fat32_Entry *fat32Entry = container(entry, fs_fat32_Entry, vfsEntry);
 	fs_fat32_Partition *par = container(entry->par, fs_fat32_Partition, par);
 	int res = res_SUCC;
 
 	RBTree_lck(&par->cache.entryTr);
 	if (--fat32Entry->ref == 0) {
+		// printk(screen_log, "fs: fat32: free entry %p\n", entry);
 		List_insTail(&par->cache.freeEntryLst, &fat32Entry->freeCacheNd);
 		if (par->cache.freeEntryNum == fs_fat32_FreeEntryCache_MaxNum) {
 			fat32Entry = container(List_getHead(&par->cache.freeEntryLst), fs_fat32_Entry, freeCacheNd);
-			RBTree_del(&par->cache.entryTr, &fat32Entry->cacheNd);
 			List_del(&fat32Entry->freeCacheNd);
+			RBTree_del(&par->cache.entryTr, &fat32Entry->cacheNd);
 			res = mm_kfree(fat32Entry, mm_Attr_Shared);
-		} else par->cache.freeEntryNum++;
+		} else 
+			par->cache.freeEntryNum++;
 	}
 	RBTree_unlck(&par->cache.entryTr);
 
@@ -293,9 +334,7 @@ fs_Partition *fs_fat32_installGptPar(fs_Disk *disk, fs_gpt_ParEntry *entry) {
 	void *buf = mm_kmalloc(hw_diskdev_lbaSz, mm_Attr_Shared, NULL);
 	disk->device->read(disk->device, entry->stLba, 1, buf);
 
-	par->par.st = entry->stLba;
-	par->par.ed = entry->edLba;
-	par->par.disk = disk;
+	fs_Partition_init(&par->par, entry->stLba, entry->edLba, 0, disk);
 	memcpy(buf, &par->bootSec, sizeof(fs_fat32_BootSector));
 
 	mm_kfree(buf, mm_Attr_Shared);
@@ -305,7 +344,6 @@ fs_Partition *fs_fat32_installGptPar(fs_Disk *disk, fs_gpt_ParEntry *entry) {
 
 	// initialize cache
 	if (fs_fat32_initParCache(par) == res_FAIL) goto installGptPar_fail;
-
 
 	// make root
 	par->par.drv = &fs_fat32_drv;
@@ -318,11 +356,12 @@ fs_Partition *fs_fat32_installGptPar(fs_Disk *disk, fs_gpt_ParEntry *entry) {
 		root->vfsEntry.flags = fs_vfs_EntryAttr_flags_IsDir;
 		root->ref = 1;
 
-		fs_fat32_DirEntry_setFstClus(&root->dirEntry, par->fstDtSec);
+		fs_fat32_DirEntry_setFstClus(&root->dirEntry, par->bootSec.rootClus);
+		root->dirEntry.attr = fs_fat32_DirEntry_attr_Dir;
 
 		RBTree_ins(&par->cache.entryTr, &root->cacheNd);
 	}
-	printk(screen_succ, "fs: fat32: driver is applied to disk %p partition %p\n", disk, entry);
+	// printk(screen_succ, "fs: fat32: driver is applied to disk %p partition %p\n", disk, entry);
 
 	return &par->par;
 
@@ -345,16 +384,17 @@ fs_vfs_Entry *fs_fat32_DirAPI_nxt(fs_vfs_Dir *dir) {
 
 	fs_fat32_LDirEntry lEnts[32];
 	fs_fat32_DirEntry *sEnt = NULL;
-	int lEntNum;
 
 	u16 name[fs_vfs_maxNameLen];
-	int nameLen = -1;
+	int nameLen = 0, lEntNum = 0;
 
-	while (fat32Dir->clusId != fs_fat32_ClusEnd) {
+	if (fat32Dir->curEnt) fs_fat32_releaseEntry(&fat32Dir->curEnt->vfsEntry);
+
+	while (fat32Dir->clusId != fs_fat32_ClusEnd && !nameLen) {
 		if (cache == NULL) cache = fs_fat32_getClusCacheNd(par, fat32Dir->clusId);
 
-		for (; fat32Dir->clusOff < par->bytesPerClus && nameLen == -1; fat32Dir->clusOff += sizeof(fs_fat32_DirEntry)) {
-			fs_fat32_LDirEntry *lEnt = (void *)(cache->clus + fat32Dir->clusOff);
+		for (; fat32Dir->clusOff < par->bytesPerClus && !nameLen; fat32Dir->clusOff += sizeof(fs_fat32_DirEntry)) {
+			fs_fat32_LDirEntry *lEnt = cache->clus + fat32Dir->clusOff;
 			if (_isDeletedEnt(lEnt)) continue;
 			if (lEnt->attr == fs_fat32_DirEntry_attr_LongName) {
 				int ord = lEnt->ord & 0x3f;
@@ -365,31 +405,43 @@ fs_vfs_Entry *fs_fat32_DirAPI_nxt(fs_vfs_Dir *dir) {
 				sEnt = (void *)lEnt;
 
 				nameLen = _parseName(sEnt, lEnts, lEntNum, name);
-				continue;
+
+				if (nameLen > 0) {
+					// printk(screen_log, "get name:%S len=%d\n", name, nameLen);
+					fat32Dir->clusOff += sizeof(fs_fat32_DirEntry);
+					break;
+				}
+				
+				lEntNum = 0;
 			}
 		}
-		if (fat32Dir->clusOff == par->bytesPerClus) {
+		if (!nameLen) {
 			fs_fat32_releaseClusCacheNd(par, cache, 0);
 			cache = NULL;
 			fat32Dir->clusOff = 0;
 			fat32Dir->clusId = fs_fat32_getNxtClus(par, fat32Dir->clusId);
 		}
+		// printk(screen_log, "to clus:%lx+%lx\n", fat32Dir->clusId, fat32Dir->clusOff);
 	}
 	SpinLock_unlock(&fat32Dir->lck);
 
-	if (sEnt == NULL) goto DirAPI_nxt_noNxt;
+	if (!nameLen) goto DirAPI_nxt_noNxt;
 
-	RBTree_lck(&par->cache.entryTr);
 	static u16 path[fs_vfs_maxPathLen];
 	u16 pathLen = strlen16(ent->vfsEntry.path);
 	memcpy(ent->vfsEntry.path, path, pathLen * sizeof(u16));
 	path[pathLen] = fs_vfs_Separator;
 	memcpy(name, path + pathLen + 1, nameLen * sizeof(u16));
+	path[pathLen + nameLen + 1] = '\0';
+
+	// printk(screen_log, "full path:%S len=%d\n", path, pathLen + nameLen + 1);
+
+	RBTree_lck(&par->cache.entryTr);
 
 	if ((resEnt = _findEntryCache(par, path)) == NULL) {
 		resEnt = _allocEntry(par, sEnt);
 
-		memcpy(path, resEnt->vfsEntry.path, (pathLen + 1 + nameLen) * sizeof(u16));
+		memcpy(path, resEnt->vfsEntry.path, (pathLen + 2 + nameLen) * sizeof(u16));
 		
 		_insNewEntryCache(par, resEnt);
 	}
@@ -399,5 +451,8 @@ fs_vfs_Entry *fs_fat32_DirAPI_nxt(fs_vfs_Dir *dir) {
 
 	DirAPI_nxt_noNxt:
 	if (cache != NULL) fs_fat32_releaseClusCacheNd(par, cache, 0);
+
+	fat32Dir->curEnt = resEnt;
+
 	return &resEnt->vfsEntry;
 }
