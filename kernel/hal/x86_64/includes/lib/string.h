@@ -181,4 +181,46 @@ __always_inline__ int strncmp(char *a, char *b, i64 size) {
 	return _res;
 }
 
+__always_inline__ i64 strcpy(u8 *src, u8 *dst) {
+	register i64 count;
+	
+	__asm__ volatile (
+		"cld			\n\t"
+		"1:				\n\t"
+		"lodsb			\n\t"
+		"stosb			\n\t"
+		"testb %%al, %%al	\n\t"
+		"jz 2f			\n\t"
+		"incq %1		\n\t"
+		"jmp 1b		 	\n\t"
+		"2:			 	\n\t" 
+		: "=S"(src), "=c"(count)
+		: "0"(src), "D"(dst), "c"(0)
+		: "cc", "memory"
+	);
+	
+	return count;
+}
+
+__always_inline__ i64 strcpy16(u16 *src, u16 *dst) {
+	register i64 count;
+	
+	__asm__ volatile (
+		"cld			\n\t"
+		"1:				\n\t"
+		"lodsw			\n\t"
+		"stosw			\n\t"
+		"testw %%ax, %%ax	\n\t"
+		"jz 2f			\n\t"
+		"incq %1		\n\t"
+		"jmp 1b		 	\n\t"
+		"2:			 	\n\t" 
+		: "=S"(src), "=c"(count)
+		: "0"(src), "D"(dst), "c"(0)
+		: "cc", "memory"
+	);
+	
+	return count;
+}
+
 #endif

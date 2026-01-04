@@ -6,6 +6,14 @@
 #include <mm/mm.h>
 #include "inner.h"
 
+static u16 _entryTrPathBuf[fs_vfs_maxPathLen];
+
+static i64 _joinPath(u16 *path, u16 *name, u16 *buf) {
+	i64 ptr = strcpy16(path, buf);
+	buf[ptr++] = fs_vfs_Separator;
+	return ptr + strcpy16(name, buf + ptr);
+}
+
 __always_inline__ int _isDeletedEnt(void *ent) {
 	return *(char *)ent == fs_fat32_DeleteFlag;
 }
@@ -29,9 +37,9 @@ int fs_fat32_chkGpt(fs_Disk *disk, fs_gpt_ParEntry *entry) {
 	disk->device->read(disk->device, entry->stLba, 1, bs);
 	printk(screen_log, 
 		"fs: fat32: disk %p partition %p\n"
-		"\t\toemName:     %s\n"
+		"\t\toemName:	 %s\n"
 		"\t\tbytesPerSec: %#06x SecPerClus:  %#06x\n"
-		"\t\tfatSz16:     %#06x fatSz32:     %#06x\n"
+		"\t\tfatSz16:	 %#06x fatSz32:	 %#06x\n"
 		"\t\tbootSigEnd:  %#06x BytesPerSec: %#06x\n",
 		disk, entry, 
 		bs->oemName, bs->bytesPerSec, bs->secPerClus,
@@ -148,7 +156,7 @@ fs_vfs_Entry *fs_fat32_lookup(fs_vfs_Entry *cur, u16 *name) {
 	fs_fat32_Partition *par;
 
 	fs_fat32_DirEntry *sEnt;
-	static fs_fat32_LDirEntry lEnts[64];
+	fs_fat32_LDirEntry lEnts[20];
 
 	fs_fat32_Entry *resEnt;
 	u64 curClus;
@@ -160,23 +168,19 @@ fs_vfs_Entry *fs_fat32_lookup(fs_vfs_Entry *cur, u16 *name) {
 		curClus = fs_fat32_DirEntry_getFstClus(&fat32Cur->dirEntry);
 	}
 	
+	RBTree_lck(&par->cache.entryTr);
 
-	static u16 path[fs_vfs_maxPathLen];
 	int pathLen = strlen16(cur->path);
 	int nameLen = strlen16(name);
 
 	// get full path
-	memcpy(cur->path, path, pathLen * sizeof(u16));
-	path[pathLen] = fs_vfs_Separator;
-	memcpy(name, path + pathLen + 1, nameLen * sizeof(u16));
-	path[pathLen + 1 + nameLen] = '\0';
+	_joinPath(cur->path, name, _entryTrPathBuf);
 
 	// printk(screen_log, "fs: fat32: lookup %S in path %S nameLen=%d\n", name, cur->path, nameLen);
 	// printk(screen_log, "fs: fat32: fullpath:%S\n", path);
 
-	RBTree_lck(&par->cache.entryTr);
 	// search entry cache
-	resEnt = _findEntryCache(par, path);
+	resEnt = _findEntryCache(par, _entryTrPathBuf);
 	RBTree_unlck(&par->cache.entryTr);
 	if (resEnt) {
 		return &resEnt->vfsEntry;
@@ -230,14 +234,15 @@ fs_vfs_Entry *fs_fat32_lookup(fs_vfs_Entry *cur, u16 *name) {
 
 	lookup_findNode:
 
-	RBTree_lck(&par->cache.entryTr);
 	// make entry
 	resEnt = _allocEntry(par, sEnt);
 	
 	fs_fat32_releaseClusCacheNd(par, clusCache, 0);
 	
 	// set path
-	memcpy(path, resEnt->vfsEntry.path, (nameLen + pathLen + 2) * sizeof(u16));
+	_joinPath(cur->path, name, resEnt->vfsEntry.path);
+
+	RBTree_lck(&par->cache.entryTr);
 
 	// add to entry cache tree
 	_insNewEntryCache(par, resEnt);
@@ -273,7 +278,7 @@ fs_vfs_Dir *fs_fat32_openDir(fs_vfs_Entry *ent) {
 	// printk(screen_log, "fs: fat32: open dir %S clus:%lx\n", ent->path, dir->clusId);
 
 	SafeList_insTail(&par->par.dirLst, &dir->dir.parLstNd);
-    SafeList_insTail(&task_current->thread->dirLst, &dir->dir.tskLstNd);
+	SafeList_insTail(&task_current->thread->dirLst, &dir->dir.tskLstNd);
 
 	return &dir->dir;
 }
@@ -289,7 +294,7 @@ int fs_fat32_closeDir(fs_vfs_Dir *dir) {
 	fs_fat32_Partition *par = container(dir->par, fs_fat32_Partition, par);
 
 	SafeList_del(&par->par.dirLst, &dir->parLstNd);
-    SafeList_del(&fat32Dir->dir.thread->dirLst, &dir->tskLstNd);
+	SafeList_del(&fat32Dir->dir.thread->dirLst, &dir->tskLstNd);
 
 	// printk(screen_log, "fs: fat32: finish close dir %p\n", dir);
 
@@ -427,21 +432,17 @@ fs_vfs_Entry *fs_fat32_DirAPI_nxt(fs_vfs_Dir *dir) {
 
 	if (!nameLen) goto DirAPI_nxt_noNxt;
 
-	static u16 path[fs_vfs_maxPathLen];
-	u16 pathLen = strlen16(ent->vfsEntry.path);
-	memcpy(ent->vfsEntry.path, path, pathLen * sizeof(u16));
-	path[pathLen] = fs_vfs_Separator;
-	memcpy(name, path + pathLen + 1, nameLen * sizeof(u16));
-	path[pathLen + nameLen + 1] = '\0';
+	RBTree_lck(&par->cache.entryTr);
+
+	_joinPath(ent->vfsEntry.path, name, _entryTrPathBuf);
 
 	// printk(screen_log, "full path:%S len=%d\n", path, pathLen + nameLen + 1);
 
-	RBTree_lck(&par->cache.entryTr);
 
-	if ((resEnt = _findEntryCache(par, path)) == NULL) {
+	if ((resEnt = _findEntryCache(par, _entryTrPathBuf)) == NULL) {
 		resEnt = _allocEntry(par, sEnt);
 
-		memcpy(path, resEnt->vfsEntry.path, (pathLen + 2 + nameLen) * sizeof(u16));
+		strcpy16(_entryTrPathBuf, resEnt->vfsEntry.path);
 		
 		_insNewEntryCache(par, resEnt);
 	}

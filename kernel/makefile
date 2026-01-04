@@ -40,9 +40,8 @@ C_FLAGS= \
 	-Wno-packed-bitfield-compat \
 	-Wno-address-of-packed-member \
 	-mno-red-zone \
-	-fmerge-constants \
-	-g \
-
+	-fmerge-constants
+	
 GEN_C_FLAGS= \
 	--std=$(C_STD) \
 	$(C_INCLUDE_PATH) \
