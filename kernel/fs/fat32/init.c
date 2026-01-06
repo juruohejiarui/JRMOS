@@ -4,7 +4,7 @@
 #include <screen/screen.h>
 
 fs_vfs_Driver fs_fat32_drv;
-fs_vfs_File fs_fat32_fileApi;
+fs_vfs_FileAPI fs_fat32_fileApi;
 fs_vfs_DirAPI fs_fat32_dirApi;
 
 int fs_fat32_initParInfo(fs_fat32_Partition *par) {
@@ -105,8 +105,10 @@ int fs_fat32_init() {
 	memcpy("fat32", fs_fat32_drv.name, sizeof("fat32"));
 	fs_fat32_drv.lookup = fs_fat32_lookup;
 
+	fs_fat32_drv.openFile = fs_fat32_openFile;
 	fs_fat32_drv.openDir = fs_fat32_openDir;
 	
+	fs_fat32_drv.closeFile = fs_fat32_closeFile;
 	fs_fat32_drv.closeDir = fs_fat32_closeDir;
 
 	fs_fat32_drv.releaseEntry = fs_fat32_releaseEntry;
@@ -116,6 +118,10 @@ int fs_fat32_init() {
 	fs_fat32_drv.installGptPar = fs_fat32_installGptPar;
 
 	fs_fat32_drv.getRootEntry = fs_fat32_getRootEntry;
+
+	fs_fat32_fileApi.seek = fs_fat32_FileAPI_seek;
+	fs_fat32_fileApi.write = fs_fat32_FileAPI_write;
+	fs_fat32_fileApi.read = fs_fat32_FileAPI_read;
 
 	fs_fat32_dirApi.nxt = fs_fat32_DirAPI_nxt;
 

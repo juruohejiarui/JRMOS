@@ -146,7 +146,7 @@ typedef struct fs_fat32_File {
 	
 	SpinLock lck;
 
-	u64 clusId, clusOff;
+	u64 clusId, clusOff, actPtr;
 } fs_fat32_File;
 
 typedef struct fs_fat32_Dir {

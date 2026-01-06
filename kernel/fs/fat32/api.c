@@ -2,6 +2,7 @@
 #include <fs/api.h>
 #include <fs/gpt/api.h>
 #include <lib/string.h>
+#include <lib/algorithm.h>
 #include <screen/screen.h>
 #include <mm/mm.h>
 #include "inner.h"
@@ -252,6 +253,38 @@ fs_vfs_Entry *fs_fat32_lookup(fs_vfs_Entry *cur, u16 *name) {
 	return &resEnt->vfsEntry;
 }
 
+fs_vfs_File *fs_fat32_openFile(fs_vfs_Entry *ent) {
+	fs_fat32_Entry *fat32Ent = container(ent, fs_fat32_Entry, vfsEntry);
+	fs_fat32_Partition *par = container(ent->par, fs_fat32_Partition, par);
+	
+	if (fat32Ent->dirEntry.attr & (fs_fat32_DirEntry_attr_Dir | fs_fat32_DirEntry_attr_VolumeId)) {
+		printk(screen_err, "fs: fat32: %S in partition %S is not file.\n", ent->path, par->par.name);
+		return NULL;
+	}
+
+	RBTree_lck(&par->cache.entryTr);
+	fat32Ent->ref++;
+	RBTree_unlck(&par->cache.entryTr);
+
+	fs_fat32_File *file = mm_kmalloc(sizeof(fs_fat32_File), 0, (void *)fs_fat32_drv.closeFile);
+	file->file.api = &fs_fat32_fileApi;
+	file->file.par = &par->par;
+	file->file.ent = ent;
+	file->file.thd = task_current->thread;
+
+	file->clusId = fs_fat32_DirEntry_getFstClus(&fat32Ent->dirEntry);
+	file->clusOff = 0;
+	file->actPtr = 0;
+	file->file.ptr = 0;
+
+	SpinLock_init(&file->lck);
+
+	SafeList_insTail(&par->par.dirLst, &file->file.parLstNd);
+	SafeList_insTail(&task_current->thread->dirLst, &file->file.thdLstNd);
+
+	return &file->file;
+}
+
 fs_vfs_Dir *fs_fat32_openDir(fs_vfs_Entry *ent) {
 	fs_fat32_Entry *fat32Ent = container(ent, fs_fat32_Entry, vfsEntry);
 	fs_fat32_Partition *par = container(ent->par, fs_fat32_Partition, par);
@@ -267,7 +300,7 @@ fs_vfs_Dir *fs_fat32_openDir(fs_vfs_Entry *ent) {
 	dir->dir.api = &fs_fat32_dirApi;
 	dir->dir.par = &par->par;
 	dir->dir.ent = ent;
-	dir->dir.thread = task_current->thread;
+	dir->dir.thd = task_current->thread;
 
 	dir->clusId = fs_fat32_DirEntry_getFstClus(&fat32Ent->dirEntry);
 	dir->clusOff = 0;
@@ -277,10 +310,23 @@ fs_vfs_Dir *fs_fat32_openDir(fs_vfs_Entry *ent) {
 
 	// printk(screen_log, "fs: fat32: open dir %S clus:%lx\n", ent->path, dir->clusId);
 
-	SafeList_insTail(&par->par.dirLst, &dir->dir.parLstNd);
-	SafeList_insTail(&task_current->thread->dirLst, &dir->dir.tskLstNd);
+	SafeList_insTail(&par->par.fileLst, &dir->dir.parLstNd);
+	SafeList_insTail(&task_current->thread->fileLst, &dir->dir.thdLstNd);
 
 	return &dir->dir;
+}
+
+int fs_fat32_closeFile(fs_vfs_File *file) {
+	fs_fat32_File *fat32File = container(file, fs_fat32_File, file);
+	SpinLock_lock(&fat32File->lck);
+
+	fs_fat32_Entry *ent = container(fat32File->file.ent, fs_fat32_Entry, vfsEntry);
+	fs_fat32_Partition *par = container(file->par, fs_fat32_Partition, par);
+
+	SafeList_del(&par->par.fileLst, &file->parLstNd);
+	SafeList_del(&file->thd->fileLst, &file->thdLstNd);
+
+	return fs_fat32_releaseEntry(&ent->vfsEntry);
 }
 
 int fs_fat32_closeDir(fs_vfs_Dir *dir) {
@@ -294,7 +340,7 @@ int fs_fat32_closeDir(fs_vfs_Dir *dir) {
 	fs_fat32_Partition *par = container(dir->par, fs_fat32_Partition, par);
 
 	SafeList_del(&par->par.dirLst, &dir->parLstNd);
-	SafeList_del(&fat32Dir->dir.thread->dirLst, &dir->tskLstNd);
+	SafeList_del(&fat32Dir->dir.thd->dirLst, &dir->thdLstNd);
 
 	// printk(screen_log, "fs: fat32: finish close dir %p\n", dir);
 
@@ -375,6 +421,30 @@ fs_Partition *fs_fat32_installGptPar(fs_Disk *disk, fs_gpt_ParEntry *entry) {
 	return NULL;
 }
 
+i64 fs_fat32_FileAPI_seek(fs_vfs_File *file, i64 off, int base) {
+	fs_fat32_File *fat32File = container(file, fs_fat32_File, file);
+	
+	SpinLock_lock(&fat32File->lck);
+
+	i64 newPtr;
+	switch (base) {
+		case fs_vfs_FileAPI_seek_base_End : {
+			// jump to 
+		}
+		case fs_vfs_FileAPI_seek_base_Start: {
+			newPtr = 0;
+			break;
+		}
+		case fs_vfs_FileAPI_seek_base_Cur : {
+			newPtr = max(0, file->ptr + off);
+			break;
+		}
+	}
+
+	i64 actOff = newPtr - file->ptr;
+
+}
+ 
 fs_vfs_Entry *fs_fat32_DirAPI_nxt(fs_vfs_Dir *dir) {
 	fs_fat32_Dir *fat32Dir = container(dir, fs_fat32_Dir, dir);
 	
@@ -387,7 +457,7 @@ fs_vfs_Entry *fs_fat32_DirAPI_nxt(fs_vfs_Dir *dir) {
 
 	cache = NULL;
 
-	fs_fat32_LDirEntry lEnts[32];
+	fs_fat32_LDirEntry lEnts[20];
 	fs_fat32_DirEntry *sEnt = NULL;
 
 	u16 name[fs_vfs_maxNameLen];

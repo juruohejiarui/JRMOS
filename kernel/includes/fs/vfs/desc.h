@@ -43,9 +43,16 @@ typedef struct fs_vfs_Entry {
     struct fs_Partition *par;
 } fs_vfs_Entry;
 
+#define fs_vfs_FileAPI_seek_base_Start  0
+#define fs_vfs_FileAPI_seek_base_End    1
+#define fs_vfs_FileAPI_seek_base_Cur    2
+
 typedef struct fs_vfs_FileAPI {
-    int (*seek)(struct fs_vfs_File *file, u64 ptr);
-    int (*read)(struct fs_vfs_File *file, void *buf, u64 len);
+    // return offset from current ptr to the new ptr
+    i64 (*seek)(struct fs_vfs_File *file, i64 ptr, int base);
+    // return actually number of bytes written to file
+    u64 (*read)(struct fs_vfs_File *file, void *buf, u64 len);
+    // return actually number of bytes read from file
     int (*write)(struct fs_vfs_File *file, void *buf, u64 len);
 } fs_vfs_FileAPI;
 
@@ -60,11 +67,11 @@ typedef struct fs_vfs_File {
 
 	struct fs_Partition *par;
 
-    ListNode tskLstNd, parLstNd;
+    ListNode thdLstNd, parLstNd;
 
     u64 ptr;
 
-    task_TaskStruct *tsk;
+    task_ThreadStruct *thd;
 } fs_vfs_File;
 
 // should be created with kmalloc(..., 0, drv->closeDir)
@@ -74,9 +81,9 @@ typedef struct fs_vfs_Dir {
     
 	struct fs_Partition *par;
 
-    ListNode tskLstNd, parLstNd;
+    ListNode thdLstNd, parLstNd;
 
-    task_ThreadStruct *thread;
+    task_ThreadStruct *thd;
 } fs_vfs_Dir;
 
 typedef struct fs_vfs_Driver fs_vfs_Driver;
