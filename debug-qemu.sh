@@ -20,7 +20,7 @@ debug(){
 	if [ "$archName" = "arm64" -o "$archName" = "aarch64" ]; then
 		echo "debug-qemu: under aarch64"
 		ovmfPath="./OVMF_CODE_4M.fd"
-		paramArch="-cpu Haswell \
+		paramArch="-cpu Skylake-Client \
 			-vga virtio \
 			-accel tcg"
 	else
@@ -29,7 +29,6 @@ debug(){
 		ovmfPath="/usr/share/OVMF/OVMF_CODE_4M.fd"
 		paramArch="-cpu host \
 			-accel kvm"
-		# use integrated GPU
 	fi
 
 	

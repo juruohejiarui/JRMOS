@@ -23,14 +23,14 @@ int fs_fat32_writeSec(fs_fat32_Partition *par, u64 off, u64 sz, void *buf) {
 	return res_SUCC;
 }
 
-fs_fat32_ClusCacheNd *fs_fat32_getClusCacheNd(fs_fat32_Partition *par, u64 off) {
+fs_fat32_ClusCacheNd *fs_fat32_getClusCacheNd(fs_fat32_Partition *par, u64 idx) {
 	fs_fat32_ClusCacheNd *cacheNd;
 	// printk(screen_log, "fs: fat32: search clus cache %016lx\n", off);
-	if (off == fs_fat32_ClusEnd) return NULL;
+	if (idx == fs_fat32_ClusEnd) return NULL;
 	RBTree_lck(&par->cache.clusCacheTr);
 	// printk(screen_succ, "fs: fat32: get lock of clus cache tr.\n");
-	RBNode *tmp = RBTree_find(&par->cache.clusCacheTr, &off);
-	if (tmp && (cacheNd = container(tmp, fs_fat32_ClusCacheNd, clusCacheNd))->off == off) {
+	RBNode *tmp = RBTree_find(&par->cache.clusCacheTr, &idx);
+	if (tmp && (cacheNd = container(tmp, fs_fat32_ClusCacheNd, clusCacheNd))->off == idx) {
 		if (!List_isEmpty(&cacheNd->freeClusCacheNd)) 
 			List_del(&cacheNd->freeClusCacheNd),
 			List_init(&cacheNd->freeClusCacheNd);
@@ -46,16 +46,16 @@ fs_fat32_ClusCacheNd *fs_fat32_getClusCacheNd(fs_fat32_Partition *par, u64 off) 
 			printk(screen_err, "fat32: getClusCacheNd: failed to allocate memory for cluster cache.\n");
 			return NULL;
 		}
-		cacheNd->off = off;
+		cacheNd->off = idx;
 		cacheNd->clus = clus;
 		SpinLock_init(&cacheNd->useLck);
 		// printk(screen_log, "fs: fat32: new clus cache %p->%p\n", cacheNd, clus);
 		// read from disk
-		if (fs_fat32_readSec(par, (off - 2) * par->lbaPerClus + par->fstDtSec, par->lbaPerClus, clus) & res_FAIL) {
+		if (fs_fat32_readSec(par, (idx - 2) * par->lbaPerClus + par->fstDtSec, par->lbaPerClus, clus) & res_FAIL) {
 			mm_kfree(clus, mm_Attr_Shared);
 			mm_kfree(cacheNd, mm_Attr_Shared);
 			RBTree_unlck(&par->cache.clusCacheTr);
-			printk(screen_err, "fat32: getClusCacheNd: failed to read cluster %016lx.\n", off);
+			printk(screen_err, "fat32: getClusCacheNd: failed to read cluster %016lx.\n", idx);
 			return NULL;
 		}
 		List_init(&cacheNd->freeClusCacheNd);
@@ -133,6 +133,7 @@ __always_inline__ fs_fat32_FatCacheNd *_crtFatCache(fs_fat32_Partition *par, u32
 }
 
 u32 fs_fat32_getNxtClus(fs_fat32_Partition *par, u32 clus) {
+	if (clus == fs_fat32_ClusEnd) return fs_fat32_ClusEnd;
 	// read FAT1
 	u64 off = (clus * sizeof(u32)) / hw_diskdev_lbaSz;
 	u64 idx = (clus * sizeof(u32)) % hw_diskdev_lbaSz / sizeof(u32);
@@ -142,9 +143,11 @@ u32 fs_fat32_getNxtClus(fs_fat32_Partition *par, u32 clus) {
 	if (cache == NULL) goto getNxtClus_fail;
 	u32 res = cache->sec[idx];
 	RBTree_unlck(&par->cache.fatTr);
-	return res & 0xfffffff8 ? fs_fat32_ClusEnd : res;
+	printk(screen_log, "fs: fat32: %p: nxtClus(%#010x)=%#010x\n", par, clus, res);
+	return (res & 0xffffff8) == 0xffffff8 ? fs_fat32_ClusEnd : res;
 	getNxtClus_fail:
 	RBTree_unlck(&par->cache.fatTr);
+	printk(screen_err, "fs: fat32: %p: failed to get nxt clus of %#010x\n", par, clus);
 	return fs_fat32_ClusEnd;
 }
 

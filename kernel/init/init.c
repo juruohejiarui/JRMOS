@@ -7,15 +7,40 @@
 #include <hardware/usb/xhci/api.h>
 #include <screen/screen.h>
 
-void init_testFs(u8 *path) {
-	u16 buf[fs_vfs_maxPathLen];
-	u16 len = toStr16(path, buf);
-	printk(screen_log, "fs: test path: %S, len=%d\n", buf, len);
-	fs_vfs_Entry *entry = fs_vfs_lookup(buf);
-	fs_vfs_Dir *dir = fs_vfs_openDir(entry);
+void init_testDir(u8 *path) {
+	fs_vfs_Entry *entry;
+	fs_vfs_Dir *dir;
+
+	{
+		u16 buf[fs_vfs_maxPathLen];
+		u16 len = toStr16(path, buf);
+		printk(screen_log, "fs: test path: %S, len=%d\n", buf, len);
+		entry = fs_vfs_lookup(buf);
+		dir = fs_vfs_openDir(entry);
+	}
+	
 	while ((entry = dir->api->nxt(dir))) {
 		printk(screen_log, "%S\n", entry->path);
 	}
+}
+
+void init_testFile(u8 *path) {
+	fs_vfs_Entry *entry;
+	fs_vfs_File *file;
+
+	{
+		u16 buf[fs_vfs_maxPathLen];
+		u16 len = toStr16(path, buf);
+		printk(screen_log, "fs: test path: %S, len=%d\n", buf, len);
+		entry = fs_vfs_lookup(buf);
+		file = fs_vfs_openFile(entry);
+	}
+
+	u8 buf[32];
+	memset(buf, 0, sizeof(buf));
+	u64 off = fs_vfs_seek(file, -15, fs_vfs_FileAPI_seek_base_End);
+	u64 bytes = fs_vfs_read(file, buf, 32);
+	printk(screen_log, "read %d byte(s) from file %s:\n%s\n", bytes, path, buf + 1);
 }
 
 void init_init() {	
@@ -38,6 +63,6 @@ void init_init() {
 
 	hw_pci_chk();
 
-	task_newTask(init_testFs, (u64)"AA", task_attr_Builtin);
-	task_newTask(init_testFs, (u64)"AA/EFI/BOOT", task_attr_Builtin);
+	task_newTask(init_testDir, (u64)"AA", task_attr_Builtin);
+	task_newTask(init_testFile, (u64)"AA/test/test.txt", task_attr_Builtin);
 }

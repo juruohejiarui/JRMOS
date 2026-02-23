@@ -68,12 +68,12 @@ __always_inline__ int fs_fat32_FatCacheNd_match(RBNode *a, void *b) {
 
 __always_inline__ int fs_fat32_EntryCache_cmp(RBNode *a, RBNode *b) {
 	register fs_fat32_Entry *ta = container(a, fs_fat32_Entry, cacheNd), *tb = container(a, fs_fat32_Entry, cacheNd);
-	return strcmp16(ta->vfsEntry.path, tb->vfsEntry.path);
+	return strcmp16(ta->vfsEnt.path, tb->vfsEnt.path);
 }
 
 __always_inline__ int fs_fat32_EntryCache_match(RBNode *a, void *b) {
 	register fs_fat32_Entry *ta = container(a, fs_fat32_Entry, cacheNd);
-	return strcmp16(ta->vfsEntry.path, b);
+	return strcmp16(ta->vfsEnt.path, b);
 }
 
 RBTree_insertDef(fs_fat32_FatCacheNd_insert, fs_fat32_FatCacheNd_cmp);

@@ -23,6 +23,10 @@ __always_inline__ void _deleteEnt(void *ent) {
 	*(char *)ent = fs_fat32_DeleteFlag;
 }
 
+__always_inline__ void _syncToVfsEnt(fs_fat32_Entry *ent) {
+	ent->vfsEnt.size = ent->dirEntry.fileSz;
+}
+
 int fs_fat32_chkBootSec(fs_fat32_BootSector *bs) {
 	if (bs->bootSigEnd != 0xaa55 || bs->fatSz16 != 0)
 		return res_FAIL;
@@ -60,8 +64,8 @@ static fs_fat32_Entry *_allocEntry(fs_fat32_Partition *par, fs_fat32_DirEntry *d
 	fs_fat32_Entry *entry = mm_kmalloc(sizeof(fs_fat32_Entry), mm_Attr_Shared, NULL);
 	memcpy(dirEntry, &entry->dirEntry, sizeof(fs_fat32_DirEntry));
 
-	entry->vfsEntry.par = (void *)&par->par;
-	entry->vfsEntry.size = dirEntry->fileSz;
+	entry->vfsEnt.par = (void *)&par->par;
+	_syncToVfsEnt(entry);
 
 	return entry;
 }
@@ -136,8 +140,8 @@ fs_fat32_Entry *_findEntryCache(fs_fat32_Partition *par, u16 *path) {
 	// printk(screen_log, "fs: fat32: search entry cache: %S\n", path);
 	RBNode *nd = RBTree_find(&par->cache.entryTr, path);
 	fs_fat32_Entry *entry;
-	// printk(screen_log, "->cache node:%p path:%S\n", nd, container(nd, fs_fat32_Entry, cacheNd)->vfsEntry.path);
-	if (nd && !strcmp16((entry = container(nd, fs_fat32_Entry, cacheNd))->vfsEntry.path, path)) {
+	// printk(screen_log, "->cache node:%p path:%S\n", nd, container(nd, fs_fat32_Entry, cacheNd)->vfsEnt.path);
+	if (nd && !strcmp16((entry = container(nd, fs_fat32_Entry, cacheNd))->vfsEnt.path, path)) {
 		// printk(screen_log, "fs: fat32: matched.\n");
 		if (entry->ref++ == 0) 
 			// printk(screen_log, "fs: fat32: remove from free list.\n");
@@ -164,8 +168,8 @@ fs_vfs_Entry *fs_fat32_lookup(fs_vfs_Entry *cur, u16 *name) {
 
 	u16 buf[fs_vfs_maxNameLen];
 	{
-		fs_fat32_Entry *fat32Cur = container(cur, fs_fat32_Entry, vfsEntry), *entry;
-		par = container(fat32Cur->vfsEntry.par, fs_fat32_Partition, par);
+		fs_fat32_Entry *fat32Cur = container(cur, fs_fat32_Entry, vfsEnt), *entry;
+		par = container(fat32Cur->vfsEnt.par, fs_fat32_Partition, par);
 		curClus = fs_fat32_DirEntry_getFstClus(&fat32Cur->dirEntry);
 	}
 	
@@ -184,7 +188,7 @@ fs_vfs_Entry *fs_fat32_lookup(fs_vfs_Entry *cur, u16 *name) {
 	resEnt = _findEntryCache(par, _entryTrPathBuf);
 	RBTree_unlck(&par->cache.entryTr);
 	if (resEnt) {
-		return &resEnt->vfsEntry;
+		return &resEnt->vfsEnt;
 	}
 
 	// printk(screen_log, "fs: fat32: no entry cache.\n");
@@ -241,7 +245,9 @@ fs_vfs_Entry *fs_fat32_lookup(fs_vfs_Entry *cur, u16 *name) {
 	fs_fat32_releaseClusCacheNd(par, clusCache, 0);
 	
 	// set path
-	_joinPath(cur->path, name, resEnt->vfsEntry.path);
+	_joinPath(cur->path, name, resEnt->vfsEnt.path);
+
+	printk(screen_log, "fs: fat32: entry %p: path:%S fileSz:%u\n", resEnt, resEnt->vfsEnt.path, resEnt->dirEntry.fileSz);
 
 	RBTree_lck(&par->cache.entryTr);
 
@@ -250,11 +256,11 @@ fs_vfs_Entry *fs_fat32_lookup(fs_vfs_Entry *cur, u16 *name) {
 	
 	RBTree_unlck(&par->cache.entryTr);
 
-	return &resEnt->vfsEntry;
+	return &resEnt->vfsEnt;
 }
 
 fs_vfs_File *fs_fat32_openFile(fs_vfs_Entry *ent) {
-	fs_fat32_Entry *fat32Ent = container(ent, fs_fat32_Entry, vfsEntry);
+	fs_fat32_Entry *fat32Ent = container(ent, fs_fat32_Entry, vfsEnt);
 	fs_fat32_Partition *par = container(ent->par, fs_fat32_Partition, par);
 	
 	if (fat32Ent->dirEntry.attr & (fs_fat32_DirEntry_attr_Dir | fs_fat32_DirEntry_attr_VolumeId)) {
@@ -272,9 +278,9 @@ fs_vfs_File *fs_fat32_openFile(fs_vfs_Entry *ent) {
 	file->file.ent = ent;
 	file->file.thd = task_current->thread;
 
-	file->clusId = fs_fat32_DirEntry_getFstClus(&fat32Ent->dirEntry);
-	file->clusOff = 0;
-	file->actPtr = 0;
+	file->curClusIdx = fs_fat32_DirEntry_getFstClus(&fat32Ent->dirEntry);
+	file->curClusOff = 0;
+	file->curPtr = 0;
 	file->file.ptr = 0;
 
 	SpinLock_init(&file->lck);
@@ -282,11 +288,13 @@ fs_vfs_File *fs_fat32_openFile(fs_vfs_Entry *ent) {
 	SafeList_insTail(&par->par.dirLst, &file->file.parLstNd);
 	SafeList_insTail(&task_current->thread->dirLst, &file->file.thdLstNd);
 
+	printk(screen_log, "fs: fat32: open file %p. size=%u\n", file, file->file.ent->size);
+
 	return &file->file;
 }
 
 fs_vfs_Dir *fs_fat32_openDir(fs_vfs_Entry *ent) {
-	fs_fat32_Entry *fat32Ent = container(ent, fs_fat32_Entry, vfsEntry);
+	fs_fat32_Entry *fat32Ent = container(ent, fs_fat32_Entry, vfsEnt);
 	fs_fat32_Partition *par = container(ent->par, fs_fat32_Partition, par);
 	if (~fat32Ent->dirEntry.attr & fs_fat32_DirEntry_attr_Dir) {
 		printk(screen_err, "fs: fat32: %S in partition %S is not directory.\n", ent->path, par->par.name);
@@ -302,7 +310,7 @@ fs_vfs_Dir *fs_fat32_openDir(fs_vfs_Entry *ent) {
 	dir->dir.ent = ent;
 	dir->dir.thd = task_current->thread;
 
-	dir->clusId = fs_fat32_DirEntry_getFstClus(&fat32Ent->dirEntry);
+	dir->clusIdx = fs_fat32_DirEntry_getFstClus(&fat32Ent->dirEntry);
 	dir->clusOff = 0;
 	dir->curEnt = NULL;
 	
@@ -320,13 +328,13 @@ int fs_fat32_closeFile(fs_vfs_File *file) {
 	fs_fat32_File *fat32File = container(file, fs_fat32_File, file);
 	SpinLock_lock(&fat32File->lck);
 
-	fs_fat32_Entry *ent = container(fat32File->file.ent, fs_fat32_Entry, vfsEntry);
+	fs_fat32_Entry *ent = container(fat32File->file.ent, fs_fat32_Entry, vfsEnt);
 	fs_fat32_Partition *par = container(file->par, fs_fat32_Partition, par);
 
 	SafeList_del(&par->par.fileLst, &file->parLstNd);
 	SafeList_del(&file->thd->fileLst, &file->thdLstNd);
 
-	return fs_fat32_releaseEntry(&ent->vfsEntry);
+	return fs_fat32_releaseEntry(&ent->vfsEnt);
 }
 
 int fs_fat32_closeDir(fs_vfs_Dir *dir) {
@@ -334,9 +342,9 @@ int fs_fat32_closeDir(fs_vfs_Dir *dir) {
 	fs_fat32_Dir *fat32Dir = container(dir, fs_fat32_Dir, dir);
 	SpinLock_lock(&fat32Dir->lck);
 
-	if (fat32Dir->curEnt) fs_fat32_releaseEntry(&fat32Dir->curEnt->vfsEntry);
+	if (fat32Dir->curEnt) fs_fat32_releaseEntry(&fat32Dir->curEnt->vfsEnt);
 
-	fs_fat32_Entry *ent = container(fat32Dir->dir.ent, fs_fat32_Entry, vfsEntry);
+	fs_fat32_Entry *ent = container(fat32Dir->dir.ent, fs_fat32_Entry, vfsEnt);
 	fs_fat32_Partition *par = container(dir->par, fs_fat32_Partition, par);
 
 	SafeList_del(&par->par.dirLst, &dir->parLstNd);
@@ -344,12 +352,12 @@ int fs_fat32_closeDir(fs_vfs_Dir *dir) {
 
 	// printk(screen_log, "fs: fat32: finish close dir %p\n", dir);
 
-	return fs_fat32_releaseEntry(&ent->vfsEntry);
+	return fs_fat32_releaseEntry(&ent->vfsEnt);
 }
 
 int fs_fat32_releaseEntry(fs_vfs_Entry *entry) {
 	// printk(screen_log, "fs: fat32: release entry %p\n", entry);
-	fs_fat32_Entry *fat32Entry = container(entry, fs_fat32_Entry, vfsEntry);
+	fs_fat32_Entry *fat32Entry = container(entry, fs_fat32_Entry, vfsEnt);
 	fs_fat32_Partition *par = container(entry->par, fs_fat32_Partition, par);
 	int res = res_SUCC;
 
@@ -376,7 +384,7 @@ fs_vfs_Entry *fs_fat32_getRootEntry(fs_Partition *par) {
 	fs_fat32_Entry *root = fat32Par->root;
 	root->ref++;
 
-	return &root->vfsEntry;
+	return &root->vfsEnt;
 }
 
 fs_Partition *fs_fat32_installGptPar(fs_Disk *disk, fs_gpt_ParEntry *entry) {
@@ -403,8 +411,8 @@ fs_Partition *fs_fat32_installGptPar(fs_Disk *disk, fs_gpt_ParEntry *entry) {
 		memset(root, 0, sizeof(fs_fat32_Entry));
 		par->root = root;
 
-		root->vfsEntry.par = (void *)&par->par;
-		root->vfsEntry.flags = fs_vfs_EntryAttr_flags_IsDir;
+		root->vfsEnt.par = (void *)&par->par;
+		root->vfsEnt.flags = fs_vfs_EntryAttr_flags_IsDir;
 		root->ref = 1;
 
 		fs_fat32_DirEntry_setFstClus(&root->dirEntry, par->bootSec.rootClus);
@@ -421,39 +429,208 @@ fs_Partition *fs_fat32_installGptPar(fs_Disk *disk, fs_gpt_ParEntry *entry) {
 	return NULL;
 }
 
+// move curPtr, curClusId, and curClusOff to ptr
+static int _jmpToPtr(fs_fat32_File *file, int alloc) {
+	fs_fat32_Partition *par = container(file->file.par, fs_fat32_Partition, par);
+
+	// extent file size if necessary
+	if (alloc) {
+		register fs_fat32_Entry *ent = container(file->file.ent, fs_fat32_Entry, vfsEnt);
+		ent->dirEntry.fileSz = max(ent->dirEntry.fileSz, file->file.ptr);
+		_syncToVfsEnt(ent);
+	}
+	while (file->curPtr < file->file.ptr) {
+		i64 farest = file->curPtr + (par->bytesPerClus - file->curClusOff);
+		// should jump to next cluster
+		if (farest <= file->file.ptr) {
+			int nxtClus = fs_fat32_getNxtClus(par, file->curClusIdx);
+			if (nxtClus == fs_fat32_ClusEnd && alloc) {
+				nxtClus = fs_fat32_allocClus(par);
+				fs_fat32_setNxtClus(par, file->curClusIdx, nxtClus);
+
+				// write 0 to new cluster
+				fs_fat32_ClusCacheNd *nd = fs_fat32_getClusCacheNd(par, nxtClus);
+				memset(nd->clus, 0, par->bytesPerClus);
+				fs_fat32_releaseClusCacheNd(par, nd, 1);
+			}
+			file->curClusIdx = nxtClus;
+			file->curClusOff = 0;
+			file->curPtr = farest;
+		} else {
+			file->curPtr = file->file.ptr;
+		}
+	}
+}
+
 i64 fs_fat32_FileAPI_seek(fs_vfs_File *file, i64 off, int base) {
 	fs_fat32_File *fat32File = container(file, fs_fat32_File, file);
+	fs_fat32_Partition *par = container(file->par, fs_fat32_Partition, par);
+	fs_fat32_Entry *ent = container(file->ent, fs_fat32_Entry, vfsEnt);
 	
 	SpinLock_lock(&fat32File->lck);
 
 	i64 newPtr;
+
+	// initialize actual ptr
+	fat32File->curPtr = fat32File->curClusOff = 0;
+	fat32File->curClusIdx = fs_fat32_DirEntry_getFstClus(&ent->dirEntry);
 	switch (base) {
 		case fs_vfs_FileAPI_seek_base_End : {
-			// jump to 
+			// jump to end
+			file->ptr = ent->dirEntry.fileSz + off;
+			break;
 		}
 		case fs_vfs_FileAPI_seek_base_Start: {
-			newPtr = 0;
+			file->ptr = off;
 			break;
 		}
 		case fs_vfs_FileAPI_seek_base_Cur : {
-			newPtr = max(0, file->ptr + off);
+			file->ptr += off;
 			break;
 		}
 	}
+	// move as far as possible
+	// boundaries:
+	// 1. EOF
+	// 2. file->ptr
+	while (fat32File->curPtr != file->ptr && fat32File->curPtr < ent->dirEntry.fileSz) {
+		if (fat32File->curClusOff == par->bytesPerClus) {
+			int nxtClus = fs_fat32_getNxtClus(par, fat32File->curClusIdx);
+			printk(screen_log, "fs: fat32: %p: seek: nxtClus:%#010x\n", fat32File, nxtClus);
+			if (nxtClus == fs_fat32_ClusEnd) break;
+			fat32File->curClusIdx = nxtClus;
+			fat32File->curClusOff = 0;
+		}
+		i64 farest = min(
+			ent->dirEntry.fileSz - fat32File->curPtr, 
+			min(fat32File->curPtr + (par->bytesPerClus - fat32File->curClusOff), 
+				file->ptr - fat32File->curPtr));
+		fat32File->curClusOff += farest;
+		fat32File->curPtr += farest;
+	}
 
-	i64 actOff = newPtr - file->ptr;
+	SpinLock_unlock(&fat32File->lck);
 
+	printk(screen_log, "fs: fat32: %p: curClus:(%#010x+%#010x) curPtr:%#010x ptr:%#010x\n", 
+		fat32File,
+		fat32File->curClusIdx,
+		fat32File->curClusOff,
+		fat32File->curPtr,
+		fat32File->file.ptr);
+
+	return file->ptr;
+}
+
+i64 fs_fat32_FileAPI_write(fs_vfs_File *file, void *buf, u64 len) {
+	if (!len) return 0;
+	fs_fat32_File *fat32File = container(file, fs_fat32_File, file);
+	SpinLock_lock(&fat32File->lck);
+
+	// jump to ptr
+	_jmpToPtr(fat32File, 1);
+
+	fs_fat32_Partition *par = container(file->par, fs_fat32_Partition, par);
+
+	i64 acc = 0;
+	// should jump to next cluster
+	if (fat32File->curClusOff == par->bytesPerClus) {
+		i32 nxtClus = fs_fat32_getNxtClus(par, fat32File->curClusIdx);
+		// should allocate new clus
+		if (nxtClus == fs_fat32_ClusEnd) {
+			nxtClus = fs_fat32_allocClus(par);
+			if (!nxtClus) goto end;
+			fs_fat32_setNxtClus(par, fat32File->curClusIdx, nxtClus);
+		}
+		fat32File->curClusIdx = nxtClus;
+		fat32File->curClusOff = 0;
+	}
+	fs_fat32_ClusCacheNd *cache = fs_fat32_getClusCacheNd(par, fat32File->curClusIdx);
+
+	acc = min(par->bytesPerClus - fat32File->curClusOff, len);
+
+	memcpy(buf, cache->clus + fat32File->curClusOff, acc);
+	
+	fs_fat32_releaseClusCacheNd(par, cache, 1);
+
+	fat32File->curClusOff += acc;
+	fat32File->curPtr += acc;
+	fat32File->file.ptr += acc;
+
+	// extent file size
+	{
+		fs_fat32_Entry *ent = container(file->ent, fs_fat32_Entry, vfsEnt);
+		ent->dirEntry.fileSz = max(ent->dirEntry.fileSz, file->ptr);
+		_syncToVfsEnt(ent);
+	}
+	end:
+	SpinLock_unlock(&fat32File->lck);
+
+	printk(screen_log, "fs: fat32: %p: curClus:(%#010x+%#010x) curPtr:%#010x ptr:%#010x\n", 
+		fat32File,
+		fat32File->curClusIdx,
+		fat32File->curClusOff,
+		fat32File->curPtr,
+		fat32File->file.ptr);
+
+	
+	return acc;
+}
+
+// only read at most a cluster
+i64 fs_fat32_FileAPI_read(fs_vfs_File *file, void *buf, u64 len) {
+	if (!len) return 0;
+	fs_fat32_File *fat32File = container(file, fs_fat32_File, file);
+	fs_fat32_Entry *ent = container(file->ent, fs_fat32_Entry, vfsEnt);
+	SpinLock_lock(&fat32File->lck);
+
+	i64 acc = 0;
+
+	// jump to ptr
+	// Jumping out of allocated cluster leads to fat32File->curClusId == fs_fat32_ClusEnd
+	_jmpToPtr(fat32File, 0);
+
+	fs_fat32_Partition *par = container(file->par, fs_fat32_Partition, par);
+	// should jump to next cluster
+	if (fat32File->curClusOff == par->bytesPerClus)
+		fat32File->curClusIdx = fs_fat32_getNxtClus(par, fat32File->curClusIdx),
+		fat32File->curClusOff = 0;
+
+	if (fat32File->curClusIdx == fs_fat32_ClusEnd) goto read_end;
+
+	fs_fat32_ClusCacheNd *cache = fs_fat32_getClusCacheNd(par, fat32File->curClusIdx);
+
+	acc = min(ent->dirEntry.fileSz - fat32File->curPtr, min(len, par->bytesPerClus - fat32File->curClusOff));
+
+	memcpy(cache->clus + fat32File->curClusOff, buf, acc);
+	
+	fs_fat32_releaseClusCacheNd(par, cache, 0);
+
+	fat32File->curClusOff += acc;
+	fat32File->curPtr += acc;
+	fat32File->file.ptr += acc;
+
+	read_end:
+	
+	SpinLock_unlock(&fat32File->lck);
+
+	printk(screen_log, "fs: fat32: %p: curClus:(%#010x+%#010x) curPtr:%#010x ptr:%#010x\n", 
+		fat32File,
+		fat32File->curClusIdx,
+		fat32File->curClusOff,
+		fat32File->curPtr,
+		fat32File->file.ptr);
+	return acc;
 }
  
 fs_vfs_Entry *fs_fat32_DirAPI_nxt(fs_vfs_Dir *dir) {
 	fs_fat32_Dir *fat32Dir = container(dir, fs_fat32_Dir, dir);
 	
 	SpinLock_lock(&fat32Dir->lck);
-	fs_fat32_Entry *ent = container(dir->ent, fs_fat32_Entry, vfsEntry), *resEnt = NULL;
+	fs_fat32_Entry *ent = container(dir->ent, fs_fat32_Entry, vfsEnt), *resEnt = NULL;
 	fs_fat32_Partition *par = container(dir->par, fs_fat32_Partition, par);
 	fs_fat32_ClusCacheNd *cache;
 
-	if (fat32Dir->clusId == fs_fat32_ClusEnd) return NULL;
+	if (fat32Dir->clusIdx == fs_fat32_ClusEnd) return NULL;
 
 	cache = NULL;
 
@@ -463,10 +640,10 @@ fs_vfs_Entry *fs_fat32_DirAPI_nxt(fs_vfs_Dir *dir) {
 	u16 name[fs_vfs_maxNameLen];
 	int nameLen = 0, lEntNum = 0;
 
-	if (fat32Dir->curEnt) fs_fat32_releaseEntry(&fat32Dir->curEnt->vfsEntry);
+	if (fat32Dir->curEnt) fs_fat32_releaseEntry(&fat32Dir->curEnt->vfsEnt);
 
-	while (fat32Dir->clusId != fs_fat32_ClusEnd && !nameLen) {
-		if (cache == NULL) cache = fs_fat32_getClusCacheNd(par, fat32Dir->clusId);
+	while (fat32Dir->clusIdx != fs_fat32_ClusEnd && !nameLen) {
+		if (cache == NULL) cache = fs_fat32_getClusCacheNd(par, fat32Dir->clusIdx);
 
 		for (; fat32Dir->clusOff < par->bytesPerClus && !nameLen; fat32Dir->clusOff += sizeof(fs_fat32_DirEntry)) {
 			fs_fat32_LDirEntry *lEnt = cache->clus + fat32Dir->clusOff;
@@ -494,7 +671,7 @@ fs_vfs_Entry *fs_fat32_DirAPI_nxt(fs_vfs_Dir *dir) {
 			fs_fat32_releaseClusCacheNd(par, cache, 0);
 			cache = NULL;
 			fat32Dir->clusOff = 0;
-			fat32Dir->clusId = fs_fat32_getNxtClus(par, fat32Dir->clusId);
+			fat32Dir->clusIdx = fs_fat32_getNxtClus(par, fat32Dir->clusIdx);
 		}
 		// printk(screen_log, "to clus:%lx+%lx\n", fat32Dir->clusId, fat32Dir->clusOff);
 	}
@@ -504,7 +681,7 @@ fs_vfs_Entry *fs_fat32_DirAPI_nxt(fs_vfs_Dir *dir) {
 
 	RBTree_lck(&par->cache.entryTr);
 
-	_joinPath(ent->vfsEntry.path, name, _entryTrPathBuf);
+	_joinPath(ent->vfsEnt.path, name, _entryTrPathBuf);
 
 	// printk(screen_log, "full path:%S len=%d\n", path, pathLen + nameLen + 1);
 
@@ -512,7 +689,7 @@ fs_vfs_Entry *fs_fat32_DirAPI_nxt(fs_vfs_Dir *dir) {
 	if ((resEnt = _findEntryCache(par, _entryTrPathBuf)) == NULL) {
 		resEnt = _allocEntry(par, sEnt);
 
-		strcpy16(_entryTrPathBuf, resEnt->vfsEntry.path);
+		strcpy16(_entryTrPathBuf, resEnt->vfsEnt.path);
 		
 		_insNewEntryCache(par, resEnt);
 	}
@@ -525,5 +702,5 @@ fs_vfs_Entry *fs_fat32_DirAPI_nxt(fs_vfs_Dir *dir) {
 
 	fat32Dir->curEnt = resEnt;
 
-	return &resEnt->vfsEntry;
+	return &resEnt->vfsEnt;
 }

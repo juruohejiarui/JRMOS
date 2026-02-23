@@ -37,6 +37,9 @@ else
             echo "install-EFI: create test/test.txt"
             sudo touch /mnt/test/test.txt
         fi
+        echo "install-EFI: write test content to test/test.txt"
+        sudo truncate -s 4097 /mnt/test/test.txt
+        sudo sh -c "echo \"This is a test.bro\" >> /mnt/test/test.txt"
         sudo sync
 
         sudo du -h /mnt/

@@ -24,7 +24,7 @@ __always_inline__ int fs_fat32_flushClusCacheNd(fs_fat32_Partition *par, fs_fat3
 	return fs_fat32_writeSec(par, (nd->off - 2) * par->lbaPerClus + par->fstDtSec, par->lbaPerClus, nd->clus);
 }
 
-fs_fat32_ClusCacheNd *fs_fat32_getClusCacheNd(fs_fat32_Partition *par, u64 off);
+fs_fat32_ClusCacheNd *fs_fat32_getClusCacheNd(fs_fat32_Partition *par, u64 idx);
 
 int fs_fat32_releaseClusCacheNd(fs_fat32_Partition *par, fs_fat32_ClusCacheNd *nd, int modi);
 

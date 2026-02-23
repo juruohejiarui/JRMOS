@@ -129,7 +129,7 @@ typedef struct fs_fat32_Cache {
 } fs_fat32_Cache;
 
 typedef struct fs_fat32_Entry {
-	fs_vfs_Entry vfsEntry;
+	fs_vfs_Entry vfsEnt;
 	fs_fat32_DirEntry dirEntry;
 
 	// node on fs_fat32_Cache->entryTr
@@ -146,7 +146,7 @@ typedef struct fs_fat32_File {
 	
 	SpinLock lck;
 
-	u64 clusId, clusOff, actPtr;
+	i64 curClusIdx, curClusOff, curPtr;
 } fs_fat32_File;
 
 typedef struct fs_fat32_Dir {
@@ -154,7 +154,7 @@ typedef struct fs_fat32_Dir {
 
 	SpinLock lck;
 
-    u64 clusId, clusOff;
+    u64 clusIdx, clusOff;
 	
 	fs_fat32_Entry *curEnt;
 } fs_fat32_Dir;

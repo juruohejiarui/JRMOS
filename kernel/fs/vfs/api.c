@@ -66,9 +66,24 @@ fs_vfs_Entry *fs_vfs_lookup(u16 *path) {
     return NULL;
 }
 
+fs_vfs_File *fs_vfs_openFile(fs_vfs_Entry *ent) {
+    fs_Partition *par = ent->par;
+
+    fs_vfs_File *file = par->drv->openFile(ent);
+
+    if (file == NULL) {
+        printk(screen_err, "fs: vfs: failed to open file %S in partition %S\n", ent->path, par->name);
+        return NULL;
+    }
+
+    fs_vfs_releaseEnt(ent);
+
+    return file;
+}
+
 fs_vfs_Dir *fs_vfs_openDir(fs_vfs_Entry *ent) {
     // printk(screen_log, "fs: vfs: open dir %S\n", ent->path);
-    fs_Partition *par = (void *)ent->par;
+    fs_Partition *par = ent->par;
     
     fs_vfs_Dir *dir = par->drv->openDir(ent);
 
@@ -90,4 +105,30 @@ int fs_vfs_closeDir(fs_vfs_Dir *dir) {
 int fs_vfs_releaseEnt(fs_vfs_Entry *ent) {
     fs_vfs_Driver *drv = ent->par->drv;
     return drv->releaseEntry(ent);
+}
+
+i64 fs_vfs_seek(fs_vfs_File *file, i64 off, int base) {
+    return file->api->seek(file, off, base);
+}
+
+u64 fs_vfs_read(fs_vfs_File *file, u8 *buf, u64 len) {
+    u64 tot = 0, acc;
+    do {
+        acc = file->api->read(file, buf, len);
+        tot += acc;
+        len -= acc;
+        buf += acc;
+    } while (acc);
+    return tot;
+}
+
+u64 fs_vfs_write(fs_vfs_File *file, u8 *buf, u64 len) {
+    u64 tot = 0, acc;
+    do {
+        acc = file->api->write(file, buf, len);
+        tot += acc;
+        len -= acc;
+        buf += acc;
+    } while (acc);
+    return tot;
 }

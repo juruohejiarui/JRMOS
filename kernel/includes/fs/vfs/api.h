@@ -16,12 +16,18 @@ void fs_vfs_assignName(fs_Partition *par);
 
 fs_vfs_Entry *fs_vfs_lookup(u16 *path);
 
+fs_vfs_File *fs_vfs_openFile(fs_vfs_Entry *ent);
+
 fs_vfs_Dir *fs_vfs_openDir(fs_vfs_Entry *ent);
 
 int fs_vfs_releaseEnt(fs_vfs_Entry *ent);
 
 int fs_vfs_closeDir(fs_vfs_Dir *dir);
 
+
+i64 fs_vfs_seek(fs_vfs_File *file, i64 off, int base);
+u64 fs_vfs_read(fs_vfs_File *file, u8 *buf, u64 len);
+u64 fs_vfs_write(fs_vfs_File *file, u8 *buf, u64 len);
 
 
 #endif

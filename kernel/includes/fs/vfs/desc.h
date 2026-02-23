@@ -40,7 +40,7 @@ typedef struct fs_vfs_Entry {
 
     u64 flags;
 
-    struct fs_Partition *par;
+    fs_Partition *par;
 } fs_vfs_Entry;
 
 #define fs_vfs_FileAPI_seek_base_Start  0
@@ -49,11 +49,11 @@ typedef struct fs_vfs_Entry {
 
 typedef struct fs_vfs_FileAPI {
     // return offset from current ptr to the new ptr
-    i64 (*seek)(struct fs_vfs_File *file, i64 ptr, int base);
+    i64 (*seek)(fs_vfs_File *file, i64 ptr, int base);
     // return actually number of bytes written to file
-    u64 (*read)(struct fs_vfs_File *file, void *buf, u64 len);
+    i64 (*read)(fs_vfs_File *file, void *buf, u64 len);
     // return actually number of bytes read from file
-    int (*write)(struct fs_vfs_File *file, void *buf, u64 len);
+    i64 (*write)(fs_vfs_File *file, void *buf, u64 len);
 } fs_vfs_FileAPI;
 
 typedef struct fs_vfs_DirAPI {
