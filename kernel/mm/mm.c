@@ -120,10 +120,10 @@ mm_Page *mm_init_allocPage(u64 num, u32 attr) {
     return NULL;
 }
 
-void mm_dbg() {
+void mm_dbg(const char *end) {
     mm_buddy_dbg(0);
     mm_slab_dbg(0);
-    printk(screen_log, "\r");
+    printk(screen_log, end ? end : "\n");
 }
 
 mm_Page *mm_getDesc(u64 phyAddr) {

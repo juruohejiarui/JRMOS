@@ -1,4 +1,5 @@
 #include <init/init.h>
+#include <mm/mm.h>
 #include <fs/vfs/api.h>
 #include <fs/api.h>
 #include <hardware/pci.h>
@@ -6,6 +7,8 @@
 #include <hardware/gpu.h>
 #include <hardware/usb/xhci/api.h>
 #include <screen/screen.h>
+
+Atomic cnt;
 
 void init_testDir(u8 *path) {
 	fs_vfs_Entry *entry;
@@ -22,6 +25,7 @@ void init_testDir(u8 *path) {
 	while ((entry = dir->api->nxt(dir))) {
 		printk(screen_log, "%S\n", entry->path);
 	}
+	Atomic_inc(&cnt);
 }
 
 void init_testFile(u8 *path) {
@@ -39,8 +43,25 @@ void init_testFile(u8 *path) {
 	u8 buf[32];
 	memset(buf, 0, sizeof(buf));
 	u64 off = fs_vfs_seek(file, -15, fs_vfs_FileAPI_seek_base_End);
+	printk(screen_log, "seek off=%lx\n", off);
 	u64 bytes = fs_vfs_read(file, buf, 32);
 	printk(screen_log, "read %d byte(s) from file %s:\n%s\n", bytes, path, buf + 1);
+	off = fs_vfs_seek(file, -19, fs_vfs_FileAPI_seek_base_Cur);
+	printk(screen_log, "seek off=%lx\n", off);
+	bytes = fs_vfs_read(file, buf, 32);
+	printk(screen_log, "read %d byte(s) from file %s:\n%s\n", bytes, path, buf + 1);
+	off = fs_vfs_seek(file, 1000, fs_vfs_FileAPI_seek_base_Cur);
+	printk(screen_log, "seek off=%lx\n", off);
+
+	Atomic_inc(&cnt);
+}
+
+void init_testFs() {
+	task_newSubTask(init_testDir, (u64)"AA", task_attr_Builtin);
+	task_newSubTask(init_testFile, (u64)"AA/test/test.txt", task_attr_Builtin);
+	task_newSubTask(init_testFile, (u64)"AA/EFI/BOOT/test1.txt", task_attr_Builtin);
+
+	while (cnt.value != 3);
 }
 
 void init_init() {	
@@ -63,6 +84,13 @@ void init_init() {
 
 	hw_pci_chk();
 
-	task_newTask(init_testDir, (u64)"AA", task_attr_Builtin);
-	task_newTask(init_testFile, (u64)"AA/test/test.txt", task_attr_Builtin);
+	mm_dbg(NULL);
+	task_newTask(init_testFs, (u64)NULL, task_attr_Builtin);
+
+	
+
+	while (1) {
+		mm_dbg("\r");
+		task_sche_yield();
+	}
 }

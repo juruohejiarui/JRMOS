@@ -45,13 +45,13 @@ int fs_fat32_initParInfo(fs_fat32_Partition *par) {
 __always_inline__ int fs_fat32_ClusCacheNd_cmp(RBNode *a, RBNode *b) {
 	register fs_fat32_ClusCacheNd *ta = container(a, fs_fat32_ClusCacheNd, clusCacheNd),
 		*tb = container(b, fs_fat32_ClusCacheNd, clusCacheNd);
-	return ta->off < tb->off;
+	return ta->idx < tb->idx;
 }
 
 __always_inline__ int fs_fat32_ClusCacheNd_match(RBNode *a, void *b) {
 	register fs_fat32_ClusCacheNd *ta = container(a, fs_fat32_ClusCacheNd, clusCacheNd);
 	register u64 tb = *(u64 *)b;
-	return ta->off == tb ? 0 : (ta->off < tb ? -1 : 1);
+	return ta->idx == tb ? 0 : (ta->idx < tb ? -1 : 1);
 }
 
 __always_inline__ int fs_fat32_FatCacheNd_cmp(RBNode *a, RBNode *b) {

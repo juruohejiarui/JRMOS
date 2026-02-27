@@ -22,6 +22,8 @@ fs_vfs_Dir *fs_vfs_openDir(fs_vfs_Entry *ent);
 
 int fs_vfs_releaseEnt(fs_vfs_Entry *ent);
 
+int fs_vfs_closeFile(fs_vfs_File *file);
+
 int fs_vfs_closeDir(fs_vfs_Dir *dir);
 
 

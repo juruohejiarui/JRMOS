@@ -16,14 +16,6 @@ __always_inline__ void fs_fat32_DirEntry_setFstClus(fs_fat32_DirEntry *dir, u32 
 	dir->fstClusLo = (fstClus & 0xffff);
 }
 
-int fs_fat32_readSec(fs_fat32_Partition *par, u64 off, u64 sz, void *buf);
-int fs_fat32_writeSec(fs_fat32_Partition *par, u64 off, u64 sz, void *buf);
-
-
-__always_inline__ int fs_fat32_flushClusCacheNd(fs_fat32_Partition *par, fs_fat32_ClusCacheNd *nd) {
-	return fs_fat32_writeSec(par, (nd->off - 2) * par->lbaPerClus + par->fstDtSec, par->lbaPerClus, nd->clus);
-}
-
 fs_fat32_ClusCacheNd *fs_fat32_getClusCacheNd(fs_fat32_Partition *par, u64 idx);
 
 int fs_fat32_releaseClusCacheNd(fs_fat32_Partition *par, fs_fat32_ClusCacheNd *nd, int modi);
@@ -62,5 +54,7 @@ i64 fs_fat32_FileAPI_read(fs_vfs_File *file, void *buf, u64 len);
 
 // functions for vfs Dir api
 fs_vfs_Entry *fs_fat32_DirAPI_nxt(fs_vfs_Dir *dir);
+
+void fs_fat32_dbg(fs_fat32_Partition *par);
 
 #endif

@@ -6,5 +6,6 @@
     },
     "makefile.makefilePath": "${workspaceFolder}/kernel/",
     "C_Cpp.intelliSenseEngine": "default",
-    "C_Cpp.enhancedColorization": "enabled"
+    "C_Cpp.enhancedColorization": "enabled",
+    "cmake.sourceDirectory": "/media/psf/Home/Documents/Projects/JRMOS/kernel"
 }

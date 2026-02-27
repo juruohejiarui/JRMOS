@@ -28,6 +28,11 @@ else
             sudo touch /mnt/EFI/BOOT/test2.txt
         fi
 
+        echo "install-EFI: write test content to /mnt/EFI/BOOT/test1.txt"
+        sudo truncate -s 0 /mnt/EFI/BOOT/test1.txt
+        sudo sh -c "echo \"This is a test2. How are you?\" >> /mnt/EFI/BOOT/test1.txt"
+        sudo sync
+
         if [ ! -d "/mnt/test/" ]; then
             echo "install-EFI: create test/"
             sudo mkdir -p /mnt/test/
@@ -39,7 +44,7 @@ else
         fi
         echo "install-EFI: write test content to test/test.txt"
         sudo truncate -s 4097 /mnt/test/test.txt
-        sudo sh -c "echo \"This is a test.bro\" >> /mnt/test/test.txt"
+        sudo sh -c "echo \"This is a test. What can I say?\" >> /mnt/test/test.txt"
         sudo sync
 
         sudo du -h /mnt/

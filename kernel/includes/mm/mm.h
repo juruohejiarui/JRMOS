@@ -5,7 +5,7 @@
 
 int mm_init();
 
-void mm_dbg();
+void mm_dbg(const char *end);
 
 // divide the page group and return the right part of the original group
 // the group should not be in any list when calling this function
@@ -17,7 +17,7 @@ u64 mm_getPhyAddr(mm_Page *desc);
 mm_Page *mm_init_allocPage(u64 num, u32 attr);
 
 int mm_slab_init();
-void mm_slab_dbg();
+void mm_slab_dbg(int detail);
 
 __always_inline__ int mm_slabRecord_comparator(RBNode *a, RBNode *b) {
     mm_SlabRecord *ta = container(a, mm_SlabRecord, rbNd),

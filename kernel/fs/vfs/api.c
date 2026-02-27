@@ -98,6 +98,10 @@ fs_vfs_Dir *fs_vfs_openDir(fs_vfs_Entry *ent) {
     return dir;
 }
 
+int fs_vfs_closeFile(fs_vfs_File *file) {
+    return mm_kfree(file, 0);
+}
+
 int fs_vfs_closeDir(fs_vfs_Dir *dir) {
     return mm_kfree(dir, 0);
 }

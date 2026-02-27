@@ -1,6 +1,5 @@
 #include <lib/spinlock.h>
 #include <task/api.h>
-#include <cpu/api.h>
 
 void SpinLock_lockMask(SpinLock *lock) {
 	task_sche_msk();

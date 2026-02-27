@@ -496,7 +496,6 @@ i64 fs_fat32_FileAPI_seek(fs_vfs_File *file, i64 off, int base) {
 	while (fat32File->curPtr != file->ptr && fat32File->curPtr < ent->dirEntry.fileSz) {
 		if (fat32File->curClusOff == par->bytesPerClus) {
 			int nxtClus = fs_fat32_getNxtClus(par, fat32File->curClusIdx);
-			printk(screen_log, "fs: fat32: %p: seek: nxtClus:%#010x\n", fat32File, nxtClus);
 			if (nxtClus == fs_fat32_ClusEnd) break;
 			fat32File->curClusIdx = nxtClus;
 			fat32File->curClusOff = 0;
@@ -511,12 +510,12 @@ i64 fs_fat32_FileAPI_seek(fs_vfs_File *file, i64 off, int base) {
 
 	SpinLock_unlock(&fat32File->lck);
 
-	printk(screen_log, "fs: fat32: %p: curClus:(%#010x+%#010x) curPtr:%#010x ptr:%#010x\n", 
-		fat32File,
-		fat32File->curClusIdx,
-		fat32File->curClusOff,
-		fat32File->curPtr,
-		fat32File->file.ptr);
+	// printk(screen_log, "fs: fat32: %p: seek(): curClus:(%#010x+%#010x) curPtr:%#010x ptr:%#010x\n", 
+	// 	fat32File,
+	// 	fat32File->curClusIdx,
+	// 	fat32File->curClusOff,
+	// 	fat32File->curPtr,
+	// 	fat32File->file.ptr);
 
 	return file->ptr;
 }
@@ -565,12 +564,12 @@ i64 fs_fat32_FileAPI_write(fs_vfs_File *file, void *buf, u64 len) {
 	end:
 	SpinLock_unlock(&fat32File->lck);
 
-	printk(screen_log, "fs: fat32: %p: curClus:(%#010x+%#010x) curPtr:%#010x ptr:%#010x\n", 
-		fat32File,
-		fat32File->curClusIdx,
-		fat32File->curClusOff,
-		fat32File->curPtr,
-		fat32File->file.ptr);
+	// printk(screen_log, "fs: fat32: %p: write(): curClus:(%#010x+%#010x) curPtr:%#010x ptr:%#010x\n", 
+	// 	fat32File,
+	// 	fat32File->curClusIdx,
+	// 	fat32File->curClusOff,
+	// 	fat32File->curPtr,
+	// 	fat32File->file.ptr);
 
 	
 	return acc;
@@ -613,12 +612,12 @@ i64 fs_fat32_FileAPI_read(fs_vfs_File *file, void *buf, u64 len) {
 	
 	SpinLock_unlock(&fat32File->lck);
 
-	printk(screen_log, "fs: fat32: %p: curClus:(%#010x+%#010x) curPtr:%#010x ptr:%#010x\n", 
-		fat32File,
-		fat32File->curClusIdx,
-		fat32File->curClusOff,
-		fat32File->curPtr,
-		fat32File->file.ptr);
+	// printk(screen_log, "fs: fat32: %p: read(): curClus:(%#010x+%#010x) curPtr:%#010x ptr:%#010x\n", 
+	// 	fat32File,
+	// 	fat32File->curClusIdx,
+	// 	fat32File->curClusOff,
+	// 	fat32File->curPtr,
+	// 	fat32File->file.ptr);
 	return acc;
 }
  

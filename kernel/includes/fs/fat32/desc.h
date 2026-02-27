@@ -92,7 +92,7 @@ typedef struct fs_fat32_ClusCacheNd {
 	RBNode clusCacheNd;
 	ListNode freeClusCacheNd;
 	// offset (Cluster)
-	u64 off;
+	u64 idx;
 
 	#define fs_fat32_ClusCacheNd_MaxModiCnt 128
 	/// @brief when count of modify reach fs_fs_fat32_ClusCacheNd_MaxModiCnt, this contents of this cache will be
@@ -113,17 +113,17 @@ typedef struct fs_fat32_FatCacheNd {
 
 typedef struct fs_fat32_Cache {
 	RBTree entryTr;
-	#define fs_fat32_FreeEntryCache_MaxNum 64
+	#define fs_fat32_FreeEntryCache_MaxNum 32
 	ListNode freeEntryLst;
 	u64 freeEntryNum;
 
 
 	RBTree fatTr;
-	#define fs_fat32_FatCache_MaxNum 64
+	#define fs_fat32_FatCache_MaxNum 32
 	u64 fatNum;
 
 	RBTree clusCacheTr;
-	#define fs_fat32_FreeClusCache_MaxNum	64
+	#define fs_fat32_FreeClusCache_MaxNum	32
 	ListNode freeClusCacheLst;
 	u64 freeClusCacheNum;
 } fs_fat32_Cache;
