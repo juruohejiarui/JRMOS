@@ -7,6 +7,10 @@
 #include <cpu/desc.h>
 #include <task/api.h>
 
+cpu_definevar(hal_intr_TssBlk, hal_intr_tss);
+cpu_definevar(hal_intr_IdtBlk, hal_intr_idt);
+cpu_definevar(intr_Desc *[0x40], hal_intr_desc);
+
 void hal_intr_setTss(hal_intr_TSS * tss,
     u64 rsp0, u64 rsp1, u64 rsp2, u64 ist1, u64 ist2, u64 ist3, u64 ist4, u64 ist5, u64 ist6, u64 ist7) {
     tss->rsp0 = rsp0;
@@ -36,8 +40,9 @@ void hal_intr_setTssItem(u64 idx, hal_intr_TSS *tss) {
 }
 
 void hal_intr_dispatcher(u64 rsp, u64 irqId) {
+    // printk(screen_warn, "intr: cpu:%d irq:%x\t", cpu_getvar(cpu_id), irqId);
     intr_Desc *intr = &hal_intr_desc[irqId - 0x20];
-    if (intr->handler == NULL) {
+    if (__unlikely__(intr->handler == NULL)) {
         printk(screen_err, "intr: no handler for intr #%#lx\n", irqId);
     } else intr->handler(intr->param);
     if (intr->ctrl != NULL && intr->ctrl->ack != NULL) intr->ctrl->ack(intr);
@@ -64,7 +69,7 @@ void (*hal_intr_entryList[24])(void) = {
 intr_Desc hal_intr_desc[24];
 
 void hal_intr_setInCpuDesc(intr_Desc *desc, u32 intrNum) {
-    for (int i = 0; i < intrNum; i++) cpu_desc[desc[i].cpuId].hal.intrDesc[desc[i].vecId - 0x40] = &desc[i];
+    for (int i = 0; i < intrNum; i++) cpu_setCpuVar(desc[i].cpuId, hal_intr_desc[desc[i].vecId - 0x40], &desc[i]);
 }
 
 int hal_intr_init() {
@@ -72,7 +77,7 @@ int hal_intr_init() {
 
     // set trap gates
     hal_intr_setTss((hal_intr_TSS *)hal_init_tss,
-        (u64)hal_init_stk + 32768, (u64)hal_init_stk + 32768, (u64)hal_init_stk + 32768,
+        (u64)hal_init_stk + task_krlStkSize, (u64)hal_init_stk + task_krlStkSize, (u64)hal_init_stk + task_krlStkSize,
         0xffff800000007c00, 0xffff800000007c00, 0xffff800000007c00, 0xffff800000007c00, 
         0xffff800000007c00, 0xffff800000007c00, 0xffff800000007c00);
 
@@ -86,9 +91,15 @@ int hal_intr_init() {
     return res_SUCC;
 }
 
+int hal_intr_initCpuVar(int idx) {
+    memset(cpu_cpuPtr(idx, intr_msk[0]), 0xff, sizeof(cpu_var(intr_msk)));
+    cpu_setCpuVar(idx, intr_msk[1], 0);
+    SpinLock_init(cpu_cpuPtr(idx, intr_mskLck));
+    cpu_setCpuVar(idx, intr_freeCnt, 64);
+    cpu_setCpuVar(idx, intr_useCnt, 3 * 64);
+}
 int hal_intr_initAP() {
-    cpu_Desc *desc = &cpu_desc[task_current->cpuId];
-    hal_intr_setTr(desc->hal.trIdx);
+    hal_intr_setTr(cpu_ptr(hal_intr_tss)->trIdx);
     
     if (hal_hw_apic_initAP() == res_FAIL) return res_FAIL;
     return res_SUCC;

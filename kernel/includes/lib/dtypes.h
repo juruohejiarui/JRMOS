@@ -18,8 +18,17 @@ typedef double f64;
 #define __always_inline__ static inline __attribute__ ((always_inline))
 #endif
 
+
 #ifndef __noinline__
 #define __noinline__ __attribute__ ((noinline))
+#endif
+
+#ifndef __likely__
+#define __likely__(x) __builtin_expect(!!(x), 1)
+#endif
+
+#ifndef __unlikely__
+#define __unlikely__(x) __builtin_expect(!!(x), 0)
 #endif
 
 #define NULL ((void *)0)

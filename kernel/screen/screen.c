@@ -307,7 +307,7 @@ void putchar(u64 col, char ch) {
 static void _printStr(u64 col, const char *str, int len) {
     // close the interrupt if it is open now
 	u64 prevState = intr_state();
-	if (prevState) intr_mask();
+	intr_mask();
 	SpinLock_lock(&_printLck);
     while (len--) putchar(col, *str++);
 	SpinLock_unlock(&_printLck);

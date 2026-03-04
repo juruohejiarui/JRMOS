@@ -59,7 +59,6 @@ int hw_pci_chk() {
 	SafeList_enum(&hw_pci_devLst, pciDevNd) {
 		hw_pci_Dev *dev = container(pciDevNd, hw_pci_Dev, lst);
 		// scan drivers
-		hw_Driver *drv;
 		SafeList_enum(&hw_drvLst, drvNd) {
 			hw_Driver *drv = container(drvNd, hw_Driver, lst);
 			// find one driver

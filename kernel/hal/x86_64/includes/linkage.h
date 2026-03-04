@@ -17,7 +17,6 @@
 
 #define SYMBOL_NAME_LABEL(X) X##:
 
-
 /*
 
 */

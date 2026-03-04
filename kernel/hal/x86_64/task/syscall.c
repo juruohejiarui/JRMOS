@@ -16,10 +16,10 @@ int hal_task_syscall_toUsr(void (*entry)(u64), u64 param) {
 	// @todo allocation of user stack
 	void *usrStkPtr = mm_mmap(task_usrStkSize, mm_Attr_User | mm_Attr_Writable, NULL, 0);
 
-	task_current->hal.usrStkTop = (u64)usrStkPtr + task_usrStkSize;
-	task_current->hal.usrRsp = (u64)usrStkPtr + task_usrStkSize;
+	task_cur->hal.usrStkTop = (u64)usrStkPtr + task_usrStkSize;
+	task_cur->hal.usrRsp = (u64)usrStkPtr + task_usrStkSize;
 
-	printk(screen_log, "usrStkPtr:%p~%p\n", usrStkPtr, task_current->hal.usrRsp);
+	printk(screen_log, "usrStkPtr:%p~%p\n", usrStkPtr, task_cur->hal.usrRsp);
 
 
 	// copy code to user space if necessary
@@ -36,7 +36,7 @@ int hal_task_syscall_toUsr(void (*entry)(u64), u64 param) {
 		"movq %%rax, %%rsp	\n\t"
 		"sysretq			\n\t"
 		:
-		: "a"(task_current->hal.usrRsp), "c"((u64)entry), "D"(param)
+		: "a"(task_cur->hal.usrRsp), "c"((u64)entry), "D"(param)
 		: "memory", "r11"
 	);
 	return res_SUCC;
@@ -53,8 +53,6 @@ int hal_task_syscall_init() {
 
 	// enable systemcall
 	hal_hw_writeMsr(hal_msr_IA32_EFER, hal_hw_readMsr(hal_msr_IA32_EFER) | 0x1);
-
-	hal_cpu_setvar(hal.curKrlStk, (u64)task_union(task_current)->krlStk);
 
 	return res_SUCC;
 }

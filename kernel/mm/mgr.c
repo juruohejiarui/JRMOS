@@ -69,7 +69,7 @@ static mm_MapBlkInfo *_findMap(mm_MapInfo *mem, void *addr) {
 }
 
 mm_MapBlkInfo *mm_findMap(void *addr) {
-    mm_MapInfo *mem = &task_current->thread->mem.mapInfo;
+    mm_MapInfo *mem = &task_cur->thread->mem.mapInfo;
     SpinLock_lockMask(&mem->mapLck);
     register mm_MapBlkInfo *bst = _findMap(mem, addr);
     SpinLock_unlockMask(&mem->mapLck);
@@ -78,7 +78,7 @@ mm_MapBlkInfo *mm_findMap(void *addr) {
 
 __always_inline__ void *_align(void *st, u64 attr) { return (void *)upAlign((u64)st, (attr & mm_Attr_Large ? Page_2MSize : Page_4KSize)); }
 void *mm_mmap(u64 size, u64 attr, void *st, u64 pAddr) {
-    mm_MapInfo *mem = &task_current->thread->mem.mapInfo;
+    mm_MapInfo *mem = &task_cur->thread->mem.mapInfo;
     // align to 4K
     st = _align(st, attr);
     size = (u64)_align((void *)size, attr);
@@ -110,19 +110,19 @@ void *mm_mmap(u64 size, u64 attr, void *st, u64 pAddr) {
     
     SpinLock_unlockMask(&mem->mapLck);
 
-    printk(screen_log, "mm: #%d: mem_mmap: addr:%p\n", task_current->pid, st);
+    printk(screen_log, "mm: #%d: mem_mmap: addr:%p\n", task_cur->pid, st);
 
     return st;
 }
 
 int mm_munmap(void *addr, u64 size) {
-    mm_MapInfo *mem = &task_current->thread->mem.mapInfo;
+    mm_MapInfo *mem = &task_cur->thread->mem.mapInfo;
     void *addrEd = addr + size;
     int res = res_SUCC;
     SpinLock_lockMask(&mem->mapLck);
     mm_MapBlkInfo *blk = _findMap(mem, addr);
     if (blk == NULL || blk->st != addr || blk->ed != addrEd) {
-        printk(screen_err, "mem: #%5d: mem_unmap: addr:%#018lx size:%#018lx\n", task_current->pid, addr, size);
+        printk(screen_err, "mem: #%5d: mem_unmap: addr:%#018lx size:%#018lx\n", task_cur->pid, addr, size);
         goto mm_munmap_failed;
     }
     // delete node from rbtree

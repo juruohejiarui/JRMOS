@@ -9,12 +9,7 @@
 #else
 #error No definition of task_getLevel() for this arch
 #endif
-
-#ifdef HAL_TASK_CURRENT
-#define task_current hal_task_current
-#else
-#error No definition of task_current() for this arch!
-#endif
+#define task_cur cpu_getvar(task_curTsk)
 
 #define task_union(taskStruct) ((task_Union *)(taskStruct))
 
@@ -26,7 +21,11 @@ void task_sche_enable();
 void task_sche_disable();
 int task_sche_getState();
 
-void task_sche_updCurState();
+__always_inline__ void task_sche_updCurState() {
+    register u64 tmp = task_sche_cfsTbl[task_cur->priority];
+    task_cur->vRuntime += tmp;
+    task_cur->state |= task_state_NeedSchedule;
+}
 
 void task_sche_updState();
 
@@ -48,9 +47,9 @@ void task_sche_finishReq(task_TaskStruct *tsk);
 
 void task_sche_preempt(task_TaskStruct *task);
 
-__always_inline__ void task_sche_msk() { Atomic_inc(cpu_getvar(scheMsk)); }
+__always_inline__ void task_sche_msk() { Atomic_inc(cpu_ptr(task_scheMsk)); }
 
-__always_inline__ void task_sche_unmsk() { Atomic_dec(cpu_getvar(scheMsk)); }
+__always_inline__ void task_sche_unmsk() { Atomic_dec(cpu_ptr(task_scheMsk)); }
 
 void task_sche();
 

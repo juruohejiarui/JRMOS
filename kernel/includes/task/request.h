@@ -27,6 +27,6 @@ __always_inline__ int task_Request_isFinished(task_Request *req) {
 
 // give up all the request, must guarantee that those request will not be responsed
 __always_inline__ void task_Request_giveUp() {
-	task_current->reqWait.value = 0;
+	task_cur->reqWait.value = 0;
 }
 #endif 

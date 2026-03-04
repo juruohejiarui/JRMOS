@@ -50,9 +50,10 @@ debug(){
 			-device usb-kbd \
 			-device usb-mouse \
 			-m 512M \
-			-D b.log \
+			-D qemu.log \
+			-no-reboot \
 			-d \
-				int,trace:usb_xhci_run,guest_errors \
+				trace:usb_xhci_run,guest_errors \
 			-smp 4"
 
 

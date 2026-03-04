@@ -126,7 +126,7 @@ void hw_usb_xhci_uninstallDev(hw_usb_xhci_Device *dev) {
 }
 
 void hw_usb_xhci_devMgrTsk(hw_usb_xhci_Device *dev) {
-	printk(screen_log, "hw: xhci: device manager task %ld for device %p under host %p\n", task_current->pid, dev, dev->host);
+	printk(screen_log, "hw: xhci: device manager task %ld for device %p under host %p\n", task_cur->pid, dev, dev->host);
 	if (hw_usb_xhci_devInit(dev) == res_FAIL) {
 		printk(screen_err, "hw: xhci: device manager task for device %p failed to initialize\n", dev);
 		hw_usb_xhci_uninstallDev(dev);

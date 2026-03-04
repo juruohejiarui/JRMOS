@@ -37,13 +37,20 @@ SECTIONS
 		
 		mm_symbol_edata = .;
 	}
+	. = ALIGN(8);
+	.data.percpu :
+	{
+		cpu_symbol_percpu = .;
+		*(.data.percpu)
+		cpu_symbol_epercpu = .;
+	}
+	. = ALIGN(32768);
+	.data.hal_init_stk : { *(.data.hal_init_stk) }
 	.rodata : {
 		mm_symbol_rodata = .;
 		*(.rodata)
 		mm_symbol_erodata = .;
 	}
-	. = ALIGN(32768);
-	.data.hal_init_stk : { *(.data.hal_init_stk) }
 	.bss :
 	{
 		mm_symbol_bss = .;

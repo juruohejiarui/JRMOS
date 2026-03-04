@@ -2,7 +2,7 @@
 #include <screen/screen.h>
 
 void task_Request_init(task_Request *req, u64 flags) {
-	req->src = task_current;
+	req->src = task_cur;
 	req->flags = flags;
 	req->stage.value = task_Request_stage_Wait;
 	hal_hw_mfence();

@@ -39,7 +39,7 @@ u64 hal_init_testUsr_recur(u64 dep, u64 lim) {
 u64 hal_init_test(u64 param) {
 	task_signal_setHandler(task_Signal_Int, task_exit, -1);
 	for (int i = 0; i < param * 100; i++) {
-		if (i == 11 * param) task_signal_send(task_current, task_Signal_Int);
+		if (i == 11 * param) task_signal_send(task_cur, task_Signal_Int);
 		task_sche_yield();
 	}
 	return 0;
@@ -98,7 +98,7 @@ void hal_init_init() {
 	if (task_syscall_init() == res_FAIL) while (1) hal_hw_hlt();
 
 	task_sche_enable();
-
+	
 	intr_unmask();
 
 	task_sche_freeMgrTsk = task_newSubTask(task_freeMgr, 0, task_attr_Builtin);
@@ -113,20 +113,27 @@ void hal_init_init() {
 }
 
 void hal_init_initAP() {
-	hal_hw_writeMsr(hal_msr_IA32_GS_BASE, (u64)&cpu_desc[task_current->cpuId]);
+	{
+		u64 rsp;
+		__asm__ volatile ("movq %%rsp, %0" : "=r"(rsp) : : "memory");
+		task_TaskStruct *tsk = (task_TaskStruct *)(rsp & ~(task_krlStkSize - 1));
+		hal_hw_writeMsr(hal_msr_IA32_GS_BASE, (u64)cpu_bsAddr[tsk->cpuId]);
+		hal_hw_writeMsr(hal_msr_IA32_KERNEL_GS_BASE, 0);
+	}
+
 	if (hal_intr_initAP() == res_FAIL) while (1) hal_hw_hlt();
 
 	task_initIdle();
-
+	
 	if (task_syscall_init() == res_FAIL) while (1) hal_hw_hlt();
 
 	intr_unmask();
 
-	hal_cpu_setvar(state, cpu_Desc_state_Active);
+	hal_cpu_setvar(cpu_state, cpu_Desc_state_Active);
 
 	hal_cpu_chk();
 
-	// printk(screen_log, "init: cpu #%d initialized\n", task_current->cpuId);
+	// printk(screen_log, "init: cpu #%d initialized\n", task_cur->cpuId);
 	hal_hw_mfence();
 
 	while (1) {

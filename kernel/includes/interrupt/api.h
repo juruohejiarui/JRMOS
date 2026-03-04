@@ -36,6 +36,8 @@ int intr_free(intr_Desc *desc, int intrNum);
 
 int intr_init();
 
+int intr_initCpuVar(int idx);
+
 __always_inline__ int intr_enable(intr_Desc *desc) {
 	return desc->ctrl->enable(desc);
 }

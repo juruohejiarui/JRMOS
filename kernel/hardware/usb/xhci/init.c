@@ -175,7 +175,7 @@ __always_inline__ int _initHost(hw_usb_xhci_Host *host) {
 		hw_pci_MsixTbl *tbl = hw_pci_getMsixTbl(msix, host->pci.cfg);
 		
 		printk(screen_log, "hw: xhci: host %p msixtbl:%p vecNum:%d msgCtrl:%#010x\n", host, tbl, vecNum, msix->msgCtrl);
-
+		hw_pci_disableMsixAll(host->msixCap, host->pci.cfg, NULL, 0);
 		for (int i = 0; i < host->intrNum; i++) {
 			hw_pci_initIntr(host->intr + i, hw_usb_xhci_msiHandler, (u64)host | i, "xhci msix");
 		}

@@ -108,6 +108,8 @@ int hw_pci_enableMsiAll(hw_pci_MsiCap *cap, intr_Desc *desc, u64 intrNum) {
 
 int hw_pci_enableMsixAll(hw_pci_MsixCap *cap, hw_pci_Cfg *cfg, intr_Desc *desc, u64 intrNum) {
     hw_pci_MsixTbl *tbl = hw_pci_getMsixTbl(cap, cfg);
+    bit_set0_16(&cap->msgCtrl, 15);
+    hal_hw_mfence();
     for (int i = 0; i < intrNum; i++) 
         if ((tbl[i].vecCtrl & 1) && hw_pci_enableMsix(cap, cfg, &desc[i], i) == res_FAIL) return res_FAIL;
     bit_set1_16(&cap->msgCtrl, 15);
@@ -123,6 +125,7 @@ int hw_pci_disableMsiAll(hw_pci_MsiCap *cap, intr_Desc *desc, u64 intrNum) {
 }
 
 int hw_pci_disableMsixAll(hw_pci_MsixCap *cap, hw_pci_Cfg *cfg, intr_Desc *desc, u64 intrNum) {
+    bit_set0_16(&cap->msgCtrl, 15);
     bit_set1_16(&cap->msgCtrl, 14);
     hw_pci_MsixTbl *tbl = hw_pci_getMsixTbl(cap, cfg);
     for (int i = 0; i < intrNum; i++) 

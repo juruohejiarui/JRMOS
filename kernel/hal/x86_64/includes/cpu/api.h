@@ -5,23 +5,53 @@
 #include <hal/hardware/apic.h>
 
 #define hal_cpu_getvar(name) ({ \
-    __typeof__(((cpu_Desc *)NULL)->name) val; \
+    __typeof__(cpu_var(name)) val; \
     __asm__ volatile ( \
         "mov %%gs:(%1), %0" \
         : "=r" (val) \
-        : "r" ((u64)&(((cpu_Desc *)NULL)->name)) \
+        : "r" (cpu_varOffset(name)) \
+        : "memory" \
     ); \
-	val; \
+    val; \
 })
 
+#define hal_cpu_getCpuVar(idx, name) ({ \
+    __typeof__(cpu_var(name)) val; \
+    __asm__ volatile ( \
+        "mov (%1), %0" \
+        : "=r" (val) \
+        : "r"((u64)cpu_bsAddr[idx] + cpu_varOffset(name)) \
+        : "memory" \
+    ); \
+    val; \
+})
 
 #define hal_cpu_setvar(name, val) ({ \
     __asm__ volatile ( \
         "mov %1, %%gs:(%0)" \
         : \
-        : "r" ((u64)&(((cpu_Desc *)NULL)->name)), "r" (val) \
+        : "r" (cpu_varOffset(name)), "r" (val) \
+        : "memory" \
     ); \
 })
+
+#define hal_cpu_setCpuVar(idx, name, val) ({ \
+    __asm__ volatile ( \
+        "mov %1, (%0)" \
+        : \
+        : "r"((u64)cpu_bsAddr[idx] + cpu_varOffset(name)), "r" (val) \
+        : "memory" \
+    ); \
+})
+
+#define hal_cpu_ptr(name) \
+    ((__typeof__(cpu_var(name))*) \
+        ((u64)cpu_getvar(cpu_bsAddr) + cpu_varOffset(name)))
+
+#define hal_cpu_cpuPtr(idx, name) \
+    ((__typeof__(cpu_var(name))*) \
+        ((u64)cpu_bsAddr[idx] + cpu_varOffset(name)))
+
 
 int hal_cpu_init();
 

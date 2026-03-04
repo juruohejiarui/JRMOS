@@ -51,14 +51,14 @@ void _backtrace(hal_intr_PtReg *regs) {
 
 	printk(screen_err, "====================== Task Struct Information =====================\n");
 	printk(screen_err, "regs->rsp:%p,current->thread->rsp:%p,current:%p,current->tss->rsp0:%p\n",
-		regs->rsp, task_current->hal.rsp, task_current, task_current->hal.tss.rsp0);
+		regs->rsp, task_cur->hal.rsp, task_cur, task_cur->hal.tss.rsp0);
 	printk(screen_err, "====================== Kernel Stack Backtrace ======================\n");
 
 	for(i = 0;i < 10;i++)
 	{
 		if (_lookupKallsyms(ret_address, i))
 			break; 
-		if ((u64)rbp < (u64)regs->rsp || (u64)rbp > task_current->hal.tss.rsp0)
+		if ((u64)rbp < (u64)regs->rsp || (u64)rbp > task_cur->hal.tss.rsp0)
 			break;
 
 		ret_address = *(rbp + 1);
@@ -68,7 +68,7 @@ void _backtrace(hal_intr_PtReg *regs) {
 }
 
 static void _printRegs(u64 rsp) {
-	printk(screen_log, "proc #%d task #%d registers: \n", task_current->cpuId, task_current->pid);
+	printk(screen_log, "proc #%d task #%d registers: \n", task_cur->cpuId, task_cur->pid);
 	for (int i = 0; i < sizeof(hal_intr_PtReg) / sizeof(u64); i++)
 		printk(screen_log, "%4s=%p%c", _regName[i], *(u64 *)(rsp + i * 8), ((i + 1) % 8 == 0 || i == sizeof(hal_intr_PtReg) / sizeof(u64) - 1) ? '\n' : ' ');
 	// print msr
@@ -79,7 +79,7 @@ static void _printRegs(u64 rsp) {
 	printk(screen_log, "\n");
 	mm_buddy_dbg(0);
 	printk(screen_log, "\n");
-	printk(screen_log, "user stack %p~%p\n", task_current->hal.usrStkTop - task_usrStkSize, task_current->hal.usrStkTop);
+	printk(screen_log, "user stack %p~%p\n", task_cur->hal.usrStkTop - task_usrStkSize, task_cur->hal.usrStkTop);
 	_backtrace((hal_intr_PtReg *)rsp);
 }
 
@@ -263,7 +263,7 @@ void hal_intr_doPageFault(u64 rsp, u64 errorCode) {
 	mm_MapBlkInfo *mapInfo = mm_findMap((void *)cr2);
 	// mm_MapBlkInfo *mapInfo = NULL;
 	if (mapInfo && mapInfo->st <= (void *)cr2) {
-		printk(screen_warn, "trap: #%d,%p: need allocate cr2:%p\n", task_current->pid, task_current, cr2);
+		printk(screen_warn, "trap: #%d,%p: need allocate cr2:%p\n", task_cur->pid, task_cur, cr2);
 		u64 pAddr;
 		if (mapInfo->attr & mm_Attr_Fixed) {
 			pAddr = mapInfo->pAddr + ((u64)cr2 - (u64)mapInfo->st);

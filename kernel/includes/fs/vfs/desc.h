@@ -75,7 +75,7 @@ typedef struct fs_vfs_File {
 } fs_vfs_File;
 
 // should be created with kmalloc(..., 0, drv->closeDir)
-typedef struct fs_vfs_Dir {
+struct fs_vfs_Dir {
     fs_vfs_Entry *ent;
     fs_vfs_DirAPI *api;
     
@@ -84,11 +84,9 @@ typedef struct fs_vfs_Dir {
     ListNode thdLstNd, parLstNd;
 
     task_ThreadStruct *thd;
-} fs_vfs_Dir;
+};
 
-typedef struct fs_vfs_Driver fs_vfs_Driver;
-
-typedef struct fs_vfs_Driver {
+struct fs_vfs_Driver {
 	char name[fs_vfs_maxNameLen];
     // create a new entry (sub entry) unber CUR
 	fs_vfs_Entry *(*lookup)(fs_vfs_Entry *cur, u16 *name);
@@ -124,7 +122,7 @@ typedef struct fs_vfs_Driver {
     ListNode drvLstNd;
 
     SafeList parLst;
-} fs_vfs_Driver;
+};
 
 extern SafeList fs_vfs_drvLst;
 

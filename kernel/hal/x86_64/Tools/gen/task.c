@@ -34,16 +34,16 @@ int main() {
 	fwrite(buf, strlen(buf), 1, file);
 
 	sprintf(buf,
-		"#define task_usrStkSize %#lx\n"
+		"#define task_usrStkSize %#llx\n"
 		"#define task_krlStkSize %#lx\n\n",
 		task_usrStkSize,
 		task_krlStkSize);
 	fwrite(buf, strlen(buf), 1, file);
 
 	sprintf(buf, 
-		"#define task_state_Running			%#lx\n"
-		"#define task_state_NeedSchedule	%#lx\n"
-		"#define task_state_Idle			%#lx\n\n",
+		"#define task_state_Running			%#x\n"
+		"#define task_state_NeedSchedule	%#x\n"
+		"#define task_state_Idle			%#x\n\n",
 		task_state_Running,
 		task_state_NeedSchedule,
 		task_state_Idle);

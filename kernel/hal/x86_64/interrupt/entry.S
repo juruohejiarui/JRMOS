@@ -1,9 +1,12 @@
 #include <hal/linkage.h>
-#include <hal/cpu/genasm.h>
+#include <cpu/define.h>
 #include <hal/task/genasm.h>
 #include <hal/interrupt/genasm.h>
 
 .global task_sche_state
+.global cpu_symbol_percpu
+.global cpu_var(task_scheMsk)
+.global cpu_var(softirq_flag)
 
 ENTRY(hal_intr_setTr)
     movw %di, %ax
@@ -14,7 +17,7 @@ ENTRY(hal_intr_setTr)
     retq
 
 ENTRY(hal_intr_chkSwapgs)
-    bt $63, %rdi
+    btq $63, %rdi
     jc hal_intr_chkSwapgs_end
     swapgs
 hal_intr_chkSwapgs_end:
@@ -57,8 +60,10 @@ ENTRY(hal_intr_retFromIntr)
     jz hal_intr_trySchedule
     callq task_signal_scan
 hal_intr_trySchedule:
-    movq %gs:cpu_Desc_scheMsk, %rax
-    movq (%rax), %rax
+    leaq cpu_var(task_scheMsk)(%rip), %rax
+    leaq cpu_symbol_percpu(%rip), %rcx
+    subq %rcx, %rax
+    movq %gs:(%rax), %rax
     testq %rax, %rax
     jnz hal_intr_endSchedule
     movq %rsp, %rax
@@ -66,15 +71,16 @@ hal_intr_trySchedule:
 	movq task_TaskStruct_state(%rax), %rax
     testq $1, %rax    // if %rax == task_state_Running
     jz hal_intr_endSchedule
-    leaq task_sche(%rip), %rax
-    callq *%rax
+    callq task_sche
 hal_intr_endSchedule:
 	// get CPU_ID of current task
-    movq %gs:cpu_Desc_sirqFlag, %rax
+    leaq cpu_var(softirq_flag)(%rip), %rax
+    leaq cpu_symbol_percpu(%rip), %rcx
+    subq %rcx, %rax
+    movq %gs:(%rax), %rax
 	testq %rax, %rax
     jz hal_intr_endSirq
-    leaq softirq_scan(%rip), %rax
-    callq *%rax
+    callq softirq_scan
 hal_intr_endSirq:
     jmp hal_intr_restoreAll
 

@@ -77,12 +77,22 @@ typedef union task_Union {
 	u8 krlStk[task_krlStkSize];
 } task_Union;
 
-typedef struct task_MgrStruct {
-	RBTree tasks[cpu_mxNum];
-	ListNode preemptTsks[cpu_mxNum];
-	SpinLock scheLck[cpu_mxNum];
-	Atomic scheMsk[cpu_mxNum];
-	SafeList freeTsks, sleepTsks;
-} task_MgrStruct;
+extern u64 task_sche_cfsTbl[0x20];
+
+cpu_declarevar(RBTree, task_tsks);
+cpu_declarevar(ListNode, task_preemptTsks);
+cpu_declarevar(SpinLock, task_scheLck);
+cpu_declarevar(Atomic, task_scheMsk);
+cpu_declarevar(task_TaskStruct *, task_curTsk);
+
+extern SafeList task_freeTsks, task_sleepTsks;
+
+// typedef struct task_MgrStruct {
+// 	RBTree tasks[cpu_mxNum];
+// 	ListNode preemptTsks[cpu_mxNum];
+// 	SpinLock scheLck[cpu_mxNum];
+// 	Atomic scheMsk[cpu_mxNum];
+// 	SafeList freeTsks, sleepTsks;
+// } task_MgrStruct;
 
 #endif

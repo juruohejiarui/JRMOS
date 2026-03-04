@@ -1,36 +1,40 @@
 #include <hal/task/genasm.h>
 #include <hal/interrupt/genasm.h>
-#include <hal/cpu/genasm.h>
 #include <hal/linkage.h>
+#include <cpu/define.h>
 
 .global task_syscall_tbl
+.global cpu_symbol_percpu
+.global cpu_var(task_curTsk)
 
+// void hal_task_sche_switch(task_TaskStruct *from, task_TaskStruct *to)
 ENTRY(hal_task_sche_switch)
 	pushq %rbp
 	pushq %rax
-	movq %rsp, %rax
-	andq $-(task_krlStkSize), %rax
-	movq %rsp, hal_task_TaskStruct_rsp(%rax)
+	movq %rsp, hal_task_TaskStruct_rsp(%rdi)
 	leaq hal_task_sche_switch_back(%rip), %rcx
-	movq %rcx, hal_task_TaskStruct_rip(%rax)
-
-	pushq %rdi
-	movq %rdi, %rsi
-	movq %rax, %rdi
+	movq %rcx, hal_task_TaskStruct_rip(%rdi)
+	pushq %rsi
 	callq hal_task_sche_switchTss
 	popq %rdi
-
 	movq task_TaskStruct_thread(%rdi), %rbx
 	movq hal_task_ThreadStruct_pgd(%rbx), %rax
 	movq %cr3, %rbx
 	cmpq %rbx, %rax
-	
 	je hal_task_sche_switchCR3_end
 	movq %rax, %cr3
 hal_task_sche_switchCR3_end:
-	movq %rdi, %gs:hal_cpu_Desc_curKrlStk
+	// cpu_setvar(task_curTsk, to);
+	leaq cpu_symbol_percpu(%rip), %rbx
+	leaq cpu_var(task_curTsk)(%rip), %rax
+	subq %rbx, %rax
+	movq %rdi, %gs:(%rax)
 	movq hal_task_TaskStruct_rsp(%rdi), %rsp
 	movq hal_task_TaskStruct_rip(%rdi), %rax
+	btq $63, %rax
+	jc passChk
+	hlt
+passChk:
 	jmp *%rax
 hal_task_sche_switch_back:
 	popq %rax
@@ -54,10 +58,12 @@ ENTRY(hal_task_syscall_entryKrl)
 	movq %rbx, %es
 
 	swapgs
-
 	
 	// save user stack and get kernel stack from hal_task_curKrlStk
-	movq %gs:hal_cpu_Desc_curKrlStk, %rax
+	leaq cpu_symbol_percpu(%rip), %r10
+	leaq cpu_var(task_curTsk)(%rip), %rax
+	subq %r10, %rax
+	movq %gs:(%rax), %rax
 	movq %rsp, hal_task_TaskStruct_usrRsp(%rax)
 	movq %rax, %rsp
 	addq $task_krlStkSize, %rsp

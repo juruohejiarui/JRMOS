@@ -117,15 +117,15 @@ int mm_map_freeTbl(hal_mm_PageTbl *tbl) {
 }
 
 int mm_map_syncKrl() {
-    if (task_current->thread->mem.krlTblModiJiff.value != mm_map_krlTblModiJiff.value) {
+    if (task_cur->thread->mem.krlTblModiJiff.value != mm_map_krlTblModiJiff.value) {
         SpinLock_lock(&mm_map_krlTblLck);
-        SpinLock_lock(&task_current->thread->mem.pgTblLck);
+        SpinLock_lock(&task_cur->thread->mem.pgTblLck);
 
-        task_current->thread->mem.krlTblModiJiff.value = mm_map_krlTblModiJiff.value;
+        task_cur->thread->mem.krlTblModiJiff.value = mm_map_krlTblModiJiff.value;
 
 	    int res = hal_mm_map_syncKrl();
 
-        SpinLock_unlock(&task_current->thread->mem.pgTblLck);
+        SpinLock_unlock(&task_cur->thread->mem.pgTblLck);
         SpinLock_unlock(&mm_map_krlTblLck);
 
         return res;
@@ -144,12 +144,12 @@ int mm_map(u64 virt, u64 phys, u64 attr) {
         SpinLock_lock(&mm_map_krlTblLck);
         hal_Atomic_inc(&mm_map_krlTblModiJiff);
     }
-    else SpinLock_lock(&task_current->thread->mem.pgTblLck);
+    else SpinLock_lock(&task_cur->thread->mem.pgTblLck);
 
     int res = hal_mm_map(virt, phys, attr);
 
     if (virt >= task_krlAddrSt) SpinLock_unlock(&mm_map_krlTblLck);
-    else SpinLock_unlock(&task_current->thread->mem.pgTblLck);
+    else SpinLock_unlock(&task_cur->thread->mem.pgTblLck);
 
     return res;
 }
@@ -159,24 +159,24 @@ int mm_unmap(u64 virt) {
         SpinLock_lock(&mm_map_krlTblLck);
         hal_Atomic_inc(&mm_map_krlTblModiJiff);
     }
-    else SpinLock_lock(&task_current->thread->mem.pgTblLck);
+    else SpinLock_lock(&task_cur->thread->mem.pgTblLck);
 
     int res = hal_mm_unmap(virt);
     
     if (virt >= task_krlAddrSt) SpinLock_unlock(&mm_map_krlTblLck);
-    else SpinLock_unlock(&task_current->thread->mem.pgTblLck);
+    else SpinLock_unlock(&task_cur->thread->mem.pgTblLck);
 
     return res;
 }
 
 u64 mm_getMap(u64 virt) {
     if (virt >= task_krlAddrSt) SpinLock_lock(&mm_map_krlTblLck);
-    else SpinLock_lock(&task_current->thread->mem.pgTblLck);
+    else SpinLock_lock(&task_cur->thread->mem.pgTblLck);
 
     u64 phyAddr = hal_mm_getMap(virt);
     
     if (virt >= task_krlAddrSt) SpinLock_unlock(&mm_map_krlTblLck);
-    else SpinLock_unlock(&task_current->thread->mem.pgTblLck);
+    else SpinLock_unlock(&task_cur->thread->mem.pgTblLck);
 
     return phyAddr;
 }

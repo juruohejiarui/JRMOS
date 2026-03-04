@@ -100,7 +100,7 @@ int fs_fat32_initParCache(fs_fat32_Partition *par) {
 }
 
 int fs_fat32_init() {
-	printk(screen_log, "fs_fat32_init()");
+	printk(screen_log, "fs_fat32_init()\n");
 	memset(&fs_fat32_drv, 0, sizeof(fs_vfs_Driver));
 	memcpy("fat32", fs_fat32_drv.name, sizeof("fat32"));
 	fs_fat32_drv.lookup = fs_fat32_lookup;

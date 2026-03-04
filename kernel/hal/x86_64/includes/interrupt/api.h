@@ -3,6 +3,7 @@
 
 #include <hal/interrupt/desc.h>
 #include <hal/interrupt/genasm.h>
+#include <cpu/api.h>
 #include <interrupt/desc.h>
 #include <hal/linkage.h>
 #include <lib/string.h>
@@ -145,6 +146,8 @@ void hal_intr_setTr(u16 idx);
 __always_inline__ void hal_intr_cpyTss(hal_intr_TSS *src, u32 *dst) { memcpy(src, dst, sizeof(hal_intr_TSS)); }
 
 int hal_intr_init();
+
+int hal_intr_initCpuVar(int idx);
 
 int hal_intr_initAP();
 #endif

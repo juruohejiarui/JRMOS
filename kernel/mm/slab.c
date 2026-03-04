@@ -38,12 +38,12 @@ __always_inline__ int _addRecord(void *addr, u64 size, void (*destructor)(void *
     record->ptr = addr;
     record->size = size;
     // printk(screen_log, "mm: slab: addRecord(): add record %p,size=%d\n", record->ptr, record->size);
-    RBTree_insLck(&task_current->thread->mem.slabRecord, &record->rbNd);
+    RBTree_insLck(&task_cur->thread->mem.slabRecord, &record->rbNd);
     return res_SUCC;
 }
 
 int _delRecord(void *addr) {
-    RBNode *node = task_current->thread->mem.slabRecord.root;
+    RBNode *node = task_cur->thread->mem.slabRecord.root;
     mm_SlabRecord *record = NULL;
     while (node) {
         record = container(node, mm_SlabRecord, rbNd);
@@ -55,7 +55,7 @@ int _delRecord(void *addr) {
     return res_FAIL;
     findRecord:
     // printk(screen_log, "mm: slab: delRecord(): del record %p,size=%d\n", record->ptr, record->size);
-    RBTree_delLck(&task_current->thread->mem.slabRecord, node);
+    RBTree_delLck(&task_cur->thread->mem.slabRecord, node);
     return mm_kfree(record, mm_Attr_Shared);
 }
 
@@ -251,12 +251,15 @@ void *mm_kmalloc(u64 size, u32 attr, void (*destructor)(void *)) {
         printk(screen_err, "mm: slab: kmalloc(): failed to allocate a memory block with size %ld. Too large\n", size);
         return NULL;
     }
-    int intrState = intr_state();
-    intr_mask();
-    SpinLock_lock(&_SlabLck);
-    void *addr = _kmalloc(size);
-    SpinLock_unlock(&_SlabLck);
-    if (intrState) intr_unmask();
+    void *addr;
+    {
+        int intrState = intr_state();
+        intr_mask();
+        SpinLock_lock(&_SlabLck);
+        addr = _kmalloc(size);
+        SpinLock_unlock(&_SlabLck);
+        if (__likely__(intrState)) intr_unmask();
+    }
     if (addr && (~attr & mm_Attr_Shared)) {
         int i;
         for (i = 0; i < mm_slab_mxSizeShift - mm_slab_mnSizeShift + 1; i++)

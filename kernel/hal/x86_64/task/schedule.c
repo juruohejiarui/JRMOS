@@ -13,7 +13,7 @@
 int hal_task_dispatchTask(task_TaskStruct *tsk) {
 	tsk->cpuId = tsk->pid % cpu_num;
 	
-	tsk->hal.gsBase = (u64)&cpu_desc[tsk->cpuId];
+	tsk->hal.gsBase = (u64)cpu_getCpuVar(tsk->cpuId, cpu_bsAddr);
 	tsk->hal.fsBase = 0;
 	tsk->hal.gsKrlBase = 0;
 
@@ -21,21 +21,19 @@ int hal_task_dispatchTask(task_TaskStruct *tsk) {
 }
 
 void hal_task_sche_yield() {
-	hal_cpu_sendIntr_self(cpu_intr_Schedule);
+	hal_cpu_sendIntr_self(hal_cpu_intr_Schedule);
 }
 
 void hal_task_sche_switchTss(task_TaskStruct *prev, task_TaskStruct *next) {
-	hal_intr_TSS *cpuTss = cpu_getvar(hal.tss), *tskTss = &next->hal.tss;
-	cpuTss->rsp0 = tskTss->rsp0;
-	cpuTss->rsp2 = tskTss->rsp2;
-	cpuTss->ist2 = tskTss->ist2;
+	{
+		register hal_intr_TSS *cpuTss = cpu_ptr(hal_intr_tss)->tss, *tskTss = &next->hal.tss;
+		cpuTss->rsp0 = tskTss->rsp0;
+		cpuTss->rsp2 = tskTss->rsp2;
+		cpuTss->ist2 = tskTss->ist2;
+		// printk(screen_log, "tss:%p<%p\n", cpuTss, tskTss);
+	}
 
-
-	// printk(screen_log, "from %p,rip=%p to %p,rip=%p\n", prev, prev->hal.rip, next, next->hal.rip);
-
-	prev->hal.gsBase = hal_hw_readMsr(hal_msr_IA32_GS_BASE);
-	prev->hal.fsBase = hal_hw_readMsr(hal_msr_IA32_FS_BASE);
-	prev->hal.gsKrlBase = hal_hw_readMsr(hal_msr_IA32_KERNEL_GS_BASE);
+	register u64 gsBase = cpu_getvar(cpu_bsAddr);
 
 	__asm__ volatile ( "movq %%fs, %0" : "=a"(prev->hal.fs));
 	__asm__ volatile ( "movq %%gs, %0" : "=a"(prev->hal.gs));
@@ -43,11 +41,7 @@ void hal_task_sche_switchTss(task_TaskStruct *prev, task_TaskStruct *next) {
     __asm__ volatile ( "movq %0, %%fs" : : "a"(next->hal.fs));
 	__asm__ volatile ( "movq %0, %%gs" : : "a"(next->hal.gs));
 
-	hal_hw_writeMsr(hal_msr_IA32_GS_BASE, next->hal.gsBase);
-	hal_hw_writeMsr(hal_msr_IA32_FS_BASE, next->hal.fsBase);
-	hal_hw_writeMsr(hal_msr_IA32_KERNEL_GS_BASE, next->hal.gsKrlBase);
-
-	// printk(screen_log, "cpu %d: prev gsBase %p next gsBase %p\n", task_current->cpuId, prev->hal.gsBase, next->hal.gsBase);
+	hal_hw_writeMsr(hal_msr_IA32_GS_BASE, gsBase);
 }
 
 void hal_task_sche_updOtherState() {
@@ -69,14 +63,14 @@ void hal_task_newThread(task_ThreadStruct *thread, u64 attr) {
 }
 
 void hal_task_initIdle() {
-	memcpy(cpu_getvar(hal.tss), &hal_task_current->hal.tss, sizeof(hal_intr_TSS));
+	memcpy(cpu_ptr(hal_intr_tss)->tss, &task_cur->hal.tss, sizeof(hal_intr_TSS));
 
-	hal_task_current->hal.fs = hal_task_current->hal.gs = hal_mm_segment_KrlData;
+	task_cur->hal.fs = task_cur->hal.gs = hal_mm_segment_KrlData;
 
-	hal_task_current->hal.gsBase = hal_hw_readMsr(hal_msr_IA32_GS_BASE);
-	hal_task_current->hal.fsBase = 0;
-	hal_task_current->hal.gsKrlBase = 0;
-    hal_task_current->hal.rsp = (u64)cpu_getvar(hal.initStk) + task_krlStkSize;
+	task_cur->hal.gsBase = cpu_getvar(cpu_bsAddr);
+	task_cur->hal.fsBase = 0;
+	task_cur->hal.gsKrlBase = 0;
+    task_cur->hal.rsp = (u64)cpu_getvar(hal_cpu_initStk) + task_krlStkSize;
 }
 
 void hal_task_tskEntry(void *entry, u64 arg, u64 attr) {

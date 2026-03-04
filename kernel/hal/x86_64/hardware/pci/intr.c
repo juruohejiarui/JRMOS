@@ -1,8 +1,10 @@
 #include <hardware/pci.h>
+#include <hal/interrupt/desc.h>
 #include <interrupt/api.h>
 #include <screen/screen.h>
 #include <hal/hardware/apic.h>
 #include <cpu/api.h>
+#include <hal/cpu/desc.h>
 #include <task/api.h>
 
 #define buildIrq(num) hal_intr_buildIrq(pci_intr, num, hal_hw_pci_intr_dispatcher);
@@ -37,30 +39,31 @@ void (*hal_hw_pci_intrLst[0x40])(void) = {
 };
 
 void hal_hw_pci_intr_dispatcher(u64 rsp, u64 num) {
-	intr_Desc *intr = cpu_getvar(hal.intrDesc[num - 0x40]);
+	intr_Desc *intr = cpu_getvar(hal_intr_desc[num - 0x40]);
 
-	// printk(screen_log, "hw: pci: intr #%d on cpu #%d desc:%p handler:%p ctrl:%p\n", num, task_current->cpuId, intr, intr->handler, intr->ctrl);
+	// printk(screen_log, "hw: pci: intr #%d on cpu #%d desc:%p handler:%p ctrl:%p\n", num, task_cur->cpuId, intr, intr->handler, intr->ctrl);
 	
 	if (intr == NULL || intr->handler == NULL) {
-		printk(screen_err, "hw: pci: no handler for intr #%d on cpu #%d\n", num, task_current->cpuId);
+		printk(screen_err, "hw: pci: no handler for intr #%d on cpu #%d\n", num, task_cur->cpuId);
 		while (1) hal_hw_hlt();
 	}
 	intr->handler(intr->param);
 	if (intr->ctrl != NULL && intr->ctrl->ack != NULL) intr->ctrl->ack(intr);
 }
 
+__always_inline__ int _apicMask(u32 cpuId) {
+	return (hal_hw_apic_supportFlag & hal_hw_apic_supportFlag_X2Apic
+		 ? cpu_getCpuVar(cpuId, hal_cpu_x2apic) : cpu_getCpuVar(cpuId, hal_cpu_apic)) << 12;
+}
+
 __always_inline__ void hal_hw_pci_Msi_setMsgAddr(hw_pci_MsiCap *cap, u32 cpuId, u32 redirect, u32 destMode) {
-	register u32 val = 0xfee00000u
-		 | ((hal_hw_apic_supportFlag & hal_hw_apic_supportFlag_X2Apic ? cpu_desc[cpuId].hal.x2apic : cpu_desc[cpuId].hal.apic) << 12)
-		 | (redirect << 3) | (destMode << 2);
+	register u32 val = 0xfee00000u | _apicMask(cpuId) | (redirect << 3) | (destMode << 2);
 	if (hw_pci_MsiCap_is64(cap)) cap->cap64.msgAddr = val;
 	else cap->cap32.msgAddr = val;
 }
 
 __always_inline__ void hal_hw_pci_Msix_setMsgAddr(u64 *msgAddr, u32 cpuId, u32 redirect, u32 destMode) {
-	*msgAddr = 0xfee00000u
-		 | ((hal_hw_apic_supportFlag & hal_hw_apic_supportFlag_X2Apic ? cpu_desc[cpuId].hal.x2apic : cpu_desc[cpuId].hal.apic) << 12)
-		 | (redirect << 3) | (destMode << 2);
+	*msgAddr = 0xfee00000u | _apicMask(cpuId) | (redirect << 3) | (destMode << 2);
 }
 
 __always_inline__ void hal_hw_pci_setMsgData16(u16 *msgData, u32 vec, u32 deliverMode, u32 level, u32 triggerMode) {
@@ -73,7 +76,7 @@ __always_inline__ void hal_hw_pci_setMsgData32(u32 *msgData, u32 vec, u32 delive
 
 static void hal_hw_pci_getIntrGate(intr_Desc *desc, u64 intrNum) {
     for (int i = 0; i < intrNum; i++) {
-        hal_intr_setIntrGate(cpu_desc[desc[i].cpuId].hal.idtTbl, desc[i].vecId, 0, hal_hw_pci_intrLst[desc[i].vecId - 0x40]);
+        hal_intr_setIntrGate(cpu_cpuPtr(desc[i].cpuId, hal_intr_idt)->tbl, desc[i].vecId, 0, hal_hw_pci_intrLst[desc[i].vecId - 0x40]);
     }
 }
 

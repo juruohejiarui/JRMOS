@@ -73,8 +73,9 @@ void init_init() {
 
 	if (hw_pci_init() == res_FAIL) {
 		printk(screen_err, "init: failed to initialize pci.\n");
-		while (1) ;
+		while (1) hal_hw_hlt();
 	}
+
 	if (hw_driver_registerBuiltin() == res_FAIL) {
 		printk(screen_err, "init: failed to register builtin drivers.\n");
 		while (1) ;

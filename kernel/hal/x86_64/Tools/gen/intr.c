@@ -58,6 +58,14 @@ int main() {
 		offsetof(hal_intr_PtReg, rsp),
 		offsetof(hal_intr_PtReg, ss));
 	fwrite(buf, strlen(buf), 1, file);
+	sprintf(buf,
+		"#define hal_intr_TssBlk_tss %#lx\n\n",
+		offsetof(hal_intr_TssBlk, tss));
+	fwrite(buf, strlen(buf), 1, file);
+	sprintf(buf,
+		"#define hal_intr_IdtBlk_tbl %#lx\n\n",
+		offsetof(hal_intr_IdtBlk, tbl));
+	fwrite(buf, strlen(buf), 1, file);
 	sprintf(buf, "#endif\n");
 	fwrite(buf, strlen(buf), 1, file);
 	fclose(file);

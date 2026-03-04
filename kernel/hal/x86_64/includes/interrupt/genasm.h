@@ -26,4 +26,8 @@
 #define hal_intr_PtReg_rsp 0xb0
 #define hal_intr_PtReg_ss  0xb8
 
+#define hal_intr_TssBlk_tss 0
+
+#define hal_intr_IdtBlk_tbl 0x2
+
 #endif

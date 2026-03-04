@@ -3,6 +3,8 @@
 
 #include <task/constant.h>
 #include <task/structs.h>
+#include <cpu/api.h>
+#include <hal/cpu/desc.h>
 
 #define HAL_TASK_GETLEVEL
 
@@ -17,26 +19,17 @@ __always_inline__ int hal_task_getLevel() {
     return cs & 3 ? task_level_User : task_level_Kernel;
 }
 
-#define HAL_TASK_CURRENT
-
-__always_inline__ task_TaskStruct *hal_task_getCurrent() {
-    register task_TaskStruct *task;
-	__asm__ volatile ( " andq %%rsp, %0		\n\t" : "=r"(task) : "0"(~(task_krlStkSize - 1)) : "memory");
-    return task;
-}
-
-#define hal_task_current hal_task_getCurrent()
 
 // get the idle task of the specific cpu
 __always_inline__ task_TaskStruct *hal_task_idleTask(int cpuIdx) {
-    return &((task_Union *)cpu_desc[cpuIdx].hal.initStk)->task;
+    return &((task_Union *)cpu_getCpuVar(cpuIdx, hal_cpu_initStk))->task;
 }
 
 int hal_task_dispatchTask(task_TaskStruct *tsk);
 
 void hal_task_sche_yield();
 
-void hal_task_sche_switch(task_TaskStruct *to);
+void hal_task_sche_switch(task_TaskStruct *from, task_TaskStruct *to);
 
 void hal_task_sche_switchTss(task_TaskStruct *prev, task_TaskStruct *next);
 

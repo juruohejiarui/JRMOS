@@ -2,7 +2,8 @@
 #define __INTERRUPT_DESC_H__
 
 #include <lib/dtypes.h>
-#include <hal/interrupt/desc.h>
+#include <lib/spinlock.h>
+#include <cpu/desc.h>
 
 struct intr_Desc;
 
@@ -25,6 +26,11 @@ typedef struct intr_Desc {
     intr_Ctrl *ctrl;
 } intr_Desc;
 
-#define intr_handlerDeclare(name) void name(u64 param)
+#define intr_handlerDeclare(name) __noinline__ void name(u64 param)
+
+cpu_declarevar(u64[4], intr_msk);
+cpu_declarevar(u32, intr_freeCnt);
+cpu_declarevar(u32, intr_useCnt);
+cpu_declarevar(SpinLock, intr_mskLck);
 
 #endif

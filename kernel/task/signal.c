@@ -4,9 +4,9 @@
 #include <mm/mm.h>
 
 void task_signal_setHandler(u64 signal, void (*handler)(u64), u64 param) {
-    task_current->thread->sigHandler[signal] = handler;
-    task_current->thread->sigParam[signal] = param;
-    printk(screen_log, "task: signal: task #%d set handler for signal #%d with param %p\n", task_current->pid, signal, param);
+    task_cur->thread->sigHandler[signal] = handler;
+    task_cur->thread->sigParam[signal] = param;
+    printk(screen_log, "task: signal: task #%d set handler for signal #%d with param %p\n", task_cur->pid, signal, param);
 }
 
 void task_signal_send(task_TaskStruct *target, u64 signal) {
@@ -34,27 +34,27 @@ void task_signal_sendFromIntr(task_TaskStruct *target, u64 signal) {
 void task_signal_mgrTskMain() {
     while (1) {
         while (SafeList_isEmpty(&task_signal_reqLst)) task_sche_yield();
-        task_current->priority = task_Priority_Running;
+        task_cur->priority = task_Priority_Running;
         while (!SafeList_isEmpty(&task_signal_reqLst)) {
              struct task_signal_Request *req = container(SafeList_delHead(&task_signal_reqLst), struct task_signal_Request, lst);
             task_signal_send(req->target, req->signal);
         }
-        task_current->priority = task_Priority_Lowest;
+        task_cur->priority = task_Priority_Lowest;
     }
 }
 
 void task_signal_scan() {
-    for (int i = 0; i < 64; i++) if (task_current->signal.value & (1ul << i)) {
+    for (int i = 0; i < 64; i++) if (task_cur->signal.value & (1ul << i)) {
         void (*handler)(u64);
-        if (!(handler = task_current->thread->sigHandler[i])) {
-            printk(screen_err, "task: signal: task %ld no handler for signal #%d\n", task_current->pid, i);
+        if (!(handler = task_cur->thread->sigHandler[i])) {
+            printk(screen_err, "task: signal: task %ld no handler for signal #%d\n", task_cur->pid, i);
             if (!i) task_exit(-1);
         } else {
             // if there is handler, then call the handler and reset the bit
             intr_unmask();
-            Atomic_btr(&task_current->signal, i);
-            printk(screen_warn, "task: singal: task %ld handle signal #%d\n", task_current->pid, i);
-            handler(task_current->thread->sigParam[i]);
+            Atomic_btr(&task_cur->signal, i);
+            printk(screen_warn, "task: singal: task %ld handle signal #%d\n", task_cur->pid, i);
+            handler(task_cur->thread->sigParam[i]);
             intr_mask();
         }
     }

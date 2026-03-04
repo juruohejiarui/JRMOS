@@ -119,7 +119,7 @@ __always_inline__ int hw_nvme_initIntr(hw_nvme_Host *host) {
 		hw_pci_MsixTbl *tbl = hw_pci_getMsixTbl(host->msix, host->pci.cfg);
 
 		printk(screen_log, "hw: nvme: %p msixtbl:%p vecNum:%d msgCtrl:%#010x\n", host, tbl, vecNum, host->msix->msgCtrl);
-
+		hw_pci_disableMsixAll(host->msix, host->pci.cfg, NULL, 0);
 		for (int i = 0; i < host->intrNum; i++)
 			hw_pci_initIntr(host->intr + i, hw_nvme_msiHandler, (u64)host | i, "nvme msix");
 		if (hw_pci_allocMsix(host->msix, host->pci.cfg, host->intr, host->intrNum) == res_FAIL) {
@@ -292,6 +292,17 @@ __always_inline__ int _initHost(hw_nvme_Host *host) {
 		}
 		printk(screen_log, "hw: nvme: %p: page size: 2^(12+%d)~2^(12+%d)\n", host, mnPgSz, mxPgSz);
 	}
+
+	// there must be at least 2 interrupt, one for admin completion queue, the other for io completion queue
+	host->intrNum = min(max(2, cpu_num), hw_nvme_Host_mxIntrNum);
+
+	printk(screen_log, "hw: nvme: %p: capAddr:%p cap:%#018lx version:%x dbStride:%d\n", 
+		host, host->capRegAddr, hw_nvme_read64(host, hw_nvme_Host_ctrlCap), hw_nvme_read32(host, hw_nvme_Host_version), host->dbStride);
+
+	if (hw_nvme_initQue(host) == res_FAIL) return res_FAIL;
+
+	if (hw_nvme_initIntr(host) == res_FAIL) return res_FAIL;
+
 	u32 cfg = 0;
 	
 	{
@@ -313,16 +324,6 @@ __always_inline__ int _initHost(hw_nvme_Host *host) {
 	}
 	
 	hw_nvme_write32(host, hw_nvme_Host_ctrlCfg, cfg);
-
-	// there must be at least 2 interrupt, one for admin completion queue, the other for io completion queue
-	host->intrNum = min(max(2, cpu_num), hw_nvme_Host_mxIntrNum);
-
-	printk(screen_log, "hw: nvme: %p: capAddr:%p cap:%#018lx version:%x dbStride:%d\n", 
-		host, host->capRegAddr, hw_nvme_read64(host, hw_nvme_Host_ctrlCap), hw_nvme_read32(host, hw_nvme_Host_version), host->dbStride);
-
-	if (hw_nvme_initQue(host) == res_FAIL) return res_FAIL;
-
-	if (hw_nvme_initIntr(host) == res_FAIL) return res_FAIL;
 
 
 	// launch nvme and get namespace information

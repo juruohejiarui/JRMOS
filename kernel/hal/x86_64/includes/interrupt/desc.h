@@ -2,6 +2,8 @@
 #define __HAL_INTERRUPT_DESC_H__
 
 #include <lib/dtypes.h>
+#include <interrupt/desc.h>
+#include <cpu/desc.h>
 
 #define hal_intr_vec_ps2    0x21
 #define hal_intr_vec_Timer  0x22
@@ -27,5 +29,19 @@ typedef struct hal_intr_PtReg {
     u64 func, errCode;
     u64 rip, cs, rflags, rsp, ss;
 } __attribute__ ((packed)) hal_intr_PtReg;
+
+typedef struct hal_intr_IdtBlk {
+    u16 sz;
+    hal_intr_IdtItem *tbl;
+} __attribute__ ((packed)) hal_intr_IdtBlk;
+
+typedef struct hal_intr_TssBlk {
+    hal_intr_TSS *tss;
+    u16 trIdx;
+} __attribute__ ((packed)) hal_intr_TssBlk;
+
+cpu_declarevar(hal_intr_TssBlk, hal_intr_tss);
+cpu_declarevar(hal_intr_IdtBlk, hal_intr_idt);
+cpu_declarevar(intr_Desc *[0x40], hal_intr_desc);
 
 #endif

@@ -1,12 +1,18 @@
+#include <cpu/define.h>
 #include <hal/linkage.h>
-#include <hal/cpu/genasm.h>
+#include <hal/task/genasm.h>
 #include <hal/interrupt/genasm.h>
 
-.globl cpu_desc
+.globl cpu_bsAddr
 .globl hal_hw_apic_supportFlag
 .globl hal_init_initAP
 .globl hal_init_init
 .globl hal_init_stk
+.globl cpu_symbol_percpu
+.globl cpu_var(hal_cpu_initStk)
+.globl cpu_var(hal_intr_idt)
+.globl cpu_var(hal_cpu_x2apic)
+.globl cpu_var(task_curTsk)
 
 .section .text
 
@@ -45,19 +51,28 @@ setSMPInfo:
     movq $0xb, %rax
     xorq %rcx, %rcx
     cpuid
-    leaq cpu_desc(%rip), %rax
+    movq cpu_bsAddr(%rip), %rbx
+    leaq cpu_symbol_percpu(%rip), %rcx
 setSMPInfo_LoopStart:
-    cmpl hal_cpu_Desc_x2apic(%rax), %edx
+    leaq cpu_var(hal_cpu_x2apic)(%rip), %rdi
+    subq %rcx, %rdi
+    movq (%rbx), %rax
+    cmpl (%rax, %rdi, 1), %edx
     jz setSMPInfo_LoopEnd
-    addq $cpu_DescSize, %rax
+    addq $8, %rbx
     jmp setSMPInfo_LoopStart
 setSMPInfo_LoopEnd:
 	// set stack pointer
-    movq hal_cpu_Desc_initStk(%rax), %rsi
-	// set idt pointer
-	lidt hal_cpu_Desc_idtPtr(%rax)
-    addq $32768, %rsi
+    leaq cpu_var(task_curTsk)(%rip), %rbx
+    subq %rcx, %rbx
+    movq (%rax, %rbx, 1), %rsi
+    addq $task_krlStkSize, %rsi
     movq %rsi, %rsp
+	// set idt pointer
+    leaq cpu_var(hal_intr_idt)(%rip), %rbx
+    subq %rcx, %rbx
+	leaq (%rax, %rbx, 1), %rbx
+    lidt (%rbx)
 setSmpTmpStkEnd:
 
     movq $0x101000, %rax
@@ -196,19 +211,22 @@ ignoreInt:
     callq hal_intr_chkSwapgs
 
     movq $0xb, %rax
-    xorq %rcx, %rcx
+    xorq %rsi, %rsi
     cpuid
-    leaq cpu_desc(%rip), %rax
-    xorq %rcx, %rcx
-ignoreInt_FindCpuId:
-    cmpl hal_cpu_Desc_x2apic(%rax), %edx
+    movq cpu_bsAddr(%rip), %rax
+    leaq cpu_symbol_percpu(%rip), %r8
+
+    ignoreInt_FindCpuId:
+    movq (%rax), %rbx
+    leaq cpu_var(hal_cpu_x2apic)(%rip), %r9
+    subq %r8, %r9
+    cmpl (%rbx, %r9, 1), %edx
     je ignoreInt_FindCpuId_End
-    addq $cpu_DescSize, %rax
+    addq $8, %rax
     incq %rcx
     jmp ignoreInt_FindCpuId
 ignoreInt_FindCpuId_End:
-    // printk(screen_err, "Unknown interrupt or fault at RIP %p cpuid=%d\n", rip, cpuid);
-    movq hal_intr_PtReg_rip(%rsp), %rdx
+    movq hal_intr_PtReg_rip(%rip), %rdx
     leaq intMsg(%rip), %rax
     pushq %rax
     movq %rax, %rsi

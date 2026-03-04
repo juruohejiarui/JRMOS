@@ -1,4 +1,5 @@
-#include <hal/cpu/api.h>
+#include <cpu/api.h>
+#include <hal/cpu/desc.h>
 #include <hal/init/init.h>
 #include <hal/hardware/apic.h>
 #include <interrupt/api.h>
@@ -9,6 +10,7 @@ static intr_Desc hal_cpu_intrDesc[0x10];
 static intr_Ctrl hal_cpu_intrCtrl;
 
 void hal_cpu_intrDispatcher(u64 rsp, u64 irqId) {
+	// printk(screen_warn, "cpu intr: cpu:%d irq:%x ", cpu_getvar(cpu_id), irqId);
 	intr_Desc *desc = &hal_cpu_intrDesc[irqId - 0x80];
 	if (desc->handler) desc->handler(desc->param);
 	else {
@@ -32,7 +34,7 @@ intr_handlerDeclare(hal_cpu_intrOfSchedule) {
 }
 
 intr_handlerDeclare(hal_cpu_intrOfPause) {
-	printk(screen_err, "P%d ", task_current->cpuId);
+	printk(screen_err, "P%d ", task_cur->cpuId);
 }
 
 int hal_cpu_initIntr() {
@@ -64,7 +66,7 @@ void hal_cpu_sendIntr(u64 irq, u32 cpuId) {
 	hal_hw_apic_IcrDesc icr;
 	*(u64 *)&icr = hal_hw_apic_makeIcr32(irq, hal_hw_apic_DestShorthand_None);
 
-	hal_hw_apic_setIcrDest(&icr, cpu_desc[cpuId].hal.apic, cpu_desc[cpuId].hal.x2apic);
+	hal_hw_apic_setIcrDest(&icr, cpu_getCpuVar(cpuId, hal_cpu_apic), cpu_getCpuVar(cpuId, hal_cpu_x2apic));
 
 	hal_hw_apic_writeIcr(*(u64 *)&icr);
 }

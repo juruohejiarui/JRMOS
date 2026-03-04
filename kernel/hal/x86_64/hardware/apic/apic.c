@@ -172,7 +172,7 @@ u64 hal_hw_apic_readRte(u8 idx) {
 }
 
 void hal_hw_apic_writeIcr(u64 val) {
-	if (hal_hw_apic_supportFlag & hal_hw_apic_supportFlag_X2Apic) hal_hw_writeMsr(0x830, val);
+	if (__likely__(hal_hw_apic_supportFlag & hal_hw_apic_supportFlag_X2Apic)) hal_hw_writeMsr(0x830, val);
 	else {
 		*(u32 *)mm_dmas_phys2Virt(0xfee00310) = (u32)(val >> 32);
 		hal_hw_mfence();
@@ -182,7 +182,7 @@ void hal_hw_apic_writeIcr(u64 val) {
 }
 
 void hal_hw_apic_writeIcr32(u32 val) {
-	if (hal_hw_apic_supportFlag & hal_hw_apic_supportFlag_X2Apic) hal_hw_writeMsr(0x830, val);
+	if (__likely__(hal_hw_apic_supportFlag & hal_hw_apic_supportFlag_X2Apic)) hal_hw_writeMsr(0x830, val);
 	else {
 		*(u32 *)mm_dmas_phys2Virt(0xfee00300) = val;
 		hal_hw_mfence();
@@ -216,7 +216,7 @@ int hal_hw_apic_disable(intr_Desc *desc) {
 }
 
 void hal_hw_apic_edgeAck(intr_Desc *desc) {
-	if (hal_hw_apic_supportFlag & hal_hw_apic_supportFlag_X2Apic) {
+	if (__likely__(hal_hw_apic_supportFlag & hal_hw_apic_supportFlag_X2Apic)) {
 		__asm__ volatile (
 			"movq $0x00, %%rdx		\n\t"
 			"movq $0x00, %%rax		\n\t"

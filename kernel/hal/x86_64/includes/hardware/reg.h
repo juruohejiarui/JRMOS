@@ -4,7 +4,7 @@
 #include <lib/dtypes.h>
 
 #define hal_hw_setCR(id, vl) do { \
-	u64 vr = (vl); \
+	register u64 vr = (vl); \
 	__asm__ volatile ( \
 		"movq %0, %%rax	\n\t"\
 		"movq %%rax, %%cr"#id"\n\t" \
@@ -27,7 +27,7 @@
 #define hal_hw_mfence() __asm__ volatile ("mfence 	\n\t" : : : "memory")
 
 __always_inline__ u64 hal_hw_readMsr(u64 msrAddr) {
-    u32 data1, data2;
+    register u32 data1, data2;
     __asm__ volatile (
         "rdmsr \n\t"
         : "=d"(data1), "=a"(data2)
@@ -55,7 +55,7 @@ __always_inline__ void hal_hw_writeMsr(u64 msrAddr, u64 data) {
 #define hal_msr_IA32_KERNEL_GS_BASE 0xC0000102
 
 __always_inline__ u64 hal_read64(u64 addr) {
-	u64 val;
+	register u64 val;
 	__asm__ volatile (
 		"movq (%1), %0	\n\t"
 		: "=b"(val)
@@ -66,7 +66,7 @@ __always_inline__ u64 hal_read64(u64 addr) {
 }
 
 __always_inline__ u32 hal_read32(u64 addr) {
-	u32 val;
+	register u32 val;
 	__asm__ volatile (
 		"movl (%1), %0	\n\t"
 		: "=b"(val)
@@ -101,12 +101,12 @@ __always_inline__ void hal_write32(u64 addr, u32 val) {
 }
 
 __always_inline__ void hal_write16(u64 addr, u16 val) {
-	u32 prev = hal_read32(addr & ~0x3ul), mask = 0xffff << ((addr & 0x3) << 3);
+	register u32 prev = hal_read32(addr & ~0x3ul), mask = 0xffff << ((addr & 0x3) << 3);
 	hal_write32(addr & ~0x3ul, (prev & ~mask) | ((u32)val << ((addr & 0x3) << 3)));
 }
 
 __always_inline__ void hal_write8(u64 addr, u8 val) {
-	u32 prev = hal_read32(addr & ~0x3ul), mask = 0xff << ((addr & 0x3) << 3);
+	register u32 prev = hal_read32(addr & ~0x3ul), mask = 0xff << ((addr & 0x3) << 3);
 	hal_write32(addr & ~0x3ul, (prev & ~mask) | ((u32)val << ((addr & 0x3) << 3)));
 }
 #endif
