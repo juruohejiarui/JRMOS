@@ -14,6 +14,6 @@
     extern __typeof__(type) cpu_var(name)
 
 #define cpu_definevar(type, name) \
-    __attribute__((__section__(".data.percpu"))) __typeof__(type) cpu_var(name)
+    __used__ __attribute__((__section__(".data.percpu"))) __typeof__(type) cpu_var(name)
 
 #endif

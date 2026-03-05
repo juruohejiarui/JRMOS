@@ -99,6 +99,7 @@ int _parseMadt() {
 			off += curEntry->len;
 		}
 	}
+	printk(screen_log, "cpu: cpu num:%d\n", cpu_num);
 
 	cpu_initVar();
 

@@ -1,11 +1,12 @@
 #!/bin/bash
-DISK_PATH=disk.img
+source ./config.sh
+DISK_PATH=${1:-'disk.img'}
 
 uNames='uname -s'
 osName=$(uname -s)
 
 if [ ! -f ${DISK_PATH} ]; then
-    ./make_img.sh
+    ./make_img.sh ${DISK_PATH}
 fi
 
 if [ "$osName" = "Darwin" ]; then
@@ -20,7 +21,7 @@ else
     LOOP_ID=20
 
     # load the first 300M partition
-    sudo losetup /dev/loop${LOOP_ID} -o 1048576 --sizelimit 314572800 ${DISK_PATH}
+    sudo losetup /dev/loop${LOOP_ID} -o $PART_EFI_ST --sizelimit $PART_EFI_SZ ${DISK_PATH}
 
     if [ $? -eq 0 ]; then
         ./install-EFI.sh /dev/loop${LOOP_ID}

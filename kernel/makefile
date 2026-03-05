@@ -36,7 +36,10 @@ C_FLAGS= \
 	$(C_INCLUDE_PATH) \
 	--std=$(C_STD) \
 	-mcmodel=large \
-	-fno-builtin -fno-stack-protector \
+	-fno-pic \
+	-fno-pie \
+	-fno-builtin \
+	-fno-stack-protector \
 	-Wno-packed-bitfield-compat \
 	-Wno-address-of-packed-member \
 	-mno-red-zone \

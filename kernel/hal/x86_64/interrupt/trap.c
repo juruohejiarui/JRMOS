@@ -21,7 +21,7 @@ static char *_regName[] = {
 
 SpinLock _trapLogLck;
 
-static int _lookupKallsyms(u64 address, int level)
+__always_inline__ int _lookupKallsyms(u64 address, int level)
 {
 	int index = 0;
 	int level_index = 0;
@@ -42,8 +42,8 @@ static int _lookupKallsyms(u64 address, int level)
 		return 1;
 }
 
-SpinLock _backtraceLock;
-void _backtrace(hal_intr_PtReg *regs) {
+static SpinLock _backtraceLock;
+__noinline__ void _backtrace(hal_intr_PtReg *regs) {
 	SpinLock_lock(&_backtraceLock);
 	u64 *rbp = (u64 *)regs->rbp;
 	u64 ret_address = regs->rip;
@@ -67,7 +67,7 @@ void _backtrace(hal_intr_PtReg *regs) {
 	SpinLock_unlock(&_backtraceLock);
 }
 
-static void _printRegs(u64 rsp) {
+__always_inline__ void _printRegs(u64 rsp) {
 	printk(screen_log, "proc #%d task #%d registers: \n", task_cur->cpuId, task_cur->pid);
 	for (int i = 0; i < sizeof(hal_intr_PtReg) / sizeof(u64); i++)
 		printk(screen_log, "%4s=%p%c", _regName[i], *(u64 *)(rsp + i * 8), ((i + 1) % 8 == 0 || i == sizeof(hal_intr_PtReg) / sizeof(u64) - 1) ? '\n' : ' ');
@@ -83,7 +83,7 @@ static void _printRegs(u64 rsp) {
 	_backtrace((hal_intr_PtReg *)rsp);
 }
 
-void hal_intr_doDivideError(u64 rsp, u64 errorCode) {
+__noinline__ void hal_intr_doDivideError(u64 rsp, u64 errorCode) {
 	u64 *p = NULL;
 	p = (u64 *)(rsp + hal_intr_PtReg_rip);
 	SpinLock_lock(&_trapLogLck);
@@ -96,21 +96,21 @@ void hal_intr_doDivideError(u64 rsp, u64 errorCode) {
 	regs->rdi = -1;
 }
 
-void hal_intr_doDebug(u64 rsp, u64 errorCode) {
+__noinline__ void hal_intr_doDebug(u64 rsp, u64 errorCode) {
 	u64 *p = NULL;
 	p = (u64 *)(rsp + hal_intr_PtReg_rip);
 	printk(screen_err, "do_debug(1),ERROR_CODE:%p,RSP:%p,RIP:%p\n",errorCode , rsp , *p);
 	while(1);
 }
 
-void hal_intr_doNMI(u64 rsp, u64 errorCode) {
+__noinline__ void hal_intr_doNMI(u64 rsp, u64 errorCode) {
 	u64 *p = NULL;
 	p = (u64 *)(rsp + hal_intr_PtReg_rip);
 	printk(screen_err, "do_nmi(2),ERROR_CODE:%p,RSP:%p,RIP:%p\n",errorCode , rsp , *p);
 	while(1);
 }
 
-void hal_intr_doInt3(u64 rsp, u64 errorCode) {
+__noinline__ void hal_intr_doInt3(u64 rsp, u64 errorCode) {
 	u64 *p = NULL;
 	p = (u64 *)(rsp + hal_intr_PtReg_rip);
 	SpinLock_lock(&_trapLogLck);
@@ -121,28 +121,28 @@ void hal_intr_doInt3(u64 rsp, u64 errorCode) {
 	while(1) hal_hw_hlt();
 }
 
-void hal_intr_doOverflow(u64 rsp, u64 errorCode) {
+__noinline__ void hal_intr_doOverflow(u64 rsp, u64 errorCode) {
 	u64 *p = NULL;
 	p = (u64 *)(rsp + hal_intr_PtReg_rip);
 	printk(screen_err, "do_overflow(4),ERROR_CODE:%p,RSP:%p,RIP:%p\n",errorCode , rsp , *p);
 	while(1);
 }
 
-void hal_intr_doBounds(u64 rsp, u64 errorCode) {
+__noinline__ void hal_intr_doBounds(u64 rsp, u64 errorCode) {
 	u64 *p = NULL;
 	p = (u64 *)(rsp + hal_intr_PtReg_rip);
 	printk(screen_err, "do_bounds(5),ERROR_CODE:%p,RSP:%p,RIP:%p\n",errorCode , rsp , *p);
 	while(1);
 }
 
-void hal_intr_doUndefinedOpcode(u64 rsp, u64 errorCode) {
+__noinline__ void hal_intr_doUndefinedOpcode(u64 rsp, u64 errorCode) {
 	u64 *p = NULL;
 	p = (u64 *)(rsp + hal_intr_PtReg_rip);
 	printk(screen_err, "do_undefined_opcode(6),ERROR_CODE:%p,RSP:%p,RIP:%p\n",errorCode , rsp , *p);
 	while(1);
 }
 
-void hal_intr_doDevNotAvailable(u64 rsp, u64 errorCode) {
+__noinline__ void hal_intr_doDevNotAvailable(u64 rsp, u64 errorCode) {
 	u64 *p = NULL;
 	p = (u64 *)(rsp + hal_intr_PtReg_rip);
 	printk(screen_err, "do_device_not_available(7),ERROR_CODE:%p,RSP:%p,RIP:%p\n",errorCode , rsp , *p);
@@ -151,7 +151,7 @@ void hal_intr_doDevNotAvailable(u64 rsp, u64 errorCode) {
 	while (1);
 }
 
-void hal_intr_doDoubleFault(u64 rsp, u64 errorCode) {
+__noinline__ void hal_intr_doDoubleFault(u64 rsp, u64 errorCode) {
 	u64 *p = NULL;
 	u64 *q = NULL;
 	p = (u64 *)(rsp + hal_intr_PtReg_rip);
@@ -160,14 +160,14 @@ void hal_intr_doDoubleFault(u64 rsp, u64 errorCode) {
 	while(1);
 }
 
-void hal_intr_doCoprocessorSegmentOverrun(u64 rsp, u64 errorCode) {
+__noinline__ void hal_intr_doCoprocessorSegmentOverrun(u64 rsp, u64 errorCode) {
 	u64 *p = NULL;
 	p = (u64 *)(rsp + hal_intr_PtReg_rip);
 	printk(screen_err, "do_coprocessor_segment_overrun(9),ERROR_CODE:%p,RSP:%p,RIP:%p\n",errorCode , rsp , *p);
 	while(1);
 }
 
-void hal_intr_doInvalidTSS(u64 rsp, u64 errorCode) {
+__noinline__ void hal_intr_doInvalidTSS(u64 rsp, u64 errorCode) {
 	u64 *p = NULL;
 	p = (u64 *)(rsp + hal_intr_PtReg_rip);
 	printk(screen_err, "do_invalid_tss(10),ERROR_CODE:%p,RSP:%p,RIP:%p\n",errorCode , rsp , *p);
@@ -186,7 +186,7 @@ void hal_intr_doInvalidTSS(u64 rsp, u64 errorCode) {
 	while(1);
 }
 
-void hal_intr_doSegmentNotPresent(u64 rsp, u64 errorCode) {
+__noinline__ void hal_intr_doSegmentNotPresent(u64 rsp, u64 errorCode) {
 	u64 *p = NULL;
 	p = (u64 *)(rsp + hal_intr_PtReg_rip);
 	printk(screen_err, "do_segment_not_present(11),ERROR_CODE:%p,RSP:%p,RIP:%p\n",errorCode , rsp , *p);
@@ -210,7 +210,7 @@ void hal_intr_doSegmentNotPresent(u64 rsp, u64 errorCode) {
 	while(1);
 }
 
-void hal_intr_doStackSegmentFault(u64 rsp, u64 errorCode) {
+__noinline__ void hal_intr_doStackSegmentFault(u64 rsp, u64 errorCode) {
 	u64 *p = NULL;
 	p = (u64 *)(rsp + hal_intr_PtReg_rip);
 	printk(screen_err, "do_stack_segment_fault(12),ERROR_CODE:%p,RSP:%p,RIP:%p\n",errorCode , rsp , *p);
@@ -229,7 +229,7 @@ void hal_intr_doStackSegmentFault(u64 rsp, u64 errorCode) {
 	while(1);
 }
 
-void hal_intr_doGeneralProtection(u64 rsp, u64 errorCode) {
+__noinline__ void hal_intr_doGeneralProtection(u64 rsp, u64 errorCode) {
 	u64 *p = NULL;
 	p = (u64 *)(rsp + hal_intr_PtReg_rip);
 	SpinLock_lock(&_trapLogLck);
@@ -254,7 +254,7 @@ void hal_intr_doGeneralProtection(u64 rsp, u64 errorCode) {
 	while (1) hal_hw_hlt();
 }
 
-void hal_intr_doPageFault(u64 rsp, u64 errorCode) {
+__noinline__ void hal_intr_doPageFault(u64 rsp, u64 errorCode) {
 	u64 *p = (u64 *)(rsp + hal_intr_PtReg_rip);
 	u64 cr2 = 0;
 	__asm__ volatile("movq %%cr2, %0":"=r"(cr2)::"memory");
@@ -305,35 +305,35 @@ void hal_intr_doPageFault(u64 rsp, u64 errorCode) {
 	}
 }
 
-void hal_intr_doX87FPUError(u64 rsp, u64 errorCode) {
+__noinline__ void hal_intr_doX87FPUError(u64 rsp, u64 errorCode) {
 	u64 *p = NULL;
 	p = (u64 *)(rsp + hal_intr_PtReg_rip);
 	printk(screen_err, "do_x87_fpu_error(16),ERROR_CODE:%p,RSP:%p,RIP:%p\n",errorCode , rsp , *p);
 	while(1);
 }
 
-void hal_intr_doAlignmentCheck(u64 rsp, u64 errorCode) {
+__noinline__ void hal_intr_doAlignmentCheck(u64 rsp, u64 errorCode) {
 	u64 *p = NULL;
 	p = (u64 *)(rsp + hal_intr_PtReg_rip);
 	printk(screen_err, "do_alignment_check(17),ERROR_CODE:%p,RSP:%p,RIP:%p\n",errorCode , rsp , *p);
 	while(1);
 }
 
-void hal_intr_doMachineCheck(u64 rsp, u64 errorCode) {
+__noinline__ void hal_intr_doMachineCheck(u64 rsp, u64 errorCode) {
 	u64 *p = NULL;
 	p = (u64 *)(rsp + hal_intr_PtReg_rip);
 	printk(screen_err, "do_machine_check(18),ERROR_CODE:%p,RSP:%p,RIP:%p\n",errorCode , rsp , *p);
 	while(1);
 }
 
-void hal_intr_doSIMDError(u64 rsp, u64 errorCode) {
+__noinline__ void hal_intr_doSIMDError(u64 rsp, u64 errorCode) {
 	u64 *p = NULL;
 	p = (u64 *)(rsp + hal_intr_PtReg_rip);
 	printk(screen_err, "do_simd_error(19),ERROR_CODE:%p,RSP:%p,RIP:%p\n",errorCode , rsp , *p);
 	while(1) hal_hw_hlt();
 }
 
-void hal_intr_doVirtualizationError(u64 rsp, u64 errorCode) {
+__noinline__ void hal_intr_doVirtualizationError(u64 rsp, u64 errorCode) {
 	u64 *p = NULL;
 	p = (u64 *)(rsp + hal_intr_PtReg_rip);
 	printk(screen_err, "do_virtualization_exception(20),ERROR_CODE:%p,RSP:%p,RIP:%p\n",errorCode , rsp , *p);
