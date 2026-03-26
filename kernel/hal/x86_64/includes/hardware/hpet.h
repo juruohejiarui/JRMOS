@@ -64,13 +64,13 @@ typedef struct hal_hw_hpet_XsdtDesc {
 extern hal_hw_hpet_XsdtDesc *hal_hw_hpet_xsdtDesc;
 
 __always_inline__ void hal_hw_hpet_setReg64(u64 offset, u64 val) {
-	*(u64 *)mm_dmas_phys2Virt(hal_hw_hpet_xsdtDesc->addr.addr + offset) = val;
+	mwrite((u64 *)mm_dmas_phys2Virt(hal_hw_hpet_xsdtDesc->addr.addr + offset), val);
 	hal_hw_mfence();
 }
 __always_inline__ u64 hal_hw_hpet_getReg64(u64 offset) { return *(u64 *)mm_dmas_phys2Virt(hal_hw_hpet_xsdtDesc->addr.addr + offset); }
 
 __always_inline__ void hal_hw_hpet_setReg32(u64 offset, u32 val) { 
-	*(u32 *)mm_dmas_phys2Virt(hal_hw_hpet_xsdtDesc->addr.addr + offset) = val;
+	mwrite((u32 *)mm_dmas_phys2Virt(hal_hw_hpet_xsdtDesc->addr.addr + offset), val);
 	hal_hw_mfence();
 }
 __always_inline__ u64 hal_hw_hpet_getReg32(u64 offset) { return *(u32 *)mm_dmas_phys2Virt(hal_hw_hpet_xsdtDesc->addr.addr + offset); }

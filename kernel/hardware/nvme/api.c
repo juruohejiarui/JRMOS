@@ -107,7 +107,7 @@ __always_inline__ int hw_nvme_tryInsReq(hw_nvme_SubQue *subQue, hw_nvme_Request 
 	return res_SUCC;
 }
 
-int hw_nvme_request(hw_nvme_Host *host, hw_nvme_SubQue *subQue, hw_nvme_Request *req) {
+__optimize__ int hw_nvme_request(hw_nvme_Host *host, hw_nvme_SubQue *subQue, hw_nvme_Request *req) {
 	task_Request_init(&req->req, task_Request_flags_Abort);
 	while (hw_nvme_tryInsReq(subQue, req) != res_SUCC) ;
 
@@ -118,6 +118,7 @@ int hw_nvme_request(hw_nvme_Host *host, hw_nvme_SubQue *subQue, hw_nvme_Request 
 	if (req->res.status != 0x01) {
 		printk(screen_err, "hw: nvme: %p: request %p failed status:%x\n", host, req, req->res.status);
 	}
+	return res_SUCC;
 }
 
 int hw_nvme_respone(hw_nvme_Request *req, hw_nvme_CmplQueEntry *entry) {

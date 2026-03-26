@@ -17,7 +17,7 @@ __always_inline__ void _setCol(RBNode *node, int col) {
 
 static RBNode *_getNext(RBTree *tree, RBNode *node);
 
-static void _rotLeft(RBTree *tree, RBNode *node) {
+__always_inline__ void _rotLeft(RBTree *tree, RBNode *node) {
 	RBNode *right = node->right;
 	if ((node->right = right->left) != NULL) _setParent(right->left, node);
 	right->left = node;
@@ -29,7 +29,7 @@ static void _rotLeft(RBTree *tree, RBNode *node) {
 	_setParent(node, right);
 }
 
-static void _rotRight(RBTree *tree, RBNode *node) {
+__always_inline__ void _rotRight(RBTree *tree, RBNode *node) {
 	RBNode *left = node->left;
 	if ((node->left = left->right) != NULL) _setParent(left->right, node);
 	left->right = node;
@@ -102,8 +102,8 @@ __always_inline__ void _fixAfterIns(RBTree *tree, RBNode *node) {
 	setBlack(tree->root);
 }
 
-void RBTree_ins(RBTree *tree, RBNode *node) {
-	if (tree->root == NULL) {
+__optimize__ void RBTree_ins(RBTree *tree, RBNode *node) {
+	if (__unlikely__(tree->root == NULL)) {
 		tree->root = tree->left = node;
 		node->left = node->right = NULL;
 		node->unionParCol = 1;
@@ -179,7 +179,7 @@ __always_inline__ void _fixAfterDel(RBTree *tree, RBNode *node, RBNode *par) {
 	if (node != NULL) setBlack(node);
 }
 
-void RBTree_del(RBTree *tree, RBNode *node) {
+__optimize__ void RBTree_del(RBTree *tree, RBNode *node) {
 	if (tree->left == node) tree->left = RBTree_getNext(tree, node);
 	RBNode *child, *par;
 	int col;
@@ -224,13 +224,13 @@ void RBTree_del(RBTree *tree, RBNode *node) {
 	if (col == RBTree_Col_Black) _fixAfterDel(tree, child, par);
 }
 
-RBNode *RBTree_getRight(RBTree *tree) {
+__optimize__ RBNode *RBTree_getRight(RBTree *tree) {
 	RBNode *res = tree->root;
 	while (res->right) res = res->right;
 	return res;
 }
 
-RBNode *RBTree_getNext(RBTree *tree, RBNode *node) {
+__optimize__ RBNode *RBTree_getNext(RBTree *tree, RBNode *node) {
 	RBNode *par;
 	if (node->right) {
 		node = node->right;

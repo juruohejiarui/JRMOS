@@ -16,10 +16,6 @@ typedef double f64;
 #ifndef __used__
 #define __used__ __attribute__((used))
 #endif 
-#ifndef __always_inline__
-// inline function must be static function
-#define __always_inline__ static inline __attribute__ ((always_inline))
-#endif
 
 #ifndef __noinline__
 #define __noinline__ __used__ __attribute__ ((noinline))
@@ -31,6 +27,10 @@ typedef double f64;
 
 #ifndef __unlikely__
 #define __unlikely__(x) __builtin_expect(!!(x), 0)
+#endif
+
+#ifndef offsetof
+#define offsetof(TYPE, MEMBER) __builtin_offsetof (TYPE, MEMBER)
 #endif
 
 #define NULL ((void *)0)
@@ -52,6 +52,21 @@ typedef double f64;
 #define Page_2MMask		(~(Page_2MSize - 1))
 #define Page_1GMask		(~(Page_1GSize - 1))
 
-#define container(memberAddr, tp, memberIden) ((tp *)(((u64)(memberAddr))-((u64)&(((tp *)0)->memberIden))))
+#define applyOffset(base, off, type) ({ \
+    register volatile u64 _t = (u64)base; \
+    (type)(_t + (off)); \
+})
+
+#define container(memberAddr, tp, memberIden) applyOffset((memberAddr), -offsetof(tp, memberIden), tp *)
+
+#define mwrite(ptr, val) (*(volatile __typeof__(*(ptr)) *)(ptr) = (val))
+#define mread(ptr) (*(volatile __typeof__(*(ptr)) *)(ptr))
+
+#define __optimize__ __attribute__((optimize("O1")))
+
+#ifndef __always_inline__
+// inline function must be static function
+#define __always_inline__ static inline __optimize__ __attribute__ ((always_inline))
+#endif
 
 #endif

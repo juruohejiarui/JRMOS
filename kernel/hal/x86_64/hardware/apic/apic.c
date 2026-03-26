@@ -171,7 +171,7 @@ u64 hal_hw_apic_readRte(u8 idx) {
 	return val;
 }
 
-void hal_hw_apic_writeIcr(u64 val) {
+__optimize__ void hal_hw_apic_writeIcr(u64 val) {
 	if (__likely__(hal_hw_apic_supportFlag & hal_hw_apic_supportFlag_X2Apic)) hal_hw_writeMsr(0x830, val);
 	else {
 		*(u32 *)mm_dmas_phys2Virt(0xfee00310) = (u32)(val >> 32);
@@ -181,7 +181,7 @@ void hal_hw_apic_writeIcr(u64 val) {
 	}
 }
 
-void hal_hw_apic_writeIcr32(u32 val) {
+__optimize__ void hal_hw_apic_writeIcr32(u32 val) {
 	if (__likely__(hal_hw_apic_supportFlag & hal_hw_apic_supportFlag_X2Apic)) hal_hw_writeMsr(0x830, val);
 	else {
 		*(u32 *)mm_dmas_phys2Virt(0xfee00300) = val;
@@ -215,7 +215,7 @@ int hal_hw_apic_disable(intr_Desc *desc) {
 	return res_SUCC;
 }
 
-void hal_hw_apic_edgeAck(intr_Desc *desc) {
+__optimize__ void hal_hw_apic_edgeAck(intr_Desc *desc) {
 	if (__likely__(hal_hw_apic_supportFlag & hal_hw_apic_supportFlag_X2Apic)) {
 		__asm__ volatile (
 			"movq $0x00, %%rdx		\n\t"

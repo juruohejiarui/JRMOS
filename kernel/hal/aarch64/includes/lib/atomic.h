@@ -62,7 +62,6 @@ __always_inline__ void hal_Atomic_dec(hal_Atomic *atomic) {
 	);
 }
 
-#define HAL_LIB_ATOMIC_BTS
 
 #endif
 #endif

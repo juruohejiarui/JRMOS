@@ -9,7 +9,7 @@ hw_Driver hw_nvme_drv, hw_nvme_devDrv;
 intr_handlerDeclare(hw_nvme_msiHandler) {
 	hw_nvme_Host *host = (void *)(param & ~0xful);
 	hw_nvme_CmplQue *cmplQue = host->cmplQue[param & 0xf];
-	
+
 	while (hw_nvme_CmplQueEntry_phaseTag(&cmplQue->entries[cmplQue->pos]) == cmplQue->phase) {
 		hw_nvme_CmplQueEntry *entry = &cmplQue->entries[cmplQue->pos++];
 		if (cmplQue->pos == cmplQue->size) cmplQue->phase ^= 1, cmplQue->pos = 0;

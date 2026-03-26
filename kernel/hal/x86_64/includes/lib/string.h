@@ -29,7 +29,7 @@ __always_inline__ void *memset(void *addr, u8 dt, i64 size) {
 		"3:					 	\n\t"
 		: "=&c"(d0), "=&D"(d1)
 		: "a"(tmp), "q"(size), "0"(size >> 3), "1"(addr)
-		: "memory"
+		: "cc", "memory"
 	);
 	return addr;
 }
@@ -52,7 +52,7 @@ __always_inline__ void *memcpy(void *src, void *dst, i64 num) {
 		"3:					\n\t"
 		: "=&c"(d0), "=&D"(d1), "=&S"(d2)
 		: "0"(num / 8), "q"(num), "1"(dst), "2"(src)
-		: "memory");
+		: "cc", "memory");
 	return dst;
 }
 
@@ -69,7 +69,7 @@ __always_inline__ int memcmp(void *fir, void *sec, i64 size) {
 		"1:			 	\n\t"
 		: "=a"(res)
 		: "0"(0), "D"(fir), "S"(sec), "c"(size)
-		:
+		: "cc"
 	);
 	return res;
 }
@@ -82,8 +82,8 @@ __always_inline__ i64 strlen(u8 *str) {
 		"scasb	  	\n\t"
 		"notq %0	\n\t"
 		"decq %0	\n\t"
-		: "=c"(res)
-		: "D"(str), "a"(0), "0"(0xffffffffffffffff)
+		: "=c"(res), "+D"(str)
+		: "a"(0), "0"(0xffffffffffffffff)
 		: "cc"
 	);
 	return res;
@@ -97,8 +97,8 @@ __always_inline__ i64 strlen16(u16 *str) {
 		"scasw		\n\t"
 		"notq %0	\n\t"
 		"decq %0	\n\t"
-		: "=c"(res)
-		: "D"(str), "a"(0), "0"(0xffffffffffffffff)
+		: "=c"(res), "+D"(str)
+		: "a"(0), "0"(0xffffffffffffffff)
 		: "cc"
 	);
 	return res;
@@ -122,9 +122,9 @@ __always_inline__ int strcmp(char *a, char *b) {
 		"jl 3f				\n\t"
 		"negl %%eax			\n\t"
 		"3:					\n\t"
-		: "=a"(_res)
-		: "D"(a), "S"(b)
-		:
+		: "=a"(_res), "+D"(a), "+S"(b)
+		: 
+		: "cc"
 	);
 	return _res;
 }
@@ -146,9 +146,9 @@ __always_inline__ int strcmp16(u16 *a, u16 *b) {
 		"jl 3f				\n\t"
 		"negl %%eax			\n\t"
 		"3:					\n\t"
-		: "=a"(_res)
-		: "D"(a), "S"(b)
-		:
+		: "=a"(_res), "+D"(a), "+S"(b)
+		: 
+		: "cc"
 	);
 	return _res;
 }
@@ -174,9 +174,9 @@ __always_inline__ int strncmp(char *a, char *b, i64 size) {
 		"jl 4f				\n\t"
 		"negl %%eax			\n\t"
 		"4:					\n\t"
-		: "=a"(_res)
-		: "D"(a), "S"(b), "c"(size)
-		:
+		: "=a"(_res), "+D"(a), "+S"(b), "+c"(size)
+		: 
+		: "cc"
 	);
 	return _res;
 }
@@ -194,8 +194,8 @@ __always_inline__ i64 strcpy(u8 *src, u8 *dst) {
 		"incq %1		\n\t"
 		"jmp 1b		 	\n\t"
 		"2:			 	\n\t" 
-		: "=S"(src), "=c"(count)
-		: "0"(src), "D"(dst), "c"(0)
+		: "=S"(src), "=c"(count), "+D"(dst)
+		: "0"(src), "c"(0)
 		: "cc", "memory"
 	);
 	
@@ -215,8 +215,8 @@ __always_inline__ i64 strcpy16(u16 *src, u16 *dst) {
 		"incq %1		\n\t"
 		"jmp 1b		 	\n\t"
 		"2:			 	\n\t" 
-		: "=S"(src), "=c"(count)
-		: "0"(src), "D"(dst), "c"(0)
+		: "=S"(src), "=c"(count), "+D"(dst)
+		: "0"(src), "c"(0)
 		: "cc", "memory"
 	);
 	

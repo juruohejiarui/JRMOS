@@ -26,7 +26,7 @@ typedef struct intr_Desc {
     intr_Ctrl *ctrl;
 } intr_Desc;
 
-#define intr_handlerDeclare(name) __noinline__ void name(u64 param)
+#define intr_handlerDeclare(name) __noinline__ __optimize__ void name(u64 param)
 
 cpu_declarevar(u64[4], intr_msk);
 cpu_declarevar(u32, intr_freeCnt);

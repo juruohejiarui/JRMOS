@@ -20,6 +20,9 @@ static u32 *_bufAddr;
 static u32 _lineLen[4096];
 static u32 _lineSize;
 
+#define _displayWidth 1024
+#define _displayHeight 768
+
 static SpinLock _printLck, _bufLck;
 
 screen_Info *screen_info;
@@ -67,7 +70,7 @@ static const unsigned int
 	flag_sign = 0x08, 
 	flag_special = 0x10;
 
-static int _skipAtoI(const char **fmt) {
+static __optimize__ int _skipAtoI(const char **fmt) {
 	int i = 0, sign = 1;
 	if (**fmt == '-') sign = -1, (*fmt)++;
 	while (isDigit(**fmt)) {
@@ -82,7 +85,7 @@ static int _skipAtoI(const char **fmt) {
     __res; \
 })
 
-static char *_number(char *str, i64 num, int base, int size, int precision, int tp) {
+static __optimize__ char *_number(char *str, i64 num, int base, int size, int precision, int tp) {
     char c, sign, tmp[66];
     const char *digits = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     int i;
@@ -233,7 +236,7 @@ __always_inline__ int _sprintf(char *buf, const char *fmt, va_list args) {
     return str - buf;
 }
 
-static void _scroll(void) {
+static __optimize__ void _scroll(void) {
     int x, y;
     unsigned int *addr = position.fbAddr, 
                 *addr2 = position.fbAddr + screen_charHeight * screen_info->pixelPreLine,
@@ -260,7 +263,7 @@ static void _scroll(void) {
     _lineLen[position.yPos - 1] = 0;
 }
 
-static void _drawchar(unsigned int fcol, unsigned int bcol, int px, int py, char ch) {
+static __optimize__ void _drawchar(unsigned int fcol, unsigned int bcol, int px, int py, char ch) {
     int x, y;
     int testVal; u64 off;
     unsigned int *addr, *bufAddr;
@@ -278,11 +281,11 @@ static void _drawchar(unsigned int fcol, unsigned int bcol, int px, int py, char
         }
 }
 
-void putchar(u64 col, char ch) {
+__optimize__ void putchar(u64 col, char ch) {
     int i;
     if (ch == '\n') {
         position.yPos++, position.xPos = 0;
-        if (position.yPos >= min(72, position.yRes / screen_charHeight)) {
+        if (position.yPos >= min(_displayHeight / screen_charHeight, position.yRes / screen_charHeight)) {
             _scroll();
 			position.yPos--;
         }
@@ -296,7 +299,7 @@ void putchar(u64 col, char ch) {
             putchar(col, ' ');
         } while (position.xPos & 3);
     } else {
-        if (position.xPos == position.xRes / screen_charWidth)
+        if (position.xPos == min(_displayWidth / screen_charWidth, position.xRes / screen_charWidth))
             putchar(col, '\n');
         _drawchar(col & 0xffffffff, (col >> 32) & 0xffffffff, screen_charWidth * position.xPos, screen_charHeight * position.yPos, ch);
         position.xPos++;
@@ -304,7 +307,7 @@ void putchar(u64 col, char ch) {
     }
 }
 
-static void _printStr(u64 col, const char *str, int len) {
+static __optimize__ void _printStr(u64 col, const char *str, int len) {
     // close the interrupt if it is open now
 	u64 prevState = intr_state();
 	intr_mask();

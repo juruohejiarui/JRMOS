@@ -36,8 +36,8 @@ C_FLAGS= \
 	$(C_INCLUDE_PATH) \
 	--std=$(C_STD) \
 	-mcmodel=large \
-	-fno-pic \
-	-fno-pie \
+	-fpic \
+	-fpie \
 	-fno-builtin \
 	-fno-stack-protector \
 	-Wno-packed-bitfield-compat \

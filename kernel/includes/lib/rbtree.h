@@ -35,7 +35,7 @@ typedef struct RBTree {
 
 // define insert function for RBTree
 #define RBTree_insertDef(name, comparator) \
-static void name(RBTree *tree, RBNode *node, RBNode ***tgr, RBNode **par) { \
+static __optimize__ void name(RBTree *tree, RBNode *node, RBNode ***tgr, RBNode **par) { \
 	if (tree->left == NULL || comparator(node, tree->left)) tree->left = node; \
 	RBNode **src = &tree->root, *lst; \
 	while (*src) { \
@@ -49,7 +49,7 @@ static void name(RBTree *tree, RBNode *node, RBNode ***tgr, RBNode **par) { \
 
 // find node s.t. <= requirement and closest to requirement
 #define RBTree_findDef(name, match) \
-static RBNode *name(RBTree *tree, void *data) { \
+static __optimize__ RBNode *name(RBTree *tree, void *data) { \
 	RBNode *node = tree->root, *bst = NULL; \
 	while (node) { \
 		register int res = match(node, data); \

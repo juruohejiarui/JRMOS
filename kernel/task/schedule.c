@@ -42,7 +42,7 @@ __always_inline__ void _updOtherState() {
     hal_task_sche_updOtherState();
 }
 
-void task_sche_updState() {
+__optimize__ void task_sche_updState() {
     if (__unlikely__(!task_sche_state)) return ;
     task_sche_updCurState();
     _updOtherState();
@@ -61,9 +61,10 @@ void task_sche_init() {
     task_pidCnt.value = 0;
 }
 
-void task_sche_yield() {
-    task_cur->vRuntime += task_sche_cfsTbl[task_cur->priority];
-    task_cur->state |= task_state_NeedSchedule;
+__optimize__ void task_sche_yield() {
+    register task_TaskStruct *cur = task_cur;
+    cur->vRuntime += task_sche_cfsTbl[cur->priority];
+    cur->state |= task_state_NeedSchedule;
     hal_task_sche_yield();
 }
 
@@ -77,7 +78,7 @@ void task_sche_wake(task_TaskStruct *task) {
     SpinLock_unlockMask(cpu_cpuPtr(task->cpuId, task_scheLck));
 }
 
-void task_sche_preempt(task_TaskStruct *task) {
+__optimize__ void task_sche_preempt(task_TaskStruct *task) {
     // mask interrupt
     {
         register u32 state = task->state;
@@ -154,9 +155,10 @@ __always_inline__ void task_sche_hangCur() {
 }
 
 // main process of scheduling, take the next task and switch to it
-void task_sche() {
+__optimize__ void task_sche() {
     SpinLock_lock(cpu_ptr(task_scheLck));
     task_TaskStruct *nxtTsk;
+    RBTree *tsks;
     // search for the next task
     if (!List_isEmpty(cpu_ptr(task_preemptTsks))) {
         nxtTsk = container(List_getHead(cpu_ptr(task_preemptTsks)), task_TaskStruct, scheNd);
@@ -164,11 +166,11 @@ void task_sche() {
         List_del(&nxtTsk->scheNd);
         goto needSche;
     } else {
-        RBNode *nxtTskNd = RBTree_getLeft(cpu_ptr(task_tsks));
+        RBNode *nxtTskNd = RBTree_getLeft(tsks = cpu_ptr(task_tsks));
         if (!nxtTskNd) goto noNeedToSche;
         nxtTsk = container(nxtTskNd, task_TaskStruct, rbNd);
         if (nxtTsk->vRuntime > task_cur->vRuntime) goto noNeedToSche;
-        RBTree_del(cpu_ptr(task_tsks), &nxtTsk->rbNd);
+        RBTree_del(tsks, &nxtTsk->rbNd);
         goto needSche;
     }
     noNeedToSche:
@@ -272,6 +274,7 @@ __always_inline__ void _insNewTsk(task_TaskStruct *tsk) {
 
     SpinLock_lockMask(cpu_cpuPtr(tsk->cpuId, task_scheLck));
     RBTree_ins(cpu_cpuPtr(tsk->cpuId, task_tsks), &tsk->rbNd);
+    RBTree_debug(cpu_cpuPtr(tsk->cpuId, task_tsks));
     SpinLock_unlockMask(cpu_cpuPtr(tsk->cpuId, task_scheLck));
 }
 
