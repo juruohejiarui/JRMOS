@@ -53,7 +53,7 @@ typedef double f64;
 #define Page_1GMask		(~(Page_1GSize - 1))
 
 #define applyOffset(base, off, type) ({ \
-    register volatile u64 _t = (u64)base; \
+    u64 _t = (u64)base; \
     (type)(_t + (off)); \
 })
 

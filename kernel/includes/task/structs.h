@@ -60,9 +60,7 @@ struct task_TaskStruct {
 
 	RBNode rbNd;
 
-	ListNode threadNd;
-	
-	ListNode scheNd;
+	ListNode threadNd, scheNd;
 
 
 	Atomic signal;

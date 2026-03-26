@@ -38,7 +38,11 @@ __always_inline__ void task_sche_syncVRuntime(task_TaskStruct *task) { task->vRu
 
 // release cpu immediately
 void task_sche_yield();
-
+// set task_cur to sleep
+void task_sche_sleep();
+// task_cur sleep for **at least** x millseconds
+void task_sche_msleep(int msec);
+// weak specific task immediately
 void task_sche_wake(task_TaskStruct *task);
 
 void task_sche_waitReq();
@@ -46,6 +50,9 @@ void task_sche_waitReq();
 void task_sche_finishReq(task_TaskStruct *tsk);
 
 void task_sche_preempt(task_TaskStruct *task);
+
+__always_inline__ void task_sche_mskCpu(int cpu) { Atomic_inc(cpu_cpuPtr(cpu, task_scheMsk)); }
+__always_inline__ void task_sche_unmskCpu(int cpu) { Atomic_dec(cpu_cpuPtr(cpu, task_scheMsk)); }
 
 __always_inline__ void task_sche_msk() { Atomic_inc(cpu_ptr(task_scheMsk)); }
 

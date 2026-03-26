@@ -6,6 +6,7 @@
 .global task_sche_state
 .global cpu_symbol_percpu
 .global cpu_var(task_scheMsk)
+.global cpu_var(task_scheLck)
 .global cpu_var(softirq_flag)
 
 ENTRY(hal_intr_setTr)
