@@ -112,7 +112,7 @@ int hw_usb_xhci_freeRing(hw_usb_xhci_Host *host, hw_usb_xhci_Ring *ring) {
     return res_SUCC;
 }
 
-static int _tryInsReq(hw_usb_xhci_Host *host, hw_usb_xhci_Ring *ring, hw_usb_xhci_Request *req) {
+__always_inline__ int _tryInsReq(hw_usb_xhci_Host *host, hw_usb_xhci_Ring *ring, hw_usb_xhci_Request *req) {
     req->flags &= ~hw_usb_xhci_Request_flags_Finished;
     SpinLock_lockMask(&ring->lck);
     // check if the ring is full
@@ -148,7 +148,7 @@ void hw_usb_xhci_InsReq(hw_usb_xhci_Host *host, hw_usb_xhci_Ring *ring, hw_usb_x
 }
 
 // insert the request, write the doorbell register, then wait for the reply
-void hw_usb_xhci_request(hw_usb_xhci_Host *host, hw_usb_xhci_Ring *ring, hw_usb_xhci_Request *req, hw_usb_xhci_Device *dev, u32 doorbell) {
+__optimize__ void hw_usb_xhci_request(hw_usb_xhci_Host *host, hw_usb_xhci_Ring *ring, hw_usb_xhci_Request *req, hw_usb_xhci_Device *dev, u32 doorbell) {
     task_Request_init(&req->req, task_Request_flags_Abort);
     if (dev != NULL) {
         for (int i = 0; i < req->inputSz; i++)
@@ -160,7 +160,7 @@ void hw_usb_xhci_request(hw_usb_xhci_Host *host, hw_usb_xhci_Ring *ring, hw_usb_
     task_Request_send(&req->req);
 }
 
-hw_usb_xhci_Request *hw_usb_xhci_makeRequest(u32 size, u32 flags) {
+__optimize__ hw_usb_xhci_Request *hw_usb_xhci_makeRequest(u32 size, u32 flags) {
 	hw_usb_xhci_Request *req = mm_kmalloc(sizeof(hw_usb_xhci_Request) + size * sizeof(hw_usb_xhci_TRB), 0, NULL);
     if (!req) {
         printk(screen_err, "hw: xhci: alloc request failed\n");
@@ -182,7 +182,7 @@ int hw_usb_xhci_freeRequest(hw_usb_xhci_Request *req) {
 }
 
 // response the first request in the ring and wake the corresponding task
-hw_usb_xhci_Request *hw_usb_xhci_response(hw_usb_xhci_Ring *ring, hw_usb_xhci_TRB *result, u64 trbAddr) {
+__optimize__ hw_usb_xhci_Request *hw_usb_xhci_response(hw_usb_xhci_Ring *ring, hw_usb_xhci_TRB *result, u64 trbAddr) {
     SpinLock_lockMask(&ring->lck);
     if (!ring->load) {
         SpinLock_unlockMask(&ring->lck);

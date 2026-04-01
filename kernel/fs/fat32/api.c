@@ -355,7 +355,7 @@ int fs_fat32_closeDir(fs_vfs_Dir *dir) {
 	return fs_fat32_releaseEntry(&ent->vfsEnt);
 }
 
-int fs_fat32_releaseEntry(fs_vfs_Entry *entry) {
+__optimize__ int fs_fat32_releaseEntry(fs_vfs_Entry *entry) {
 	// printk(screen_log, "fs: fat32: release entry %p\n", entry);
 	fs_fat32_Entry *fat32Entry = container(entry, fs_fat32_Entry, vfsEnt);
 	fs_fat32_Partition *par = container(entry->par, fs_fat32_Partition, par);
@@ -430,7 +430,7 @@ fs_Partition *fs_fat32_installGptPar(fs_Disk *disk, fs_gpt_ParEntry *entry) {
 }
 
 // move curPtr, curClusId, and curClusOff to ptr
-static int _jmpToPtr(fs_fat32_File *file, int alloc) {
+static __optimize__ int _jmpToPtr(fs_fat32_File *file, int alloc) {
 	fs_fat32_Partition *par = container(file->file.par, fs_fat32_Partition, par);
 
 	// extent file size if necessary
@@ -462,7 +462,7 @@ static int _jmpToPtr(fs_fat32_File *file, int alloc) {
 	}
 }
 
-i64 fs_fat32_FileAPI_seek(fs_vfs_File *file, i64 off, int base) {
+__optimize__ i64 fs_fat32_FileAPI_seek(fs_vfs_File *file, i64 off, int base) {
 	fs_fat32_File *fat32File = container(file, fs_fat32_File, file);
 	fs_fat32_Partition *par = container(file->par, fs_fat32_Partition, par);
 	fs_fat32_Entry *ent = container(file->ent, fs_fat32_Entry, vfsEnt);
@@ -520,7 +520,7 @@ i64 fs_fat32_FileAPI_seek(fs_vfs_File *file, i64 off, int base) {
 	return file->ptr;
 }
 
-i64 fs_fat32_FileAPI_write(fs_vfs_File *file, void *buf, u64 len) {
+__optimize__ i64 fs_fat32_FileAPI_write(fs_vfs_File *file, void *buf, u64 len) {
 	if (!len) return 0;
 	fs_fat32_File *fat32File = container(file, fs_fat32_File, file);
 	SpinLock_lock(&fat32File->lck);
@@ -576,7 +576,7 @@ i64 fs_fat32_FileAPI_write(fs_vfs_File *file, void *buf, u64 len) {
 }
 
 // only read at most a cluster
-i64 fs_fat32_FileAPI_read(fs_vfs_File *file, void *buf, u64 len) {
+__optimize__ i64 fs_fat32_FileAPI_read(fs_vfs_File *file, void *buf, u64 len) {
 	if (!len) return 0;
 	fs_fat32_File *fat32File = container(file, fs_fat32_File, file);
 	fs_fat32_Entry *ent = container(file->ent, fs_fat32_Entry, vfsEnt);
@@ -621,7 +621,7 @@ i64 fs_fat32_FileAPI_read(fs_vfs_File *file, void *buf, u64 len) {
 	return acc;
 }
  
-fs_vfs_Entry *fs_fat32_DirAPI_nxt(fs_vfs_Dir *dir) {
+__optimize__ fs_vfs_Entry *fs_fat32_DirAPI_nxt(fs_vfs_Dir *dir) {
 	fs_fat32_Dir *fat32Dir = container(dir, fs_fat32_Dir, dir);
 	
 	SpinLock_lock(&fat32Dir->lck);

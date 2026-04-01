@@ -27,7 +27,7 @@ __always_inline__ int _flushCacheNd(fs_fat32_Partition *par, fs_fat32_ClusCacheN
 	return _writeSec(par, (nd->idx - 2) * par->lbaPerClus + par->fstDtSec, par->lbaPerClus, nd->clus);
 }
 
-fs_fat32_ClusCacheNd *fs_fat32_getClusCacheNd(fs_fat32_Partition *par, u64 idx) {
+__optimize__ fs_fat32_ClusCacheNd *fs_fat32_getClusCacheNd(fs_fat32_Partition *par, u64 idx) {
 	fs_fat32_ClusCacheNd *cacheNd;
 	// printk(screen_log, "fs: fat32: search clus cache %016lx\n", off);
 	if (idx == fs_fat32_ClusEnd) return NULL;
@@ -76,7 +76,7 @@ fs_fat32_ClusCacheNd *fs_fat32_getClusCacheNd(fs_fat32_Partition *par, u64 idx) 
 
 
 // should be called whenever cache is modified.
-int fs_fat32_releaseClusCacheNd(fs_fat32_Partition *par, fs_fat32_ClusCacheNd *nd, int modi) {
+__optimize__ int fs_fat32_releaseClusCacheNd(fs_fat32_Partition *par, fs_fat32_ClusCacheNd *nd, int modi) {
 	RBTree_lck(&par->cache.clusCacheTr);
 	int free = (nd->waitCnt.value == 0);
 	int res = res_SUCC;
@@ -139,7 +139,7 @@ __always_inline__ fs_fat32_FatCacheNd *_crtFatCache(fs_fat32_Partition *par, u32
 	return cache;
 }
 
-u32 fs_fat32_getNxtClus(fs_fat32_Partition *par, u32 clus) {
+__optimize__ u32 fs_fat32_getNxtClus(fs_fat32_Partition *par, u32 clus) {
 	if (clus == fs_fat32_ClusEnd) return fs_fat32_ClusEnd;
 	// read FAT1
 	u64 off = (clus * sizeof(u32)) / hw_diskdev_lbaSz;
@@ -158,7 +158,7 @@ u32 fs_fat32_getNxtClus(fs_fat32_Partition *par, u32 clus) {
 	return fs_fat32_ClusEnd;
 }
 
-int fs_fat32_setNxtClus(fs_fat32_Partition *par, u32 clus, u32 nxt) {
+__optimize__ int fs_fat32_setNxtClus(fs_fat32_Partition *par, u32 clus, u32 nxt) {
     u64 off = (clus * sizeof(u32)) / hw_diskdev_lbaSz;
 	u64 idx = (clus * sizeof(u32)) % hw_diskdev_lbaSz / sizeof(u32);
 
@@ -175,7 +175,7 @@ int fs_fat32_setNxtClus(fs_fat32_Partition *par, u32 clus, u32 nxt) {
 	return res_FAIL | res_DAMAGED;
 }
 
-u32 fs_fat32_allocClus(fs_fat32_Partition *par) {
+__optimize__ u32 fs_fat32_allocClus(fs_fat32_Partition *par) {
 	RBTree_lck(&par->cache.fatTr);
 	u32 res = 0;
 	int i;

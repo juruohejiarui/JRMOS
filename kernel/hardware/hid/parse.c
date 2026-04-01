@@ -74,7 +74,7 @@ static i32 hw_hid_Item_sdata(struct hw_hid_Item *item) {
     return 0; // should not happen
 }
 
-static u8 *_fetchItem(u8 *st, u8 *ed, struct hw_hid_Item *item) {
+__always_inline__ u8 *_fetchItem(u8 *st, u8 *ed, struct hw_hid_Item *item) {
     if ((ed - st) <= 0) return NULL;
     u8 b = *st++;
 
@@ -117,7 +117,7 @@ static u8 *_fetchItem(u8 *st, u8 *ed, struct hw_hid_Item *item) {
     return NULL;
 }
 
-static int _parseGlobal(struct hw_hid_Parser *parser, struct hw_hid_Item *item) {
+__always_inline__ int _parseGlobal(struct hw_hid_Parser *parser, struct hw_hid_Item *item) {
     switch (item->tag) {
         case hw_hid_Item_tag_Push :
             if (parser->gloStkPtr == hw_hid_ParserGlobal_StkSize) {
@@ -185,7 +185,7 @@ static int _completeUsage(struct hw_hid_Parser *parser, u32 idx) {
     parser->loc.usage[idx] &= 0xffff;
     parser->loc.usage[idx] |= (parser->glo.usagePg << 16);
 }
-static int _addUsage(struct hw_hid_Parser *parser, u32 usage) {
+__always_inline__ int _addUsage(struct hw_hid_Parser *parser, u32 usage) {
     if (parser->loc.usageIdx >= hw_hid_ParserLocal_UsageMx) {
         printk(screen_err, "hw: hid: parser %p: usage index overflow\n", parser);
         return res_FAIL;
@@ -197,7 +197,7 @@ static int _addUsage(struct hw_hid_Parser *parser, u32 usage) {
     return res_SUCC;
 }
 
-static int _parseLocal(struct hw_hid_Parser *parser, struct hw_hid_Item *item) {
+__always_inline__ int _parseLocal(struct hw_hid_Parser *parser, struct hw_hid_Item *item) {
     u32 data; u32 n;
     if (item->size == 0) {
         printk(screen_err, "hw: hid: parser %p: invalid local item size: %d\n", parser, item->size);
@@ -254,7 +254,7 @@ static int _parseLocal(struct hw_hid_Parser *parser, struct hw_hid_Item *item) {
     }
 }
 
-static int _collection(struct hw_hid_Parser *parser, u32 tp ) {
+__always_inline__ int _collection(struct hw_hid_Parser *parser, u32 tp ) {
     struct hw_hid_Collection *coll;
     u32 usage = parser->loc.usage[0];
 
@@ -288,7 +288,7 @@ static int _collection(struct hw_hid_Parser *parser, u32 tp ) {
     return res_SUCC;
 }
 
-static int _endCollection(struct hw_hid_Parser *parser) {
+__always_inline__ int _endCollection(struct hw_hid_Parser *parser) {
     if (!parser->colStkPtr) {
         printk(screen_err, "hw: hid: parser %p: collection stack underflow\n", parser);
         return res_FAIL;
@@ -333,7 +333,7 @@ static struct hw_hid_Report *_registerReport(struct hw_hid_Parser *parser, u32 t
     return report;
 }
 
-static struct hw_hid_Field *_registerField(struct hw_hid_Report *report, u32 usage) {
+__always_inline__ struct hw_hid_Field *_registerField(struct hw_hid_Report *report, u32 usage) {
     if (report->fieldCnt >= hw_hid_Parser_MxFields) {
         printk(screen_err, "hw: hid: report %p: field count overflow\n", report);
         return NULL;
@@ -448,7 +448,7 @@ static int _parseMain(struct hw_hid_Parser *parser, struct hw_hid_Item *item) {
     memset(&parser->loc, 0, sizeof(struct hw_hid_ParserLocal));
     return ret;
 }
-int hw_hid_parse(u8 *report, u32 reportLen, hw_hid_Parser *parser) {
+__optimize__ int hw_hid_parse(u8 *report, u32 reportLen, hw_hid_Parser *parser) {
     u8 *st = report, *ed = report + reportLen;
     struct hw_hid_Item item;
     u8 *nxt;
@@ -502,14 +502,14 @@ void hw_hid_printParser(hw_hid_Parser *parser) {
     SpinLock_unlock(&_printLck);
 }
 
-u32 _getReportUData(u8 *report, struct hw_hid_Field *field, int idx) {
+__always_inline__ u32 _getReportUData(u8 *report, struct hw_hid_Field *field, int idx) {
     u32 off = field->reportSz * idx + field->reportOff;
     u32 mask = (1u << field->reportSz) - 1;
     mask <<= (off & 0x7);
     return (*(u32 *)(report + (off / 8)) & mask) >> (off & 0x7);
 }
 
-i32 _getReportSData(u8 *report, struct hw_hid_Field *field, int idx) {
+__always_inline__ i32 _getReportSData(u8 *report, struct hw_hid_Field *field, int idx) {
     u32 off = field->reportSz * idx + field->reportOff;
     u32 mask = (1u << field->reportSz) - 1;
     mask <<= (off & 0x7);
@@ -518,7 +518,7 @@ i32 _getReportSData(u8 *report, struct hw_hid_Field *field, int idx) {
     return data >> (32 - field->reportSz);
 }
 
-int hw_hid_parseKeyboardInput(hw_hid_Parser *parser, u8 *report, hw_hid_KeyboardInput *input) {
+__optimize__ int hw_hid_parseKeyboardInput(hw_hid_Parser *parser, u8 *report, hw_hid_KeyboardInput *input) {
     struct hw_hid_ReportEnum *repEnum = &parser->reportEnum[hw_hid_ReportTp_Input];
     struct hw_hid_Report *rep = repEnum->report[0];
     // get modify key status
@@ -528,7 +528,7 @@ int hw_hid_parseKeyboardInput(hw_hid_Parser *parser, u8 *report, hw_hid_Keyboard
     return res_SUCC;
 }
 
-int hw_hid_parseMouseInput(hw_hid_Parser *parser, u8 *report, hw_hid_MouseInput *input) {
+__optimize__ int hw_hid_parseMouseInput(hw_hid_Parser *parser, u8 *report, hw_hid_MouseInput *input) {
     struct hw_hid_ReportEnum *repEnum = &parser->reportEnum[hw_hid_ReportTp_Input];
     struct hw_hid_Report *rep = repEnum->report[0];
     input->buttons = 0;
