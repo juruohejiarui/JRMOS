@@ -2,6 +2,7 @@
 #include <mm/mm.h>
 #include <fs/vfs/api.h>
 #include <fs/api.h>
+#include <hardware/datetime.h>
 #include <hardware/pci.h>
 #include <hardware/diskdev.h>
 #include <hardware/gpu.h>
@@ -28,7 +29,7 @@ void init_testDir(u8 *path) {
 	Atomic_inc(&cnt);
 }
 
-void init_testFile(u8 *path) {
+void init_testRead(u8 *path) {
 	fs_vfs_Entry *entry;
 	fs_vfs_File *file;
 
@@ -53,13 +54,53 @@ void init_testFile(u8 *path) {
 	off = fs_vfs_seek(file, 1000, fs_vfs_FileAPI_seek_base_Cur);
 	printk(screen_log, "seek off=%lx\n", off);
 
+	Datetime datetime;
+
+	hw_datetime_now(&datetime);
+
+	printk(screen_log, "%4d-%2d-%2d %d:%d:%d\n", 
+		datetime.date.year, datetime.date.month, datetime.date.year,
+		datetime.time.hour, datetime.time.minute, datetime.time.second);
+
 	Atomic_inc(&cnt);
 }
 
+void init_testWrite(u8 *path) {
+	fs_vfs_Entry *entry;
+	fs_vfs_File *file;
+
+	{
+		u16 buf[fs_vfs_maxPathLen];
+		u16 len = toStr16(path, buf);
+		printk(screen_log, "fs: test path: %S, len=%d\n", buf, len);
+		entry = fs_vfs_lookup(buf);
+		file = fs_vfs_openFile(entry);
+	}
+
+	u8 buf[32];
+	memset(buf, 0, sizeof(buf));
+	u64 off = fs_vfs_seek(file, -15, fs_vfs_FileAPI_seek_base_End);
+	printk(screen_log, "seek off=%lx\n", off);
+	u64 bytes = fs_vfs_read(file, buf, 32);
+	printk(screen_log, "read %d byte(s) from file %s:\n%s\n", bytes, path, buf + 1);
+	off = fs_vfs_seek(file, -19, fs_vfs_FileAPI_seek_base_Cur);
+	printk(screen_log, "seek off=%lx\n", off);
+	bytes = fs_vfs_read(file, buf, 32);
+	printk(screen_log, "read %d byte(s) from file %s:\n%s\n", bytes, path, buf + 1);
+	off = fs_vfs_seek(file, 1000, fs_vfs_FileAPI_seek_base_Cur);
+	printk(screen_log, "seek off=%lx\n", off);
+	bytes = fs_vfs_write(file, buf, 32);
+	printk(screen_log, "write %d bytes(s) to file %s\n", bytes, path);
+
+	Atomic_inc(&cnt);
+}
+
+
+
 void init_testFs() {
 	task_newSubTask(init_testDir, (u64)"AA", task_attr_Builtin);
-	task_newSubTask(init_testFile, (u64)"AA/test/test.txt", task_attr_Builtin);
-	task_newSubTask(init_testFile, (u64)"AA/EFI/BOOT/test1.txt", task_attr_Builtin);
+	task_newSubTask(init_testRead, (u64)"AA/test/test.txt", task_attr_Builtin);
+	task_newSubTask(init_testWrite, (u64)"AA/EFI/BOOT/test1.txt", task_attr_Builtin);
 
 	while (cnt.value != 3);
 }

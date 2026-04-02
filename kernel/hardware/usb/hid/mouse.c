@@ -3,7 +3,7 @@
 #include <screen/screen.h>
 #include <mm/mm.h>
 
-int hw_usb_hid_mouse(hw_usb_xhci_Device *dev, hw_hid_Parser *parser, int inEp) {
+__optimize__ int hw_usb_hid_mouse(hw_usb_xhci_Device *dev, hw_hid_Parser *parser, int inEp) {
     printk(screen_log, "hw: usb hid: device %p is a mouse with parser %p.\n", dev, parser);
 
     hw_usb_xhci_Request *req = hw_usb_xhci_makeRequest(1, hw_usb_xhci_Request_flags_Abort);

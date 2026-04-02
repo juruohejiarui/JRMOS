@@ -20,8 +20,8 @@ static u32 *_bufAddr;
 static u32 _lineLen[4096];
 static u32 _lineSize;
 
-#define _displayWidth 1024
-#define _displayHeight 768
+#define _displayWidth 2048
+#define _displayHeight (768 * 2)
 
 static SpinLock _printLck, _bufLck;
 

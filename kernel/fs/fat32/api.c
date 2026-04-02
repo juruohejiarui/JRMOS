@@ -25,6 +25,11 @@ __always_inline__ void _deleteEnt(void *ent) {
 
 __always_inline__ void _syncToVfsEnt(fs_fat32_Entry *ent) {
 	ent->vfsEnt.size = ent->dirEntry.fileSz;
+	ent->vfsEnt.ModiTime = ent->dirEntry.wrtData;
+}
+
+__always_inline__ void _updModiDatetime(fs_fat32_Entry *ent) {
+
 }
 
 int fs_fat32_chkBootSec(fs_fat32_BootSector *bs) {
@@ -447,6 +452,7 @@ static __optimize__ int _jmpToPtr(fs_fat32_File *file, int alloc) {
 			if (nxtClus == fs_fat32_ClusEnd && alloc) {
 				nxtClus = fs_fat32_allocClus(par);
 				fs_fat32_setNxtClus(par, file->curClusIdx, nxtClus);
+				printk(screen_log, "fat32: %p: alloc %#010x after %#010x\n", file, file->curClusIdx, nxtClus);
 
 				// write 0 to new cluster
 				fs_fat32_ClusCacheNd *nd = fs_fat32_getClusCacheNd(par, nxtClus);
@@ -559,6 +565,7 @@ __optimize__ i64 fs_fat32_FileAPI_write(fs_vfs_File *file, void *buf, u64 len) {
 	{
 		fs_fat32_Entry *ent = container(file->ent, fs_fat32_Entry, vfsEnt);
 		ent->dirEntry.fileSz = max(ent->dirEntry.fileSz, file->ptr);
+		
 		_syncToVfsEnt(ent);
 	}
 	end:

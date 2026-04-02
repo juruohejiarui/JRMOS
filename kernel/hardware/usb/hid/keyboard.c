@@ -3,7 +3,7 @@
 #include <screen/screen.h>
 #include <mm/mm.h>
 
-int hw_usb_hid_keyboard(hw_usb_xhci_Device *dev, hw_hid_Parser *parser, int inEp, int outEp) {
+__optimize__ int hw_usb_hid_keyboard(hw_usb_xhci_Device *dev, hw_hid_Parser *parser, int inEp, int outEp) {
     printk(screen_log, "hw: usb hid: device %p is a keyboard with parser %p.\n", dev, parser);
     
     u8 *rawReport = mm_kmalloc(parser->reportEnum[hw_hid_ReportTp_Input].report[0]->sz / 8, 0, NULL);
