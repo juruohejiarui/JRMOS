@@ -22,9 +22,9 @@ void task_sche_disable();
 int task_sche_getState();
 
 __always_inline__ void task_sche_updCurState() {
-    register u64 tmp = task_sche_cfsTbl[task_cur->priority];
-    task_cur->vRuntime += tmp;
-    task_cur->state |= task_state_NeedSchedule;
+    register task_TaskStruct *cur = task_cur;
+    cur->vRuntime += task_sche_cfsTbl[cur->priority];
+    cur->state |= task_state_NeedSchedule;
 }
 
 void task_sche_updState();

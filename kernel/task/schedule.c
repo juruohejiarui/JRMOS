@@ -20,12 +20,13 @@ cpu_definevar(ListNode, task_preemptTsks);
 cpu_definevar(SpinLock, task_scheLck);
 cpu_definevar(Atomic, task_scheMsk);
 cpu_definevar(task_TaskStruct *, task_curTsk);
+cpu_definevar(u64, task_switchCnt);
 
 u64 task_sche_cfsTbl[0x20] = {
     0x1, 0x2, 0x4, 0x8, 0x10, 0x20, 0x40
 };
 
-void task_sche_enable() { printk(screen_log, "enable sche\n"); task_sche_state = 1; }
+void task_sche_enable() { task_sche_state = 1; }
 void task_sche_disable() { task_sche_state = 0; }
 int task_sche_getState() { return task_sche_state; }
 
@@ -157,21 +158,13 @@ __optimize__ void task_sche() {
         nxtTsk = container(List_getHead(cpu_ptr(task_preemptTsks)), task_TaskStruct, scheNd);
         printk(screen_warn, "task #%d preempted by #%d\n", task_cur->pid, nxtTsk->pid);
         List_del(&nxtTsk->scheNd);
-        goto needSche;
     } else {
         RBNode *nxtTskNd = RBTree_getLeft(tsks = cpu_ptr(task_tsks));
         if (!nxtTskNd) goto noNeedToSche;
         nxtTsk = container(nxtTskNd, task_TaskStruct, rbNd);
         if (nxtTsk->vRuntime > task_cur->vRuntime) goto noNeedToSche;
         RBTree_del(tsks, &nxtTsk->rbNd);
-        goto needSche;
     }
-    noNeedToSche:
-    SpinLock_unlock(cpu_ptr(task_scheLck));
-    // printk(screen_log, "%d:no nxtTsk\n", cpu_getvar(cpu_id));
-    return ;
-
-    needSche:
     task_sche_hangCur();
     nxtTsk->state = task_state_Running;
     SpinLock_unlock(cpu_ptr(task_scheLck));
@@ -179,7 +172,15 @@ __optimize__ void task_sche() {
     //     cpu_getvar(cpu_id), 
     //     task_cur, task_cur->hal.rip,
     //     nxtTsk, nxtTsk->hal.rip);
+    (*cpu_ptr(task_switchCnt))++;
     hal_task_sche_switch(task_cur, nxtTsk);
+    return ;
+
+    noNeedToSche:
+    SpinLock_unlock(cpu_ptr(task_scheLck));
+    (*cpu_ptr(task_switchCnt))++;
+    // printk(screen_log, "%d:no nxtTsk\n", cpu_getvar(cpu_id));
+    return ;
 }
 
 task_ThreadStruct *task_newThread(u64 attr) {

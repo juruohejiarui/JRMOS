@@ -95,7 +95,7 @@ int mm_init() {
     return res_SUCC;
 }
 
-mm_Page *mm_divPageGrp(mm_Page *grpHdr) {
+__optimize__ mm_Page *mm_divPageGrp(mm_Page *grpHdr) {
     if (!grpHdr->ord) return NULL;
     --grpHdr->ord;
     mm_Page *rPart = (mm_Page *)((void *)grpHdr + (1ull << grpHdr->ord) * sizeof(mm_Page));

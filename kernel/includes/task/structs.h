@@ -82,6 +82,7 @@ cpu_declarevar(ListNode, task_preemptTsks);
 cpu_declarevar(SpinLock, task_scheLck);
 cpu_declarevar(Atomic, task_scheMsk);
 cpu_declarevar(task_TaskStruct *, task_curTsk);
+cpu_declarevar(u64, task_switchCnt);
 
 extern SafeList task_freeTsks, task_sleepTsks;
 

@@ -86,7 +86,7 @@ void mm_buddy_dbg(int detail) {
     }
 }
 
-mm_Page *mm_allocPages(u64 log2Size, u32 attr) {
+__optimize__ mm_Page *mm_allocPages(u64 log2Size, u32 attr) {
     // printk(screen_log, "mm: buddy: alloc 2^%ld page attr=%#010x\n", log2Size, attr);
     int intrState = intr_state();
     if (intrState) intr_mask();
@@ -131,7 +131,7 @@ mm_Page *mm_allocPages(u64 log2Size, u32 attr) {
     return NULL;
 }
 
-int mm_freePages(mm_Page *pages) {
+__optimize__ int mm_freePages(mm_Page *pages) {
     // printk(screen_log, "mm: buddy: try free %p->%p attr=%#010x\n", pages, mm_getPhyAddr(pages), pages->attr);
     if (~pages->attr & (mm_Attr_HeadPage | mm_Attr_Allocated)) {
         printk(screen_err, "mm: buddy: invalid pages %p: not head page or allocated page\n", pages);

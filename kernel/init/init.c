@@ -54,14 +54,6 @@ void init_testRead(u8 *path) {
 	off = fs_vfs_seek(file, 1000, fs_vfs_FileAPI_seek_base_Cur);
 	printk(screen_log, "seek off=%lx\n", off);
 
-	Datetime datetime;
-
-	hw_datetime_now(&datetime);
-
-	printk(screen_log, "%4d-%2d-%2d %d:%d:%d\n", 
-		datetime.date.year, datetime.date.month, datetime.date.year,
-		datetime.time.hour, datetime.time.minute, datetime.time.second);
-
 	Atomic_inc(&cnt);
 }
 
@@ -100,6 +92,8 @@ void init_testWrite(u8 *path) {
 void init_testFs() {
 	task_newSubTask(init_testDir, (u64)"AA", task_attr_Builtin);
 	task_newSubTask(init_testRead, (u64)"AA/test/test.txt", task_attr_Builtin);
+	task_newSubTask(init_testRead, (u64)"AA/test/test.txt", task_attr_Builtin);
+	task_newSubTask(init_testRead, (u64)"AA/test/test.txt", task_attr_Builtin);
 	task_newSubTask(init_testWrite, (u64)"AA/EFI/BOOT/test1.txt", task_attr_Builtin);
 
 	while (cnt.value != 3);
@@ -129,10 +123,20 @@ void init_init() {
 	mm_dbg(NULL);
 	task_newTask(init_testFs, (u64)NULL, task_attr_Builtin);
 
-	
-
+	Datetime datetime, lst_datetime;
+	u64 lst_switchCnt = cpu_getvar(task_switchCnt);
+	hw_datetime_now(&lst_datetime);
 	while (1) {
-		mm_dbg("\r");
+		memcpy(&datetime, &lst_datetime, sizeof(Datetime));
+		hw_datetime_now(&datetime);
+		if (!datetime_cmp(&lst_datetime, &datetime)) {
+			u64 new_switchCnt = cpu_getvar(task_switchCnt);
+			printk(screen_log, "%04d-%02d-%02d %02d:%02d:%02d %ld\r", 
+				datetime.date.year, datetime.date.month, datetime.date.day,
+				datetime.time.hour, datetime.time.minute, datetime.time.second,
+				new_switchCnt - lst_switchCnt);
+			lst_switchCnt = new_switchCnt;
+		}
 		task_sche_yield();
 	}
 }

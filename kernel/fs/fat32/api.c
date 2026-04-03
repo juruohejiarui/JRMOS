@@ -75,7 +75,7 @@ static fs_fat32_Entry *_allocEntry(fs_fat32_Partition *par, fs_fat32_DirEntry *d
 	return entry;
 }
 
-static u8 _chksum(fs_fat32_DirEntry *dirEnt) {
+__always_inline__ u8 _chksum(fs_fat32_DirEntry *dirEnt) {
 	u8 res = 0;
 	u8 *ptr = (u8 *)dirEnt;
 	for (i16 len = 11; len >= 0; len--) {
@@ -84,14 +84,14 @@ static u8 _chksum(fs_fat32_DirEntry *dirEnt) {
 	return res;
 }
 
-static int _chkLEnts(fs_fat32_DirEntry *sEnt, fs_fat32_LDirEntry *lEnts, int lEntNum) {
+__always_inline__ int _chkLEnts(fs_fat32_DirEntry *sEnt, fs_fat32_LDirEntry *lEnts, int lEntNum) {
 	u8 chksum = _chksum(sEnt);
 	
 	for (; lEntNum > 0; lEntNum--) if (lEnts[lEntNum].chksum != chksum) return res_FAIL;
 	return res_SUCC; 
 }
 
-static int _parseSEnt(fs_fat32_DirEntry *sEnt, u16 *buf) {
+__always_inline__ int _parseSEnt(fs_fat32_DirEntry *sEnt, u16 *buf) {
 	int len;
 	u8 *buf8 = (void *)buf;
 	memcpy(sEnt->name, buf8, (len = 8));
@@ -120,7 +120,7 @@ static int _parseSEnt(fs_fat32_DirEntry *sEnt, u16 *buf) {
 	return len;
 }
 
-static int _parseLEnt(fs_fat32_DirEntry *sEnt, fs_fat32_LDirEntry *lEnts, int lEntNum, u16 *buf) {
+__always_inline__ int _parseLEnt(fs_fat32_DirEntry *sEnt, fs_fat32_LDirEntry *lEnts, int lEntNum, u16 *buf) {
 	int len = 0;
 	for (int i = 1; i <= lEntNum; i++) {
 		memcpy(lEnts[i].name1, buf + len, sizeof(lEnts[i].name1));
@@ -134,14 +134,14 @@ static int _parseLEnt(fs_fat32_DirEntry *sEnt, fs_fat32_LDirEntry *lEnts, int lE
 	return len;
 }
 
-static int _parseName(fs_fat32_DirEntry *sEnt, fs_fat32_LDirEntry *lEnts, int lEntNum, u16 *buf) {
+__always_inline__ int _parseName(fs_fat32_DirEntry *sEnt, fs_fat32_LDirEntry *lEnts, int lEntNum, u16 *buf) {
 	if (lEntNum > 0 && _chkLEnts(sEnt, lEnts, lEntNum)) return _parseLEnt(sEnt, lEnts, lEntNum, buf);
 	else return _parseSEnt(sEnt, buf);
 }
 
 // This function should be called when cache->entryTr is locked
 // when a cache is found, reference to this entry increase
-fs_fat32_Entry *_findEntryCache(fs_fat32_Partition *par, u16 *path) {
+__always_inline__ fs_fat32_Entry *_findEntryCache(fs_fat32_Partition *par, u16 *path) {
 	// printk(screen_log, "fs: fat32: search entry cache: %S\n", path);
 	RBNode *nd = RBTree_find(&par->cache.entryTr, path);
 	fs_fat32_Entry *entry;
@@ -156,9 +156,19 @@ fs_fat32_Entry *_findEntryCache(fs_fat32_Partition *par, u16 *path) {
 }
 
 // This function should be called when cache->entryTr is locked
-static void _insNewEntryCache(fs_fat32_Partition *par, fs_fat32_Entry *ent) {
+__always_inline__ void _insNewEntryCache(fs_fat32_Partition *par, fs_fat32_Entry *ent) {
 	ent->ref = 1;
 	RBTree_ins(&par->cache.entryTr, &ent->cacheNd);
+}
+
+// write back dir entry
+static void _updEntry(fs_fat32_Entry *entry) {
+	fs_fat32_Partition *par = container(entry->vfsEnt.par, fs_fat32_Partition, par);
+	if (__unlikely__(entry == par->root)) {
+		return ;
+	}
+	// open parent entry
+	
 }
 
 // functions for vfs drivers

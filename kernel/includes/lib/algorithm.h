@@ -29,4 +29,10 @@
     register __typeof__(a) ta = (a); ta < 0 ? -ta : ta; \
 })
 
+#define cmp(a, b) ({ \
+    register __typeof__(a) ta = (a); \
+    register __typeof__(b) tb = (b); \
+    ta < tb ? -1 : (ta == tb ? 0 : 1); \
+})
+
 #endif

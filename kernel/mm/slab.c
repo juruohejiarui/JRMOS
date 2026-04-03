@@ -184,7 +184,7 @@ __always_inline__ int _freeSlabBlk(int sizeId, SlabBlk *blk) {
     }
 }
 
-static void *_kmalloc(u64 size) {
+static __optimize__ void *_kmalloc(u64 size) {
     int id = 0;
     while (_slab[id].size < size) id++;
     SlabBlk *blk = NULL;
@@ -219,7 +219,7 @@ static void *_kmalloc(u64 size) {
     return NULL;
 }
 
-static int _kfree(void *addr) {
+static __optimize__ int _kfree(void *addr) {
     int sizeId = 0, find = 0;
     SlabBlk *blk;
     for (sizeId = 0; sizeId < mm_slab_mxSizeShift - mm_slab_mnSizeShift + 1; sizeId++) {
@@ -246,7 +246,7 @@ static int _kfree(void *addr) {
     return res_SUCC;
 }
 
-void *mm_kmalloc(u64 size, u32 attr, void (*destructor)(void *)) {
+__optimize__ void *mm_kmalloc(u64 size, u32 attr, void (*destructor)(void *)) {
     if (size > mm_slab_mxSize) {
         printk(screen_err, "mm: slab: kmalloc(): failed to allocate a memory block with size %ld. Too large\n", size);
         return NULL;
@@ -271,7 +271,7 @@ void *mm_kmalloc(u64 size, u32 attr, void (*destructor)(void *)) {
     }
     return addr;
 }
-int mm_kfree(void *addr, u32 attr) {
+__optimize__ int mm_kfree(void *addr, u32 attr) {
     if (~attr & mm_Attr_Shared) {
         if (_delRecord(addr) == res_FAIL) {
             printk(screen_err, "mm: slab: kfree(): failed to delete record of private address %p.\n", addr);
