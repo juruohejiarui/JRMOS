@@ -32,10 +32,17 @@ struct task_ThreadStruct {
 	// kernel page table version of this thread.
 	task_MemStruct mem;
 
+	u64 state;
+	u64 id;
+
+	struct task_ThreadStruct *parent;
+
 	task_SignalHandler sigHandler[task_nrSignal];
 	u64 sigParam[task_nrSignal];
 
-	SafeList tskList;
+	SafeList tskList, children;
+
+	ListNode childNd;
 
 	// opened file list
 	SafeList fileLst;
@@ -75,8 +82,6 @@ typedef union task_Union {
 	u8 krlStk[task_krlStkSize];
 } task_Union;
 
-extern u64 task_sche_cfsTbl[0x20];
-
 cpu_declarevar(RBTree, task_tsks);
 cpu_declarevar(ListNode, task_preemptTsks);
 cpu_declarevar(SpinLock, task_scheLck);
@@ -84,14 +89,6 @@ cpu_declarevar(Atomic, task_scheMsk);
 cpu_declarevar(task_TaskStruct *, task_curTsk);
 cpu_declarevar(u64, task_switchCnt);
 
-extern SafeList task_freeTsks, task_sleepTsks;
-
-// typedef struct task_MgrStruct {
-// 	RBTree tasks[cpu_mxNum];
-// 	ListNode preemptTsks[cpu_mxNum];
-// 	SpinLock scheLck[cpu_mxNum];
-// 	Atomic scheMsk[cpu_mxNum];
-// 	SafeList freeTsks, sleepTsks;
-// } task_MgrStruct;
+extern task_ThreadStruct *task_rootThread;
 
 #endif

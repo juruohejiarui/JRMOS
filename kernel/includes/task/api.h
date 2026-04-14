@@ -21,6 +21,8 @@ void task_sche_enable();
 void task_sche_disable();
 int task_sche_getState();
 
+extern const u64 task_sche_cfsTbl[0x20];
+
 __always_inline__ void task_sche_updCurState() {
     register task_TaskStruct *cur = task_cur;
     cur->vRuntime += task_sche_cfsTbl[cur->priority];
@@ -29,7 +31,7 @@ __always_inline__ void task_sche_updCurState() {
 
 void task_sche_updState();
 
-void task_sche_init();
+void task_init();
 
 // get idle task of the specific cpu
 __always_inline__ task_TaskStruct *task_idleTask(int cpuIdx) { return hal_task_idleTask(cpuIdx); }
@@ -46,7 +48,6 @@ void task_sche_msleep(int msec);
 void task_sche_wake(task_TaskStruct *task);
 
 void task_sche_waitReq();
-
 void task_sche_finishReq(task_TaskStruct *tsk);
 
 void task_sche_preempt(task_TaskStruct *task);

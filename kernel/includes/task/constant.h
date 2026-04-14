@@ -14,6 +14,7 @@
 
 #define task_attr_Usr       0x1ul
 #define task_attr_Builtin   0x2ul
+#define task_attr_Root      0x4ul
 
 /*
 states of task
@@ -28,6 +29,7 @@ bit 0 indicates whether the task need to be scheduled
 #define task_state_NeedFree     0x5
 #define task_state_Free         0x6
 #define task_state_NeedPreempt  0x7
+#define task_state_Zombie       0x8
 
 
 #define task_nrSignal	64

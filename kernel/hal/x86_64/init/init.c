@@ -83,7 +83,7 @@ void hal_init_init() {
 
 	if (hal_timer_init() == res_FAIL) while (1) hal_hw_hlt();
 
-	task_sche_init();
+	task_init();
 
 	task_syscall_initTbl();
 
