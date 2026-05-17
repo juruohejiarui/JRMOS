@@ -1,5 +1,6 @@
 #include <timer/api.h>
 #include <task/api.h>
+#include <task/schedule.h>
 #include <hal/timer/api.h>
 
 Atomic timer_jiff;

@@ -51,10 +51,10 @@ debug(){
 			-device usb-mouse,id=usbmouse \
 			-m 512M \
 			-D qemu.log \
-			-no-reboot \
+			-no-reboot -no-shutdown \
 			-d \
-				trace:usb_xhci_run,guest_errors \
-			-smp 4"
+				trace:usb_xhci_run,guest_errors,int,cpu_reset \
+			-smp 1"
 
 
 	$sudoFlag qemu-system-x86_64 \

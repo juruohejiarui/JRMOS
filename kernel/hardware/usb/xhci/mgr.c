@@ -1,4 +1,5 @@
 #include <hardware/usb/xhci/api.h>
+#include <task/signal.h>
 #include <screen/screen.h>
 
 intr_handlerDeclare(hw_usb_xhci_msiHandler) {

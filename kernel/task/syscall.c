@@ -1,5 +1,6 @@
 #include <task/syscall.h>
 #include <task/api.h>
+#include <task/schedule.h>
 #include <screen/screen.h>
 
 void *task_syscall_tbl[task_syscall_tblSize];

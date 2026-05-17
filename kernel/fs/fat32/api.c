@@ -1,5 +1,6 @@
 #include "inner.h"
 #include <fs/api.h>
+#include <fs/vfs/api.h>
 #include <fs/gpt/api.h>
 #include <lib/string.h>
 #include <lib/algorithm.h>
@@ -291,7 +292,7 @@ fs_vfs_File *fs_fat32_openFile(fs_vfs_Entry *ent) {
 	file->file.api = &fs_fat32_fileApi;
 	file->file.par = &par->par;
 	file->file.ent = ent;
-	file->file.thd = task_cur->thread;
+	file->file.proc = task_cur->proc;
 
 	file->curClusIdx = fs_fat32_DirEntry_getFstClus(&fat32Ent->dirEntry);
 	file->curClusOff = 0;
@@ -300,8 +301,7 @@ fs_vfs_File *fs_fat32_openFile(fs_vfs_Entry *ent) {
 
 	SpinLock_init(&file->lck);
 
-	SafeList_insTail(&par->par.dirLst, &file->file.parLstNd);
-	SafeList_insTail(&task_cur->thread->dirLst, &file->file.thdLstNd);
+	fs_vfs_registerFile(&file->file, &par->par);
 
 	printk(screen_log, "fs: fat32: open file %p. size=%u\n", file, file->file.ent->size);
 
@@ -323,7 +323,7 @@ fs_vfs_Dir *fs_fat32_openDir(fs_vfs_Entry *ent) {
 	dir->dir.api = &fs_fat32_dirApi;
 	dir->dir.par = &par->par;
 	dir->dir.ent = ent;
-	dir->dir.thd = task_cur->thread;
+	dir->dir.proc = task_cur->proc;
 
 	dir->clusIdx = fs_fat32_DirEntry_getFstClus(&fat32Ent->dirEntry);
 	dir->clusOff = 0;
@@ -333,8 +333,7 @@ fs_vfs_Dir *fs_fat32_openDir(fs_vfs_Entry *ent) {
 
 	// printk(screen_log, "fs: fat32: open dir %S clus:%lx\n", ent->path, dir->clusId);
 
-	SafeList_insTail(&par->par.fileLst, &dir->dir.parLstNd);
-	SafeList_insTail(&task_cur->thread->fileLst, &dir->dir.thdLstNd);
+	fs_vfs_registerDir(&dir->dir, &par->par);
 
 	return &dir->dir;
 }
@@ -346,8 +345,7 @@ int fs_fat32_closeFile(fs_vfs_File *file) {
 	fs_fat32_Entry *ent = container(fat32File->file.ent, fs_fat32_Entry, vfsEnt);
 	fs_fat32_Partition *par = container(file->par, fs_fat32_Partition, par);
 
-	SafeList_del(&par->par.fileLst, &file->parLstNd);
-	SafeList_del(&file->thd->fileLst, &file->thdLstNd);
+	fs_vfs_unregisterFile(file, &par->par);
 
 	return fs_fat32_releaseEntry(&ent->vfsEnt);
 }
@@ -362,8 +360,7 @@ int fs_fat32_closeDir(fs_vfs_Dir *dir) {
 	fs_fat32_Entry *ent = container(fat32Dir->dir.ent, fs_fat32_Entry, vfsEnt);
 	fs_fat32_Partition *par = container(dir->par, fs_fat32_Partition, par);
 
-	SafeList_del(&par->par.dirLst, &dir->parLstNd);
-	SafeList_del(&fat32Dir->dir.thd->dirLst, &dir->thdLstNd);
+	fs_vfs_unregisterDir(dir, &par->par);
 
 	// printk(screen_log, "fs: fat32: finish close dir %p\n", dir);
 

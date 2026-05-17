@@ -1,5 +1,6 @@
 #include <hardware/nvme.h>
 #include <mm/mm.h>
+#include <task/schedule.h>
 #include <screen/screen.h>
 #include <lib/algorithm.h>
 

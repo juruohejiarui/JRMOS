@@ -6,7 +6,7 @@
 #include <mm/desc.h>
 #include <task/structs.h>
 
-// initialize memory management for thread
+// initialize memory management for proc
 void mm_mgr_init(task_MemStruct *mem, u64 tskFlags);
 
 int mm_mgr_free(task_MemStruct *mem);

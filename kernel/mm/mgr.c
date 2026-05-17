@@ -69,7 +69,7 @@ static mm_MapBlkInfo *_findMap(mm_MapInfo *mem, void *addr) {
 }
 
 mm_MapBlkInfo *mm_findMap(void *addr) {
-    mm_MapInfo *mem = &task_cur->thread->mem.mapInfo;
+    mm_MapInfo *mem = &task_cur->proc->mem.mapInfo;
     SpinLock_lockMask(&mem->mapLck);
     register mm_MapBlkInfo *bst = _findMap(mem, addr);
     SpinLock_unlockMask(&mem->mapLck);
@@ -78,7 +78,7 @@ mm_MapBlkInfo *mm_findMap(void *addr) {
 
 __always_inline__ void *_align(void *st, u64 attr) { return (void *)upAlign((u64)st, (attr & mm_Attr_Large ? Page_2MSize : Page_4KSize)); }
 void *mm_mmap(u64 size, u64 attr, void *st, u64 pAddr) {
-    mm_MapInfo *mem = &task_cur->thread->mem.mapInfo;
+    mm_MapInfo *mem = &task_cur->proc->mem.mapInfo;
     // align to 4K
     st = _align(st, attr);
     size = (u64)_align((void *)size, attr);
@@ -116,7 +116,7 @@ void *mm_mmap(u64 size, u64 attr, void *st, u64 pAddr) {
 }
 
 int mm_munmap(void *addr, u64 size) {
-    mm_MapInfo *mem = &task_cur->thread->mem.mapInfo;
+    mm_MapInfo *mem = &task_cur->proc->mem.mapInfo;
     void *addrEd = addr + size;
     int res = res_SUCC;
     SpinLock_lockMask(&mem->mapLck);

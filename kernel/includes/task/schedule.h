@@ -10,13 +10,15 @@ extern const int task_sche_cfsWeight[40];
 cpu_declarevar(u64, task_sche_switchCnt);
 cpu_declarevar(Atomic, task_sche_msk);
 
-__always_inline__ void task_sche_updCurThdState() {
-    task_Thread *cur = task_cur;
-    cur->vRuntime += task_sche_cfsWeight[cur->priority + 20];
-    cur->state |= task_state_NeedSchedule;
-}
+u64 task_sche_getSwitchCnt();
+
+void task_sche_updCurThdState();
 
 void task_sche_updAllCurThdsState();
+
+void task_sche_waitReq();
+
+void task_sche_finishReq(task_Thread *thd);
 
 // release cpu immediately
 void task_sche_yield();
@@ -26,6 +28,10 @@ void task_sche_msleep(int msec);
 void task_sche_wake(task_Thread *thd);
 // let task preempt immediately in next time slice
 void task_sche_preempt(task_Thread *thd);
+
+void task_sche_launch(task_Thread *thd);
+
+void task_sche_handleReq();
 
 void task_sche_enable();
 
@@ -42,5 +48,6 @@ __always_inline__ void task_sche_pauseCpu(int id) { Atomic_inc(cpu_cpuPtr(id, ta
 __always_inline__ void task_sche_resumeCpu(int id) { Atomic_dec(cpu_cpuPtr(id, task_sche_msk)); }
 
 void task_sche_trySche();
+
 
 #endif

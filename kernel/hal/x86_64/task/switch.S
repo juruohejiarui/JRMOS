@@ -24,11 +24,6 @@ ENTRY(hal_task_sche_switch)
 	je hal_task_sche_switchCR3_end
 	movq %rax, %cr3
 hal_task_sche_switchCR3_end:
-	// cpu_setvar(task_curTsk, to);
-	leaq cpu_symbol_percpu(%rip), %rbx
-	leaq cpu_var(task_curTsk)(%rip), %rax
-	subq %rbx, %rax
-	movq %rdi, %gs:(%rax)
 	movq hal_task_Thread_rsp(%rdi), %rsp
 	movq hal_task_Thread_rip(%rdi), %rax
 	btq $63, %rax
@@ -61,7 +56,7 @@ ENTRY(hal_task_syscall_entryKrl)
 	
 	// save user stack and get kernel stack from hal_task_curKrlStk
 	leaq cpu_symbol_percpu(%rip), %r10
-	leaq cpu_var(task_curTsk)(%rip), %rax
+	leaq cpu_var(task_curThd)(%rip), %rax
 	subq %r10, %rax
 	movq %gs:(%rax), %rax
 	movq %rsp, hal_task_Thread_usrRsp(%rax)

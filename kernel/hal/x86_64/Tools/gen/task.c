@@ -22,7 +22,7 @@ int main() {
 		offsetof(task_Thread, signal),
 		offsetof(task_Thread, signalHandle),
 		offsetof(task_Thread, hal),
-		offsetof(task_Thread, thread),
+		offsetof(task_Thread, proc),
 		offsetof(task_Thread, hal) + offsetof(hal_task_Thread, rip),
 		offsetof(task_Thread, hal) + offsetof(hal_task_Thread, rsp),
 		offsetof(task_Thread, hal) + offsetof(hal_task_Thread, usrRsp),

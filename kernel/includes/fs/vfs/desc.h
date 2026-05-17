@@ -71,7 +71,7 @@ typedef struct fs_vfs_File {
 
     u64 ptr;
 
-    task_Process *thd;
+    task_Process *proc;
 } fs_vfs_File;
 
 // should be created with kmalloc(..., 0, drv->closeDir)
@@ -83,7 +83,7 @@ struct fs_vfs_Dir {
 
     ListNode thdLstNd, parLstNd;
 
-    task_Process *thd;
+    task_Process *proc;
 };
 
 struct fs_vfs_Driver {

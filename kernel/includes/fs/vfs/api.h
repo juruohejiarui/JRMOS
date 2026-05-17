@@ -31,5 +31,9 @@ i64 fs_vfs_seek(fs_vfs_File *file, i64 off, int base);
 u64 fs_vfs_read(fs_vfs_File *file, u8 *buf, u64 len);
 u64 fs_vfs_write(fs_vfs_File *file, u8 *buf, u64 len);
 
+void fs_vfs_registerFile(fs_vfs_File *file, fs_Partition *par);
+void fs_vfs_registerDir(fs_vfs_Dir *dir, fs_Partition *par);
+void fs_vfs_unregisterFile(fs_vfs_File *file, fs_Partition *par);
+void fs_vfs_unregisterDir(fs_vfs_Dir *dir, fs_Partition *par);
 
 #endif

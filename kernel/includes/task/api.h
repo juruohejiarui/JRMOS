@@ -6,7 +6,8 @@
 
 extern task_Process *task_rootProc;
 
-cpu_declarevar(task_Thread *, task_idleTsk);
+cpu_declarevar(task_Thread *, task_idleThd);
+cpu_declarevar(task_Thread *, task_curThd);
 
 #define task_cur hal_task_current()
 
@@ -16,8 +17,11 @@ task_Thread *task_newThd(void *entryAddr, void *arg, u64 attr, task_Process *pro
 
 task_Process *task_newProc(u64 attr);
 
+// exit this thread with the specific return
 void task_exit(i64 res);
 
 void task_init();
+
+void task_initIdleThd();
 
 #endif

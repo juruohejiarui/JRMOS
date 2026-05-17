@@ -38,12 +38,12 @@ __always_inline__ int _addRecord(void *addr, u64 size, void (*destructor)(void *
     record->ptr = addr;
     record->size = size;
     // printk(screen_log, "mm: slab: addRecord(): add record %p,size=%d\n", record->ptr, record->size);
-    RBTree_insLck(&task_cur->thread->mem.slabRecord, &record->rbNd);
+    RBTree_insLck(&task_cur->proc->mem.slabRecord, &record->rbNd);
     return res_SUCC;
 }
 
 int _delRecord(void *addr) {
-    RBNode *node = task_cur->thread->mem.slabRecord.root;
+    RBNode *node = task_cur->proc->mem.slabRecord.root;
     mm_SlabRecord *record = NULL;
     while (node) {
         record = container(node, mm_SlabRecord, rbNd);
@@ -55,7 +55,7 @@ int _delRecord(void *addr) {
     return res_FAIL;
     findRecord:
     // printk(screen_log, "mm: slab: delRecord(): del record %p,size=%d\n", record->ptr, record->size);
-    RBTree_delLck(&task_cur->thread->mem.slabRecord, node);
+    RBTree_delLck(&task_cur->proc->mem.slabRecord, node);
     return mm_kfree(record, mm_Attr_Shared);
 }
 

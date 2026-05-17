@@ -136,3 +136,23 @@ u64 fs_vfs_write(fs_vfs_File *file, u8 *buf, u64 len) {
     } while (acc);
     return tot;
 }
+
+void fs_vfs_registerFile(fs_vfs_File *file, fs_Partition *par) {
+    SafeList_insTail(&par->fileLst, &file->parLstNd);
+    SafeList_insTail(&task_cur->proc->fileLst, &file->thdLstNd);
+}
+
+void fs_vfs_registerDir(fs_vfs_Dir *dir, fs_Partition *par) {
+    SafeList_insTail(&par->dirLst, &dir->parLstNd);
+    SafeList_insTail(&task_cur->proc->dirLst, &dir->thdLstNd);
+}
+
+void fs_vfs_unregisterFile(fs_vfs_File *file, fs_Partition *par) {
+    SafeList_del(&par->fileLst, &file->parLstNd);
+    SafeList_del(&task_cur->proc->fileLst, &file->thdLstNd);
+}
+
+void fs_vfs_unregisterDir(fs_vfs_Dir *dir, fs_Partition *par) {
+    SafeList_del(&par->dirLst, &dir->parLstNd);
+    SafeList_del(&task_cur->proc->dirLst, &dir->thdLstNd);
+}

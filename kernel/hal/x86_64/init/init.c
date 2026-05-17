@@ -11,6 +11,7 @@
 #include <screen/screen.h>
 #include <task/api.h>
 #include <task/schedule.h>
+#include <task/signal.h>
 #include <task/syscall.h>
 #include <softirq/api.h>
 #include <init/init.h>
@@ -90,9 +91,7 @@ void hal_init_init() {
 
 	if (hal_cpu_enableAP() == res_FAIL) while (1) hal_hw_hlt();
 
-	task_initIdle();
-
-	task_signal_init();
+	task_initIdleThd();
 
 	hal_cpu_chk();
 
@@ -102,13 +101,13 @@ void hal_init_init() {
 	
 	intr_unmask();
 
-	// task_start(task_sche_freeMgrTsk = task_newSubTask(task_freeMgr, 0, task_attr_Builtin));
-
-	init_init();
-
-	// for (int i = 0; i < 3; i++) task_newTask(hal_init_testUsr, i, task_attr_Builtin | task_attr_Usr);
+	// new thread for other initialization task
+	task_Thread *init = task_newThd(init_init, NULL, task_attr_Builtin, task_rootProc);
+	
+	task_sche_launch(init);
 
 	while (1) {
+		task_sche_handleReq();
 		hal_hw_hlt();
 	}
 }
@@ -124,7 +123,7 @@ void hal_init_initAP() {
 
 	if (hal_intr_initAP() == res_FAIL) while (1) hal_hw_hlt();
 
-	task_initIdle();
+	task_initIdleThd();
 	
 	if (task_syscall_init() == res_FAIL) while (1) hal_hw_hlt();
 
@@ -138,6 +137,7 @@ void hal_init_initAP() {
 	hal_hw_mfence();
 
 	while (1) {
+		task_sche_handleReq();
 		hal_hw_hlt();
 	}
 }

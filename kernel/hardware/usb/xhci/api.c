@@ -1,5 +1,6 @@
 #include <hardware/usb/xhci/api.h>
 #include <mm/mm.h>
+#include <task/schedule.h>
 #include <timer/api.h>
 #include <screen/screen.h>
 #include <lib/algorithm.h>
@@ -266,7 +267,8 @@ hw_usb_xhci_Device *hw_usb_xhci_newDev(hw_usb_xhci_Host *host, hw_usb_xhci_Devic
     dev->device.drv = NULL;
     dev->device.parent = &host->pci.device;
     // make new task for the device
-    task_start(dev->mgrTsk = task_newSubTask(hw_usb_xhci_devMgrTsk, (u64)dev, task_attr_Builtin));
+    task_Process *proc = task_newProc(task_attr_Builtin);
+    task_sche_launch(dev->mgrTsk = task_newThd(hw_usb_xhci_devMgrTsk, dev, task_attr_Builtin, proc));
 
     SafeList_insTail(&host->devLst, &dev->lst);
     return dev;

@@ -3,9 +3,9 @@
 #include <screen/screen.h>
 #include <mm/mm.h>
 
-void task_signal_setHandler(u64 signal, void (*handler)(u64), u64 param) {
-    task_cur->thread->sigHandler[signal] = handler;
-    task_cur->thread->sigParam[signal] = param;
+void task_signal_setHandler(u64 signal, void (*handler)(i64), u64 param) {
+    task_cur->proc->sigHandler[signal] = handler;
+    task_cur->proc->sigParam[signal] = param;
     printk(screen_log, "task: signal: task #%d set handler for signal #%d with param %p\n", task_cur->pid, signal, param);
 }
 
@@ -28,7 +28,7 @@ void task_signal_sendFromIntr(task_Thread *target, u64 signal) {
     req->target = target;
     req->signal = signal;
     SafeList_insTail(&task_signal_reqLst, &req->lst);
-    task_sche_wake(_mgrThd);
+    task_sche_wake(_signalMgrThd);
     printk(screen_log, "task: signal: send signal %d to #%ld from interrupt program\n", req->signal, req->target->pid);
 }
 
@@ -49,8 +49,8 @@ __optimize__ void task_signal_scan() {
     task_Thread *cur = task_cur;
     printk(screen_log, "task: signal: task #%ld scanning on %#018lx\n", cur->pid, cur->signal.value);
     for (int i = 0; i < 64; i++) if (cur->signal.value & (1ul << i)) {
-        void (*handler)(u64);
-        if (!(handler = cur->thread->sigHandler[i])) {
+        task_SignalHandler handler;
+        if (!(handler = cur->proc->sigHandler[i])) {
             printk(screen_err, "task: signal: task %ld no handler for signal #%d\n", cur->pid, i);
             if (!i) task_exit(-1);
         } else {
@@ -59,7 +59,7 @@ __optimize__ void task_signal_scan() {
             cur->signalHandle++;
             intr_unmask();
             printk(screen_log, "task: singal: task %ld handle signal #%d\n", cur->pid, i);
-            handler(cur->thread->sigParam[i]);
+            handler(cur->proc->sigParam[i]);
             intr_mask();
             cur->signalHandle--;
         }
@@ -68,5 +68,8 @@ __optimize__ void task_signal_scan() {
 
 void _signal_init() {
     SafeList_init(&task_signal_reqLst);
-    _mgrThd = task_newSubTask(task_signal_mgrTskMain, 0, task_attr_Builtin);
+
+    _signalMgrThd = task_newThd(task_signal_mgrTskMain, 0, task_attr_Builtin, task_rootProc);
+
+    task_sche_launch(_signalMgrThd);
 }

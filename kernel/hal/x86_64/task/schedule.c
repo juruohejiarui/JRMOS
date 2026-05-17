@@ -1,4 +1,5 @@
 #include <hal/task/schedule.h>
+#include <task/api.h>
 #include <hal/cpu/desc.h>
 #include <hal/hardware/reg.h>
 #include <hal/interrupt/desc.h>
@@ -28,6 +29,9 @@ __optimize__ void hal_task_sche_switchTss(task_Thread *prev, task_Thread *next) 
 	prev->hal.fsBase = hal_hw_readMsr(hal_msr_IA32_FS_BASE);
 	prev->hal.gsKrlBase = hal_hw_readMsr(hal_msr_IA32_KERNEL_GS_BASE);
 
+	// printk(screen_log, "%p->hal:gs:%#018lx,fs:%#018lx %p->hal.gs:%#018lx,fs:%#018lx\n",
+		// prev, prev->hal.fs, prev->hal.gs, next, next->hal.fs, next->hal.gs);
+
 	__asm__ volatile ( "movq %%fs, %0" : "=a"(prev->hal.fs));
 	__asm__ volatile ( "movq %%gs, %0" : "=a"(prev->hal.gs));
 
@@ -37,4 +41,6 @@ __optimize__ void hal_task_sche_switchTss(task_Thread *prev, task_Thread *next) 
 	hal_hw_writeMsr(hal_msr_IA32_GS_BASE, next->hal.gsBase);
 	hal_hw_writeMsr(hal_msr_IA32_FS_BASE, next->hal.fsBase);
 	hal_hw_writeMsr(hal_msr_IA32_KERNEL_GS_BASE, next->hal.gsKrlBase);
+
+	cpu_setvar(task_curThd, next);
 }

@@ -3,7 +3,7 @@
 
 #include <task/structs.h>
 
-void task_signal_setHandler(u64 signal, void (*handler)(u64), u64 param);
+void task_signal_setHandler(u64 signal, void (*handler)(i64), u64 param);
 
 // send signal to task
 // this cannot be used in interrupt program

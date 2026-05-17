@@ -12,7 +12,7 @@
 .globl cpu_var(hal_cpu_initStk)
 .globl cpu_var(hal_intr_idt)
 .globl cpu_var(hal_cpu_x2apic)
-.globl cpu_var(task_curTsk)
+.globl cpu_var(hal_cpu_initStk)
 
 .section .text
 
@@ -63,7 +63,7 @@ setSMPInfo_LoopStart:
     jmp setSMPInfo_LoopStart
 setSMPInfo_LoopEnd:
 	// set stack pointer
-    leaq cpu_var(task_curTsk)(%rip), %rbx
+    leaq cpu_var(hal_cpu_initStk)(%rip), %rbx
     subq %rcx, %rbx
     movq (%rax, %rbx, 1), %rsi
     addq $task_krlStkSize, %rsi

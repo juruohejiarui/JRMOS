@@ -50,7 +50,7 @@ __noinline__ void _backtrace(hal_intr_PtReg *regs) {
 	int i = 0;
 
 	printk(screen_err, "====================== Task Struct Information =====================\n");
-	printk(screen_err, "regs->rsp:%p,current->thread->rsp:%p,current:%p,current->tss->rsp0:%p\n",
+	printk(screen_err, "regs->rsp:%p,current->proc->rsp:%p,current:%p,current->tss->rsp0:%p\n",
 		regs->rsp, task_cur->hal.rsp, task_cur, task_cur->hal.tss.rsp0);
 	printk(screen_err, "====================== Kernel Stack Backtrace ======================\n");
 
@@ -233,7 +233,7 @@ __noinline__ void hal_intr_doGeneralProtection(u64 rsp, u64 errorCode) {
 	u64 *p = NULL;
 	p = (u64 *)(rsp + hal_intr_PtReg_rip);
 	SpinLock_lock(&_trapLogLck);
-	printk(screen_err, "do_general_protection(13),ERROR_CODE:%p,RSP:%p,RIP:%p\t",errorCode , rsp , *p);
+	printk(screen_err, "do_general_protection(13),ERROR_CODE:%p,RSP:%p,RIP:%p cpu:%d\t",errorCode, rsp, *p, cpu_getvar(cpu_id));
 	if (errorCode & 0x01)
 		printk(screen_err, "The exception occurred during the delivery of an event external to the program, such as an interrupt or an exception.\n");
 	if (errorCode & 0x02)

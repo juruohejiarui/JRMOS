@@ -2,6 +2,7 @@
 #include <mm/mm.h>
 #include <fs/vfs/api.h>
 #include <fs/api.h>
+#include <task/schedule.h>
 #include <hardware/datetime.h>
 #include <hardware/pci.h>
 #include <hardware/diskdev.h>
@@ -89,17 +90,17 @@ void init_testWrite(u8 *path) {
 
 void init_testFs() {
 	task_Thread
-		*tsk1 = task_newSubTask(init_testDir, (u64)"AA", task_attr_Builtin),
-		*tsk2 = task_newSubTask(init_testRead, (u64)"AA/test/test.txt", task_attr_Builtin),
-		*tsk3 = task_newSubTask(init_testRead, (u64)"AA/test/test.txt", task_attr_Builtin),
-		*tsk4 = task_newSubTask(init_testRead, (u64)"AA/test/test.txt", task_attr_Builtin),
-		*tsk5 = task_newSubTask(init_testWrite, (u64)"AA/EFI/BOOT/test1.txt", task_attr_Builtin);
+		*tsk1 = task_newThd(init_testDir, "AA", task_attr_Builtin, task_cur->proc),
+		*tsk2 = task_newThd(init_testRead, "AA/test/test.txt", task_attr_Builtin, task_cur->proc),
+		*tsk3 = task_newThd(init_testRead, "AA/test/test.txt", task_attr_Builtin, task_cur->proc),
+		*tsk4 = task_newThd(init_testRead, "AA/test/test.txt", task_attr_Builtin, task_cur->proc),
+		*tsk5 = task_newThd(init_testWrite, "AA/EFI/BOOT/test1.txt", task_attr_Builtin, task_cur->proc);
 	
-	task_start(tsk1);
-	task_start(tsk2);
-	task_start(tsk3);
-	task_start(tsk4);
-	task_start(tsk5);
+	task_sche_launch(tsk1);
+	task_sche_launch(tsk2);
+	task_sche_launch(tsk3);
+	task_sche_launch(tsk4);
+	task_sche_launch(tsk5);
 
 	while (cnt.value < 3) task_sche_yield();
 }
@@ -127,27 +128,10 @@ void init_init() {
 
 	mm_dbg(NULL);
 	task_Thread 
-		*tsk1 = task_newTask(init_testFs, (u64)NULL, task_attr_Builtin),
-		*tsk2 = task_newTask(init_testFs, (u64)NULL, task_attr_Builtin);
+		*tsk1 = task_newThd(init_testFs, NULL, task_attr_Builtin, task_cur->proc),
+		*tsk2 = task_newThd(init_testFs, NULL, task_attr_Builtin, task_cur->proc);
 
-	task_Process *thd1 = tsk1->thread, *thd2 = tsk2->thread;
-	task_start(tsk1);
-	task_start(tsk2);
-
-	Datetime datetime, lst_datetime;
-	u64 lst_switchCnt = cpu_getvar(task_switchCnt);
-	hw_datetime_now(&lst_datetime);
-	while (1) {
-		memcpy(&datetime, &lst_datetime, sizeof(Datetime));
-		hw_datetime_now(&datetime);
-		// if (!datetime_cmp(&lst_datetime, &datetime)) {
-		// 	u64 new_switchCnt = cpu_getvar(task_switchCnt);
-		// 	printk(screen_log, "%04d-%02d-%02d %02d:%02d:%02d %ld\r", 
-		// 		datetime.date.year, datetime.date.month, datetime.date.day,
-		// 		datetime.time.hour, datetime.time.minute, datetime.time.second,
-		// 		new_switchCnt - lst_switchCnt);
-		// 	lst_switchCnt = new_switchCnt;
-		// }
-		task_sche_yield();
-	}
+	task_Process *thd1 = tsk1->proc, *thd2 = tsk2->proc;
+	task_sche_launch(tsk1);
+	task_sche_launch(tsk2);
 }

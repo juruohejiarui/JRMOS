@@ -12,7 +12,7 @@
 
 typedef struct task_Process task_Process;
 
-typedef void (*task_SignalHandler)(u64 signal);
+typedef void (*task_SignalHandler)(i64 signal);
 
 typedef struct task_MemStruct {
 	Atomic krlTblModiJiff;
@@ -29,7 +29,7 @@ typedef struct task_MemStruct {
 } task_MemStruct;
 
 struct task_Process {
-	// kernel page table version of this thread.
+	// kernel page table version of this proc.
 	task_MemStruct mem;
 
 	u64 state;
@@ -40,7 +40,7 @@ struct task_Process {
 	task_SignalHandler sigHandler[task_nrSignal];
 	u64 sigParam[task_nrSignal];
 
-	SafeList tskList, children;
+	SafeList thdLst, children;
 
 	ListNode childNd;
 
@@ -65,11 +65,11 @@ struct task_Thread {
 	// Move back to running state / idle state when this value is reduced to 0.
 	Atomic reqWait;
 
-	task_Process *thread;
+	task_Process *proc;
 
 	RBNode rbNd;
 
-	ListNode threadNd, scheNd, semNd;
+	ListNode thdNd, scheNd, semNd;
 
 	Atomic signal;
 	i64 signalHandle;
@@ -80,7 +80,7 @@ struct task_Thread {
 typedef struct task_Thread task_Thread;
 
 typedef union task_Union {
-	task_Thread task;
+	task_Thread thd;
 	u8 krlStk[task_krlStkSize];
 } task_Union;
 
