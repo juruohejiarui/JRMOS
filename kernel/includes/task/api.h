@@ -1,88 +1,23 @@
-#ifndef __TASK_API_H__
-#define __TASK_API_H__
+#ifndef __TASK_MGR_H__
+#define __TASK_MGR_H__
 
+#include <task/structs.h>
 #include <hal/task/api.h>
-#include <cpu/api.h>
 
-#ifdef HAL_TASK_GETLEVEL
-#define task_getLevel hal_task_getLevel
-#else
-#error No definition of task_getLevel() for this arch
-#endif
-#define task_cur cpu_getvar(task_curTsk)
+extern task_Process *task_rootProc;
 
-#define task_union(taskStruct) ((task_Union *)(taskStruct))
+cpu_declarevar(task_Thread *, task_idleTsk);
 
-task_TaskStruct *task_newSubTask(void *entryAddr, u64 arg, u64 attr);
+#define task_cur hal_task_current()
 
-task_TaskStruct *task_newTask(void *entryAddr, u64 arg, u64 attr);
+#define task_union(task) ((task_Union *)(task))
 
-void task_sche_enable();
-void task_sche_disable();
-int task_sche_getState();
+task_Thread *task_newThd(void *entryAddr, void *arg, u64 attr, task_Process *proc);
 
-extern const u64 task_sche_cfsTbl[0x20];
+task_Process *task_newProc(u64 attr);
 
-__always_inline__ void task_sche_updCurState() {
-    register task_TaskStruct *cur = task_cur;
-    cur->vRuntime += task_sche_cfsTbl[cur->priority];
-    cur->state |= task_state_NeedSchedule;
-}
-
-void task_sche_updState();
+void task_exit(i64 res);
 
 void task_init();
-
-// get idle task of the specific cpu
-__always_inline__ task_TaskStruct *task_idleTask(int cpuIdx) { return hal_task_idleTask(cpuIdx); }
-
-__always_inline__ void task_sche_syncVRuntime(task_TaskStruct *task) { task->vRuntime = task_idleTask(task->cpuId)->vRuntime; }
-
-// release cpu immediately
-void task_sche_yield();
-// set task_cur to sleep
-void task_sche_sleep();
-// task_cur sleep for **at least** x millseconds
-void task_sche_msleep(int msec);
-// weak specific task immediately
-void task_sche_wake(task_TaskStruct *task);
-
-void task_sche_waitReq();
-void task_sche_finishReq(task_TaskStruct *tsk);
-
-void task_sche_preempt(task_TaskStruct *task);
-
-__always_inline__ void task_sche_mskCpu(int cpu) { Atomic_inc(cpu_cpuPtr(cpu, task_scheMsk)); }
-__always_inline__ void task_sche_unmskCpu(int cpu) { Atomic_dec(cpu_cpuPtr(cpu, task_scheMsk)); }
-
-__always_inline__ void task_sche_msk() { Atomic_inc(cpu_ptr(task_scheMsk)); }
-
-__always_inline__ void task_sche_unmsk() { Atomic_dec(cpu_ptr(task_scheMsk)); }
-
-void task_sche();
-
-void task_initIdle();
-
-void task_exit(u64 res);
-
-u64 task_freeMgr(u64 arg);
-
-extern task_TaskStruct *task_sche_freeMgrTsk;
-
-void task_signal_setHandler(u64 signal, void (*handler)(u64), u64 param);
-
-// send signal to task
-// this cannot be used in interrupt program
-void task_signal_send(task_TaskStruct *target, u64 signal);
-
-// send signal to task from interrupt program
-// this will handled by task_signal_mgrTsk
-void task_signal_sendFromIntr(task_TaskStruct *target, u64 signal);
-
-extern task_TaskStruct *task_signal_mgrTsk;
-
-void task_signal_scan();
-
-void task_signal_init();
 
 #endif

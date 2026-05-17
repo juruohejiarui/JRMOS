@@ -47,8 +47,8 @@ debug(){
 			-device nvme,serial=deadbeef,drive=nvmedisk \
 			-net none \
 			-device usb-host,vendorid=${usbVendor},productid=${usbProduct},id=hostdev0 \
-			-device usb-kbd \
-			-device usb-mouse \
+			-device usb-kbd,id=usbkbd\
+			-device usb-mouse,id=usbmouse \
 			-m 512M \
 			-D qemu.log \
 			-no-reboot \

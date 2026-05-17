@@ -266,7 +266,7 @@ hw_usb_xhci_Device *hw_usb_xhci_newDev(hw_usb_xhci_Host *host, hw_usb_xhci_Devic
     dev->device.drv = NULL;
     dev->device.parent = &host->pci.device;
     // make new task for the device
-    dev->mgrTsk = task_newTask(hw_usb_xhci_devMgrTsk, (u64)dev, task_attr_Builtin);
+    task_start(dev->mgrTsk = task_newSubTask(hw_usb_xhci_devMgrTsk, (u64)dev, task_attr_Builtin));
 
     SafeList_insTail(&host->devLst, &dev->lst);
     return dev;

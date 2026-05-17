@@ -1,10 +1,9 @@
-#ifndef __HAL_TASK_API_H__
-#define __HAL_TASK_API_H__
+#ifndef __HAL_TASK_MGR_H__
+#define __HAL_TASK_MGR_H__
 
-#include <task/constant.h>
 #include <task/structs.h>
-#include <cpu/api.h>
 #include <hal/cpu/desc.h>
+#include <cpu/api.h>
 
 #define HAL_TASK_GETLEVEL
 
@@ -19,34 +18,32 @@ __always_inline__ int hal_task_getLevel() {
     return cs & 3 ? task_level_User : task_level_Kernel;
 }
 
+__always_inline__ task_Thread *hal_task_current()
+{
+	struct task_Thread * current = NULL;
+	__asm__ volatile ("andq %%rsp,%0	\n\t":
+        "=r"(current):
+        "0"(~(task_krlStkSize - 1)));
+	return current;
+}
+
+void hal_task_newSubTask(task_Thread *tsk, void *entryAddr, u64 arg, u64 attr);
+
+void hal_task_newTask(task_Thread *tsk, void *entryAddr, u64 arg, u64 attr);
+
+void hal_task_newProcess(task_Process *thread, u64 attr);
+
+int hal_task_freeThread(task_Process *thread);
+
+int hal_task_freeTask(task_Thread *task);
+
+void hal_task_exit(u64 res);
 
 // get the idle task of the specific cpu
-__always_inline__ task_TaskStruct *hal_task_idleTask(int cpuIdx) {
+__always_inline__ task_Thread *hal_task_idleThread(int cpuIdx) {
     return &((task_Union *)cpu_getCpuVar(cpuIdx, hal_cpu_initStk))->task;
 }
 
-int hal_task_dispatchTask(task_TaskStruct *tsk);
-
-void hal_task_sche_yield();
-
-void hal_task_sche_switch(task_TaskStruct *from, task_TaskStruct *to);
-
-void hal_task_sche_switchTss(task_TaskStruct *prev, task_TaskStruct *next);
-
-void hal_task_sche_updOtherState();
-
-void hal_task_newThread(task_ThreadStruct *thread, u64 attr);
-
-void hal_task_initIdle();
-
-void hal_task_newSubTask(task_TaskStruct *tsk, void *entryAddr, u64 arg, u64 attr);
-
-void hal_task_newTask(task_TaskStruct *tsk, void *entryAddr, u64 arg, u64 attr);
-
-int hal_task_freeThread(task_ThreadStruct *thread);
-
-int hal_task_freeTask(task_TaskStruct *task);
-
-void hal_task_exit(u64 res);
+void hal_task_initIdleThread();
 
 #endif

@@ -4,6 +4,7 @@
 intr_handlerDeclare(hw_usb_xhci_msiHandler) {
 	hw_usb_xhci_Host *host = (void *)(param & ~0xfful);
 	u32 intrId = param & 0xff;
+	printk(screen_log, "xhci: %p: intr %d\n", host, intrId);
 	hw_usb_xhci_EveRing *eveRing = host->eveRings[intrId];
 
 	// printk(screen_log, "hw: xhci: host %p handle MSI interrupt %d\n", host, intrId);
@@ -75,6 +76,7 @@ void hw_usb_xhci_portChange(hw_usb_xhci_Host *host, u32 portIdx) {
 }
 
 void hw_usb_xhci_uninstallDev(hw_usb_xhci_Device *dev) {
+	printk(screen_log, "xhci: dev %p: uninstalling...\n", dev);
 	task_Request_giveUp();
 	if (dev->device.drv != NULL) {
 		if (dev->device.drv->uninstall(&dev->device) == res_FAIL)
@@ -100,7 +102,7 @@ void hw_usb_xhci_uninstallDev(hw_usb_xhci_Device *dev) {
 		hw_usb_xhci_request(dev->host, dev->host->cmdRing, req, NULL, 0);
 		if (hw_usb_xhci_TRB_getCmplCode(&req->res) != hw_usb_xhci_TRB_CmplCode_Succ)
 			printk(screen_err, "hw: xhci: device %p failed to disable endpoint(s).\n", dev);
-		else printk(screen_succ, "hw: xhci: device %p disable endpoint(s)", dev);
+		else printk(screen_succ, "hw: xhci: device %p disable endpoint(s)\n", dev);
 	}
 
 	for (int i = 0; i < 31; i++) {

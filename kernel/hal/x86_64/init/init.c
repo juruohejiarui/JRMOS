@@ -10,6 +10,7 @@
 #include <mm/buddy.h>
 #include <screen/screen.h>
 #include <task/api.h>
+#include <task/schedule.h>
 #include <task/syscall.h>
 #include <softirq/api.h>
 #include <init/init.h>
@@ -101,7 +102,7 @@ void hal_init_init() {
 	
 	intr_unmask();
 
-	task_sche_freeMgrTsk = task_newSubTask(task_freeMgr, 0, task_attr_Builtin);
+	// task_start(task_sche_freeMgrTsk = task_newSubTask(task_freeMgr, 0, task_attr_Builtin));
 
 	init_init();
 
@@ -116,7 +117,7 @@ void hal_init_initAP() {
 	{
 		u64 rsp;
 		__asm__ volatile ("movq %%rsp, %0" : "=r"(rsp) : : "memory");
-		task_TaskStruct *tsk = (task_TaskStruct *)(rsp & ~(task_krlStkSize - 1));
+		task_Thread *tsk = (task_Thread *)(rsp & ~(task_krlStkSize - 1));
 		hal_hw_writeMsr(hal_msr_IA32_GS_BASE, (u64)cpu_bsAddr[tsk->cpuId]);
 		hal_hw_writeMsr(hal_msr_IA32_KERNEL_GS_BASE, 0);
 	}

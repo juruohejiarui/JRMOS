@@ -4,7 +4,7 @@
 #include <cpu/api.h>
 #include <hal/interrupt/api.h>
 
-void hal_task_newThread(task_ThreadStruct *thread, u64 attr) {
+void hal_task_newProcess(task_Process *thread, u64 attr) {
 	if (~attr & task_attr_Usr) {
 		thread->mem.hal.pgd = mm_krlTblPhysAddr;
 	} else {
@@ -39,20 +39,20 @@ void hal_task_tskEntry(void *entry, u64 arg, u64 attr) {
 	}
 }
 
-int hal_task_freeThread(task_ThreadStruct *thread) {
+int hal_task_freeThread(task_Process *thread) {
 	// clear map table
 	if (hal_mm_map_clrTbl(thread->mem.hal.pgd) == res_FAIL) return res_FAIL;
 	return res_SUCC;
 }
 
-int hal_task_freeTask(task_TaskStruct *tsk) {
+int hal_task_freeTask(task_Thread *tsk) {
 	return res_SUCC;
 }
 
 void hal_task_exit(u64 res) {
 }
 
-void hal_task_newSubTask(task_TaskStruct *tsk, void *entryAddr, u64 arg, u64 attr) {
+void hal_task_newSubTask(task_Thread *tsk, void *entryAddr, u64 arg, u64 attr) {
 	hal_intr_PtReg *ptReg = (hal_intr_PtReg *)(((task_Union *)tsk)->krlStk + task_krlStkSize - sizeof(hal_intr_PtReg));
 	memset(ptReg, 0, sizeof(hal_intr_PtReg));
 	
@@ -83,6 +83,6 @@ void hal_task_newSubTask(task_TaskStruct *tsk, void *entryAddr, u64 arg, u64 att
 	}
 }
 
-void hal_task_newTask(task_TaskStruct *tsk, void *entryAddr, u64 arg, u64 attr) {
+void hal_task_newTask(task_Thread *tsk, void *entryAddr, u64 arg, u64 attr) {
 	hal_task_newSubTask(tsk, entryAddr, arg, attr);
 }

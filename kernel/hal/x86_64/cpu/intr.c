@@ -4,7 +4,7 @@
 #include <hal/hardware/apic.h>
 #include <interrupt/api.h>
 #include <screen/screen.h>
-#include <task/api.h>
+#include <task/schedule.h>
 
 static intr_Desc hal_cpu_intrDesc[0x10];
 static intr_Ctrl hal_cpu_intrCtrl;
@@ -30,11 +30,10 @@ void (*hal_cpu_irqList[0x10])(void) = {
 };
 
 intr_handlerDeclare(hal_cpu_intrOfSchedule) {
-	task_sche_updCurState();
+	task_sche_updCurThdState();
 }
 
 intr_handlerDeclare(hal_cpu_intrOfPause) {
-	printk(screen_err, "P%d ", task_cur->cpuId);
 }
 
 int hal_cpu_initIntr() {

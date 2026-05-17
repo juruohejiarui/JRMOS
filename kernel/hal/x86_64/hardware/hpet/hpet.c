@@ -2,21 +2,20 @@
 #include <hal/hardware/apic.h>
 #include <hal/hardware/io.h>
 #include <hal/hardware/reg.h>
-#include <hal/cpu/api.h>
+#include <hal/cpu/desc.h>
 #include <interrupt/desc.h>
 #include <interrupt/api.h>
 #include <mm/dmas.h>
 #include <lib/string.h>
-#include <task/api.h>
+#include <task/schedule.h>
 #include <timer/api.h>
 
 hal_hw_hpet_XsdtDesc *hal_hw_hpet_xsdtDesc;
 hal_hw_apic_RteDesc hal_hw_hpet_rteDesc;
 
 intr_handlerDeclare(hal_hw_hpet_intrHandler) {
-    task_sche_updState();
+    task_sche_updAllCurThdsState();
     timer_updSirq();
-    // hal_cpu_sendIntr_allExcluSelf(cpu_intr_Pause);
 }
 
 int hal_hw_hpet_init() {

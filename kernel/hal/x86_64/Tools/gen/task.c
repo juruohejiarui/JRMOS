@@ -9,28 +9,30 @@ int main() {
 	sprintf(buf, "#ifndef __HAL_TASK_ASM_H__\n#define __HAL_TASK_ASM_H__\n\n");
 	fwrite(buf, strlen(buf), 1, file);
 	sprintf(buf, 
-		"#define task_TaskStruct_state  %#lx\n"
-		"#define task_TaskStruct_signal	%#lx\n"
-		"#define task_TaskStruct_hal    %#lx\n"
-		"#define task_TaskStruct_thread %#lx\n"
-		"#define hal_task_TaskStruct_rip    %#lx\n"
-		"#define hal_task_TaskStruct_rsp    %#lx\n"
-		"#define hal_task_TaskStruct_usrRsp %#lx\n"
-		"#define hal_task_TaskStruct_rflags %#lx\n\n",
-		offsetof(task_TaskStruct, state),
-		offsetof(task_TaskStruct, signal),
-		offsetof(task_TaskStruct, hal),
-		offsetof(task_TaskStruct, thread),
-		offsetof(task_TaskStruct, hal) + offsetof(hal_task_TaskStruct, rip),
-		offsetof(task_TaskStruct, hal) + offsetof(hal_task_TaskStruct, rsp),
-		offsetof(task_TaskStruct, hal) + offsetof(hal_task_TaskStruct, usrRsp),
-		offsetof(task_TaskStruct, hal) + offsetof(hal_task_TaskStruct, rflags));
+		"#define task_Thread_state  %#lx\n"
+		"#define task_Thread_signal	%#lx\n"
+		"#define task_Thread_signalHandle %#lx\n"
+		"#define task_Thread_hal    %#lx\n"
+		"#define task_Thread_thread %#lx\n"
+		"#define hal_task_Thread_rip    %#lx\n"
+		"#define hal_task_Thread_rsp    %#lx\n"
+		"#define hal_task_Thread_usrRsp %#lx\n"
+		"#define hal_task_Thread_rflags %#lx\n\n",
+		offsetof(task_Thread, state),
+		offsetof(task_Thread, signal),
+		offsetof(task_Thread, signalHandle),
+		offsetof(task_Thread, hal),
+		offsetof(task_Thread, thread),
+		offsetof(task_Thread, hal) + offsetof(hal_task_Thread, rip),
+		offsetof(task_Thread, hal) + offsetof(hal_task_Thread, rsp),
+		offsetof(task_Thread, hal) + offsetof(hal_task_Thread, usrRsp),
+		offsetof(task_Thread, hal) + offsetof(hal_task_Thread, rflags));
 	fwrite(buf, strlen(buf), 1, file);
 	sprintf(buf, 
-		"#define task_ThreadStruct_hal %#lx\n"
-		"#define hal_task_ThreadStruct_pgd %#lx\n\n",
-		offsetof(task_ThreadStruct, hal),
-		offsetof(task_ThreadStruct, mem) + offsetof(task_MemStruct, hal) + offsetof(hal_task_MemStruct, pgd));
+		"#define task_Process_hal %#lx\n"
+		"#define hal_task_Process_pgd %#lx\n\n",
+		offsetof(task_Process, hal),
+		offsetof(task_Process, mem) + offsetof(task_MemStruct, hal) + offsetof(hal_task_MemStruct, pgd));
 	fwrite(buf, strlen(buf), 1, file);
 
 	sprintf(buf,

@@ -5,7 +5,7 @@
 #include <task/api.h>
 
 typedef struct task_Request {
-	task_TaskStruct *src;
+	task_Thread *src;
 	u64 flags;
 	Atomic stage;
 } task_Request;
@@ -29,4 +29,5 @@ __always_inline__ int task_Request_isFinished(task_Request *req) {
 __always_inline__ void task_Request_giveUp() {
 	task_cur->reqWait.value = 0;
 }
+
 #endif 

@@ -56,12 +56,15 @@ retFromException:
 ENTRY(hal_intr_retFromIntr)    
     movq %rsp, %rax
 	andq $-(task_krlStkSize), %rax
-    movq task_TaskStruct_signal(%rax), %rax
-    testq %rax, %rax
+    movq task_Thread_signal(%rax), %rbx
+    testq %rbx, %rbx
     jz hal_intr_trySchedule
+    movq task_Thread_signalHandle(%rax), %rbx
+    testq %rbx, %rbx
+    jnz hal_intr_trySchedule
     callq task_signal_scan
 hal_intr_trySchedule:
-    leaq cpu_var(task_scheMsk)(%rip), %rax
+    leaq cpu_var(task_sche_msk)(%rip), %rax
     leaq cpu_symbol_percpu(%rip), %rcx
     subq %rcx, %rax
     movq %gs:(%rax), %rax
@@ -69,10 +72,10 @@ hal_intr_trySchedule:
     jnz hal_intr_endSchedule
     movq %rsp, %rax
     andq $-(task_krlStkSize), %rax
-	movq task_TaskStruct_state(%rax), %rax
+	movq task_Thread_state(%rax), %rax
     testq $1, %rax    // if %rax == task_state_Running
     jz hal_intr_endSchedule
-    callq task_sche
+    callq task_sche_trySche
 hal_intr_endSchedule:
 	// get CPU_ID of current task
     leaq cpu_var(softirq_flag)(%rip), %rax

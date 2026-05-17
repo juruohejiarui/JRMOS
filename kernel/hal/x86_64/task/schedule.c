@@ -1,14 +1,11 @@
-#include <hal/task/api.h>
+#include <hal/task/schedule.h>
+#include <hal/cpu/desc.h>
+#include <hal/hardware/reg.h>
 #include <hal/interrupt/desc.h>
-#include <hal/task/syscall.h>
-#include <mm/map.h>
-#include <mm/dmas.h>
-#include <task/api.h>
 #include <cpu/api.h>
-#include <lib/string.h>
 #include <screen/screen.h>
 
-int hal_task_dispatchTask(task_TaskStruct *tsk) {
+int hal_task_sche_dispatch(task_Thread *tsk) {
 	tsk->cpuId = tsk->pid % cpu_num;
 	
 	tsk->hal.gsBase = (u64)cpu_getCpuVar(tsk->cpuId, cpu_bsAddr);
@@ -18,11 +15,7 @@ int hal_task_dispatchTask(task_TaskStruct *tsk) {
 	return res_SUCC;
 }
 
-void hal_task_sche_yield() {
-	hal_cpu_sendIntr_self(hal_cpu_intr_Schedule);
-}
-
-__optimize__ void hal_task_sche_switchTss(task_TaskStruct *prev, task_TaskStruct *next) {
+__optimize__ void hal_task_sche_switchTss(task_Thread *prev, task_Thread *next) {
 	{
 		register hal_intr_TSS *cpuTss = cpu_ptr(hal_intr_tss)->tss, *tskTss = &next->hal.tss;
 		cpuTss->rsp0 = tskTss->rsp0;
@@ -45,12 +38,3 @@ __optimize__ void hal_task_sche_switchTss(task_TaskStruct *prev, task_TaskStruct
 	hal_hw_writeMsr(hal_msr_IA32_FS_BASE, next->hal.fsBase);
 	hal_hw_writeMsr(hal_msr_IA32_KERNEL_GS_BASE, next->hal.gsKrlBase);
 }
-
-void hal_task_sche_updOtherState() {
-    hal_cpu_sendIntr_allExcluSelf(hal_cpu_intr_Schedule);
-}
-
-
-
-
-

@@ -2,6 +2,8 @@
 source ./config.sh
 
 DISK_PATH=${1:-'disk.img'}
+LOOP_ID=${2:-'20'}
+
 # make a 4GB disk image
 echo "make_img.sh: create disk image"
 dd if=/dev/zero of=${DISK_PATH} bs=1M count=4096

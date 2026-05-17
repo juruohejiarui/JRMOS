@@ -56,6 +56,12 @@ __always_inline__ ListNode *List_getTail(ListNode *list) {
 	return list->prev;
 }
 
+__always_inline__ ListNode *List_delHead(ListNode *list) {
+	ListNode *hdr = List_getHead(list);
+	List_del(hdr);
+	return hdr;
+}
+
 __always_inline__ void SafeList_init(SafeList *list) {
 	SpinLock_init(&list->lck);
 	List_init(&list->head);

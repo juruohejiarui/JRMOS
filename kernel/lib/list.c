@@ -21,6 +21,10 @@ __optimize__ int SafeList_isEmpty(SafeList *list) {
 	return res;
 }
 
+__optimize__ int SafeList_lck(SafeList *list) {
+	SpinLock_lockMask(&list->lck);
+}
+
 __optimize__ void SafeList_del(SafeList *list, ListNode *node) {
 	SpinLock_lockMask(&list->lck);
 	List_del(node);

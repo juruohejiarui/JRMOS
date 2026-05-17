@@ -34,8 +34,6 @@ static int _registerCPU(int idx, u32 x2apicId, u32 apicId) {
 	// apic = apicId;
 	if (x2apicId != hal_cpu_bspApicId) {
 		cpu_setCpuVar(idx, hal_cpu_initStk, mm_kmalloc(task_krlStkSize, mm_Attr_Shared, NULL));
-		cpu_setCpuVar(idx, task_curTsk, cpu_getCpuVar(idx, hal_cpu_initStk));
-		cpu_getCpuVar(idx, task_curTsk)->cpuId = idx;
 		cpu_cpuPtr(idx, hal_intr_idt)->tbl = mm_kmalloc(sizeof(hal_intr_IdtItem) * 0x100, mm_Attr_Shared, NULL);
 		cpu_cpuPtr(idx, hal_intr_idt)->sz = sizeof(hal_intr_IdtItem) * 0x100;
 		memcpy(hal_init_idtTbl, cpu_cpuPtr(idx, hal_intr_idt)->tbl, sizeof(hal_intr_IdtItem) * 0x100);
@@ -51,7 +49,6 @@ static int _registerCPU(int idx, u32 x2apicId, u32 apicId) {
 		hal_intr_setTssItem(cpu_cpuPtr(idx, hal_intr_tss)->trIdx, cpu_cpuPtr(idx, hal_intr_tss)->tss);
 	} else {
 		cpu_setCpuVar(idx, hal_cpu_initStk, hal_init_stk);
-		cpu_setCpuVar(idx, task_curTsk, (task_TaskStruct *)hal_init_stk);
 		cpu_cpuPtr(idx, hal_intr_idt)->tbl = hal_init_idtTbl;
 		cpu_cpuPtr(idx, hal_intr_idt)->sz = sizeof(hal_intr_IdtItem) * 0x100;
 		cpu_cpuPtr(idx, hal_intr_tss)->tss = (hal_intr_TSS *)hal_init_tss;
@@ -60,7 +57,7 @@ static int _registerCPU(int idx, u32 x2apicId, u32 apicId) {
 	intr_initCpuVar(idx);
 
 	// set cpuId in taskStruct
-	task_TaskStruct *tsk = (task_TaskStruct *)cpu_getCpuVar(idx, hal_cpu_initStk);
+	task_Thread *tsk = (task_Thread *)cpu_getCpuVar(idx, hal_cpu_initStk);
 	tsk->cpuId = idx;
 	return res_SUCC;
 }

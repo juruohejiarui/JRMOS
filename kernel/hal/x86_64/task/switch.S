@@ -7,18 +7,18 @@
 .global cpu_symbol_percpu
 .global cpu_var(task_curTsk)
 
-// void hal_task_sche_switch(task_TaskStruct *from, task_TaskStruct *to)
+// void hal_task_sche_switch(task_Thread *from, task_Thread *to)
 ENTRY(hal_task_sche_switch)
 	pushq %rbp
 	pushq %rax
-	movq %rsp, hal_task_TaskStruct_rsp(%rdi)
+	movq %rsp, hal_task_Thread_rsp(%rdi)
 	leaq hal_task_sche_switch_back(%rip), %rcx
-	movq %rcx, hal_task_TaskStruct_rip(%rdi)
+	movq %rcx, hal_task_Thread_rip(%rdi)
 	pushq %rsi
 	callq hal_task_sche_switchTss
 	popq %rdi
-	movq task_TaskStruct_thread(%rdi), %rbx
-	movq hal_task_ThreadStruct_pgd(%rbx), %rax
+	movq task_Thread_thread(%rdi), %rbx
+	movq hal_task_Process_pgd(%rbx), %rax
 	movq %cr3, %rbx
 	cmpq %rbx, %rax
 	je hal_task_sche_switchCR3_end
@@ -29,8 +29,8 @@ hal_task_sche_switchCR3_end:
 	leaq cpu_var(task_curTsk)(%rip), %rax
 	subq %rbx, %rax
 	movq %rdi, %gs:(%rax)
-	movq hal_task_TaskStruct_rsp(%rdi), %rsp
-	movq hal_task_TaskStruct_rip(%rdi), %rax
+	movq hal_task_Thread_rsp(%rdi), %rsp
+	movq hal_task_Thread_rip(%rdi), %rax
 	btq $63, %rax
 	jc passChk
 	hlt
@@ -64,7 +64,7 @@ ENTRY(hal_task_syscall_entryKrl)
 	leaq cpu_var(task_curTsk)(%rip), %rax
 	subq %r10, %rax
 	movq %gs:(%rax), %rax
-	movq %rsp, hal_task_TaskStruct_usrRsp(%rax)
+	movq %rsp, hal_task_Thread_usrRsp(%rax)
 	movq %rax, %rsp
 	addq $task_krlStkSize, %rsp
 
@@ -108,7 +108,7 @@ ENTRY(hal_task_syscall_backUsr)
 
 	popq %r11
 	popq %rcx
-	movq hal_task_TaskStruct_usrRsp(%rbx), %rsp
+	movq hal_task_Thread_usrRsp(%rbx), %rsp
 
 	// switch es and ds
 	movq $0x33, %rbx

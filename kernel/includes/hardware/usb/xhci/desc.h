@@ -237,7 +237,7 @@ typedef struct hw_usb_xhci_Device {
     // whether the device is directly connected to the host
     #define hw_usb_xhci_Device_flag_Direct  (1ul << 1)
     
-    task_TaskStruct *mgrTsk;
+    task_Thread *mgrTsk;
 
     hw_usb_xhci_DevCtx *ctx;
     hw_usb_xhci_InCtx *inCtx;

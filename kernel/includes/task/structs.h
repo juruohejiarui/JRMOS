@@ -2,15 +2,15 @@
 #define __TASK_STRUCTS_H__
 
 #include <task/constant.h>
+#include <task/semaphore.h>
 #include <lib/atomic.h>
-#include <lib/list.h>
 #include <lib/rbtree.h>
 #include <hal/task/structs.h>
 #include <cpu/desc.h>
 #include <mm/desc.h>
 #include <mm/map.h>
 
-typedef struct task_ThreadStruct task_ThreadStruct;
+typedef struct task_Process task_Process;
 
 typedef void (*task_SignalHandler)(u64 signal);
 
@@ -28,14 +28,14 @@ typedef struct task_MemStruct {
 	hal_task_MemStruct hal;
 } task_MemStruct;
 
-struct task_ThreadStruct {
+struct task_Process {
 	// kernel page table version of this thread.
 	task_MemStruct mem;
 
 	u64 state;
 	u64 id;
 
-	struct task_ThreadStruct *parent;
+	task_Process *parent;
 
 	task_SignalHandler sigHandler[task_nrSignal];
 	u64 sigParam[task_nrSignal];
@@ -49,10 +49,12 @@ struct task_ThreadStruct {
 	// opened directory list
 	SafeList dirLst;
 
-	hal_task_ThreadStruct hal;
+	task_Semaphore waitSem;
+
+	hal_task_Process hal;
 } __attribute__ ((packed));
 
-struct task_TaskStruct {
+struct task_Thread {
 	u32 cpuId, priority;
 	u64 flag;
 	u64 pid;
@@ -63,32 +65,23 @@ struct task_TaskStruct {
 	// Move back to running state / idle state when this value is reduced to 0.
 	Atomic reqWait;
 
-	task_ThreadStruct *thread;
+	task_Process *thread;
 
 	RBNode rbNd;
 
-	ListNode threadNd, scheNd;
-
+	ListNode threadNd, scheNd, semNd;
 
 	Atomic signal;
+	i64 signalHandle;
  
-	hal_task_TaskStruct hal;
+	hal_task_Thread hal;
 } __attribute__ ((packed));
 
-typedef struct task_TaskStruct task_TaskStruct;
+typedef struct task_Thread task_Thread;
 
 typedef union task_Union {
-	task_TaskStruct task;
+	task_Thread task;
 	u8 krlStk[task_krlStkSize];
 } task_Union;
-
-cpu_declarevar(RBTree, task_tsks);
-cpu_declarevar(ListNode, task_preemptTsks);
-cpu_declarevar(SpinLock, task_scheLck);
-cpu_declarevar(Atomic, task_scheMsk);
-cpu_declarevar(task_TaskStruct *, task_curTsk);
-cpu_declarevar(u64, task_switchCnt);
-
-extern task_ThreadStruct *task_rootThread;
 
 #endif

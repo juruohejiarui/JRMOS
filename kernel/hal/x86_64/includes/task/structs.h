@@ -11,17 +11,17 @@ typedef struct hal_task_MemStruct {
 	hal_mm_PageTbl *pgTbl;
 } __attribute__ ((packed)) hal_task_MemStruct;
 
-typedef struct hal_task_ThreadStruct {
+typedef struct hal_task_Process {
 	
-} __attribute__ ((packed)) hal_task_ThreadStruct;
+} __attribute__ ((packed)) hal_task_Process;
 
-typedef struct hal_task_TaskStruct {
+typedef struct hal_task_Thread {
 	u64 rip, rsp, fs, gs, rflags;
 	// user space
 	u64 usrRsp, usrStkTop;
 	// storage of IA32_GS_BASE and IA32_FS_BASE
 	u64 gsBase, fsBase, gsKrlBase;
 	hal_intr_TSS tss;
-} __attribute__ ((packed)) hal_task_TaskStruct;
+} __attribute__ ((packed)) hal_task_Thread;
 
 #endif

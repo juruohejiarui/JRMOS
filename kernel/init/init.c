@@ -87,16 +87,21 @@ void init_testWrite(u8 *path) {
 	Atomic_inc(&cnt);
 }
 
-
-
 void init_testFs() {
-	task_newSubTask(init_testDir, (u64)"AA", task_attr_Builtin);
-	task_newSubTask(init_testRead, (u64)"AA/test/test.txt", task_attr_Builtin);
-	task_newSubTask(init_testRead, (u64)"AA/test/test.txt", task_attr_Builtin);
-	task_newSubTask(init_testRead, (u64)"AA/test/test.txt", task_attr_Builtin);
-	task_newSubTask(init_testWrite, (u64)"AA/EFI/BOOT/test1.txt", task_attr_Builtin);
+	task_Thread
+		*tsk1 = task_newSubTask(init_testDir, (u64)"AA", task_attr_Builtin),
+		*tsk2 = task_newSubTask(init_testRead, (u64)"AA/test/test.txt", task_attr_Builtin),
+		*tsk3 = task_newSubTask(init_testRead, (u64)"AA/test/test.txt", task_attr_Builtin),
+		*tsk4 = task_newSubTask(init_testRead, (u64)"AA/test/test.txt", task_attr_Builtin),
+		*tsk5 = task_newSubTask(init_testWrite, (u64)"AA/EFI/BOOT/test1.txt", task_attr_Builtin);
+	
+	task_start(tsk1);
+	task_start(tsk2);
+	task_start(tsk3);
+	task_start(tsk4);
+	task_start(tsk5);
 
-	while (cnt.value != 3);
+	while (cnt.value < 3) task_sche_yield();
 }
 
 void init_init() {	
@@ -121,7 +126,13 @@ void init_init() {
 	hw_pci_chk();
 
 	mm_dbg(NULL);
-	task_newTask(init_testFs, (u64)NULL, task_attr_Builtin);
+	task_Thread 
+		*tsk1 = task_newTask(init_testFs, (u64)NULL, task_attr_Builtin),
+		*tsk2 = task_newTask(init_testFs, (u64)NULL, task_attr_Builtin);
+
+	task_Process *thd1 = tsk1->thread, *thd2 = tsk2->thread;
+	task_start(tsk1);
+	task_start(tsk2);
 
 	Datetime datetime, lst_datetime;
 	u64 lst_switchCnt = cpu_getvar(task_switchCnt);
@@ -129,14 +140,14 @@ void init_init() {
 	while (1) {
 		memcpy(&datetime, &lst_datetime, sizeof(Datetime));
 		hw_datetime_now(&datetime);
-		if (!datetime_cmp(&lst_datetime, &datetime)) {
-			u64 new_switchCnt = cpu_getvar(task_switchCnt);
-			printk(screen_log, "%04d-%02d-%02d %02d:%02d:%02d %ld\r", 
-				datetime.date.year, datetime.date.month, datetime.date.day,
-				datetime.time.hour, datetime.time.minute, datetime.time.second,
-				new_switchCnt - lst_switchCnt);
-			lst_switchCnt = new_switchCnt;
-		}
+		// if (!datetime_cmp(&lst_datetime, &datetime)) {
+		// 	u64 new_switchCnt = cpu_getvar(task_switchCnt);
+		// 	printk(screen_log, "%04d-%02d-%02d %02d:%02d:%02d %ld\r", 
+		// 		datetime.date.year, datetime.date.month, datetime.date.day,
+		// 		datetime.time.hour, datetime.time.minute, datetime.time.second,
+		// 		new_switchCnt - lst_switchCnt);
+		// 	lst_switchCnt = new_switchCnt;
+		// }
 		task_sche_yield();
 	}
 }
