@@ -54,7 +54,7 @@ debug(){
 			-no-reboot -no-shutdown \
 			-d \
 				trace:usb_xhci_run,guest_errors,int,cpu_reset \
-			-smp 1"
+			-smp 4"
 
 
 	$sudoFlag qemu-system-x86_64 \

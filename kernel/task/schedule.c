@@ -17,6 +17,7 @@ const int task_sche_cfsWeight[40] = {
 
 cpu_definevar(RBTree, task_sche_thds);
 cpu_definevar(Atomic, task_sche_msk);
+cpu_definevar(ListNode, task_sche_freeThds);
 cpu_definevar(ListNode, task_sche_sleepThds);
 cpu_definevar(ListNode, task_sche_rdyPreemptThds);
 cpu_definevar(SafeList, task_sche_reqs);
@@ -55,6 +56,7 @@ void _sche_init() {
     printk(screen_log, "task: _sche_init()\n");
     for (int i = 0; i < cpu_num; i++) {
         SafeList_init(cpu_cpuPtr(i, task_sche_reqs));
+        List_init(cpu_cpuPtr(i, task_sche_freeThds));
         List_init(cpu_cpuPtr(i, task_sche_sleepThds));
         List_init(cpu_cpuPtr(i, task_sche_rdyPreemptThds));
         RBTree_init(cpu_cpuPtr(i, task_sche_thds), task_sche_thds_insert, NULL);
@@ -83,6 +85,7 @@ void task_sche_yield() {
 
 // wake a proc on the current CPU, which means the proc will be scheduled immediately after being woken up
 __optimize__ void _wakeThd(task_Thread *thd) {
+    _sche_syncVRutnime(thd);
     switch (thd->state) {
         case task_state_Sleep :
             List_del(&thd->scheNd);
@@ -95,6 +98,7 @@ __optimize__ void _wakeThd(task_Thread *thd) {
 
 // preempt a proc on the current CPU, which means the proc will be scheduled immediately after being preempted
 __optimize__ void _preemptThd(task_Thread *thd) {
+    _sche_syncVRutnime(thd);
     // printk(screen_log, "task: sche: _launchThd(): cpu #%d preempt task #%d:%p\n", cpu_getvar(cpu_id), thd->pid, thd);
     switch (thd->state) {
         case task_state_Idle :
@@ -108,10 +112,13 @@ __optimize__ void _preemptThd(task_Thread *thd) {
             List_insTail(cpu_ptr(task_sche_rdyPreemptThds), &thd->scheNd);
             break;
     }
+
 }
 
 __optimize__ void _launchThd(task_Thread *thd) {
     // printk(screen_log, "task: sche: _launchThd(): cpu #%d launch task #%d:%p\n", cpu_getvar(cpu_id), thd->pid, thd);
+    _sche_syncVRutnime(thd);
+
     RBTree_ins(cpu_ptr(task_sche_thds), &thd->rbNd);
 }
 
@@ -175,12 +182,18 @@ __optimize__ void task_sche_handleReq() {
         task_sche_resume();
         mm_kfree(req, mm_Attr_Shared);
     }
+    task_sche_pause();
+    while (!List_isEmpty(cpu_ptr(task_sche_freeThds))) {
+        task_Thread *thd = container(List_delHead(cpu_ptr(task_sche_freeThds)), task_Thread, scheNd);
+        int res = task_freeThd(thd);
+    }
+    task_sche_resume();
 }
 
 // hang the current proc
 __always_inline__ void _hangCurThd() {
     register task_Thread *cur = task_cur;
-    if (cur->reqWait.value > 0) {
+    if (cur->reqWait.value > 0 && cur->workingSignal == 0) {
         // printk(screen_log, "task: sche: _hangCurThd(): thread #%d sleep.\n", cur->pid);
         cur->state = task_state_Sleep;
         List_insTail(cpu_ptr(task_sche_sleepThds), &cur->scheNd);
@@ -189,8 +202,7 @@ __always_inline__ void _hangCurThd() {
     switch (cur->state) {
         case task_state_NeedFree :
             cur->state = task_state_Free;
-            SafeList_insTail(&task_freeThds, &cur->scheNd);
-            task_sche_preempt(_freeMgrThd);
+            List_insTail(cpu_ptr(task_sche_freeThds), &cur->scheNd);
             break;
         default :
             cur->state = task_state_Idle;
@@ -200,7 +212,7 @@ __always_inline__ void _hangCurThd() {
 }
 
 // try to schedule another proc on the current CPU; if there is no other proc, just continue to run the current proc
-void task_sche_trySche() {
+__optimize__ void task_sche_trySche() {
     task_Thread *nxt;
     // RBTree_debug(cpu_ptr(task_sche_thds));
     if (__likely__(!List_isEmpty(cpu_ptr(task_sche_rdyPreemptThds)))) {

@@ -5,7 +5,7 @@
 intr_handlerDeclare(hw_usb_xhci_msiHandler) {
 	hw_usb_xhci_Host *host = (void *)(param & ~0xfful);
 	u32 intrId = param & 0xff;
-	printk(screen_log, "xhci: %p: intr %d\n", host, intrId);
+	// printk(screen_log, "xhci: %p: intr %d\n", host, intrId);
 	hw_usb_xhci_EveRing *eveRing = host->eveRings[intrId];
 
 	// printk(screen_log, "hw: xhci: host %p handle MSI interrupt %d\n", host, intrId);
@@ -58,7 +58,7 @@ __always_inline__ void hw_usb_xhci_portDisconnect(hw_usb_xhci_Host *host, u32 po
 	if (dev == NULL) return ;
 	// in interrupt program, we can not directly send interrupt
 	// thus, use the interrupt signal
-	task_signal_sendFromIntr(dev->mgrTsk, task_Signal_Int);
+	task_signal_send(dev->mgrTsk, task_Signal_Int);
 }
 
 void hw_usb_xhci_portChange(hw_usb_xhci_Host *host, u32 portIdx) {

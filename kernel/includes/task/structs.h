@@ -11,6 +11,7 @@
 #include <mm/map.h>
 
 typedef struct task_Process task_Process;
+typedef struct task_Thread task_Thread;
 
 typedef void (*task_SignalHandler)(i64 signal);
 
@@ -49,6 +50,8 @@ struct task_Process {
 	// opened directory list
 	SafeList dirLst;
 
+	task_Thread *mainThd;
+
 	task_Semaphore waitSem;
 
 	hal_task_Process hal;
@@ -72,12 +75,10 @@ struct task_Thread {
 	ListNode thdNd, scheNd, semNd;
 
 	Atomic signal;
-	i64 signalHandle;
+	i64 workingSignal;
  
 	hal_task_Thread hal;
 } __attribute__ ((packed));
-
-typedef struct task_Thread task_Thread;
 
 typedef union task_Union {
 	task_Thread thd;

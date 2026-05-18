@@ -3,7 +3,7 @@
 
 #define task_Thread_state  0x18
 #define task_Thread_signal	0x80
-#define task_Thread_signalHandle 0x88
+#define task_Thread_workingSignal 0x88
 #define task_Thread_hal    0x90
 #define task_Thread_thread 0x30
 #define hal_task_Thread_rip    0x90
@@ -11,7 +11,7 @@
 #define hal_task_Thread_usrRsp 0xb8
 #define hal_task_Thread_rflags 0xb0
 
-#define task_Process_hal 0x538
+#define task_Process_hal 0x540
 #define hal_task_Process_pgd 0x80
 
 #define task_usrStkSize 0x1000000

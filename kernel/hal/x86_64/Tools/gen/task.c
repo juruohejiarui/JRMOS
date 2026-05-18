@@ -11,7 +11,7 @@ int main() {
 	sprintf(buf, 
 		"#define task_Thread_state  %#lx\n"
 		"#define task_Thread_signal	%#lx\n"
-		"#define task_Thread_signalHandle %#lx\n"
+		"#define task_Thread_workingSignal %#lx\n"
 		"#define task_Thread_hal    %#lx\n"
 		"#define task_Thread_thread %#lx\n"
 		"#define hal_task_Thread_rip    %#lx\n"
@@ -20,7 +20,7 @@ int main() {
 		"#define hal_task_Thread_rflags %#lx\n\n",
 		offsetof(task_Thread, state),
 		offsetof(task_Thread, signal),
-		offsetof(task_Thread, signalHandle),
+		offsetof(task_Thread, workingSignal),
 		offsetof(task_Thread, hal),
 		offsetof(task_Thread, proc),
 		offsetof(task_Thread, hal) + offsetof(hal_task_Thread, rip),

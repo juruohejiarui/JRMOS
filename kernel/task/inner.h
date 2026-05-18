@@ -8,9 +8,7 @@
 
 extern Atomic task_thdCnt, task_procCnt;
 
-extern SafeList task_freeThds;
-
-task_Thread *_freeMgrThd, *_signalMgrThd;
+task_Thread *_signalMgrThd;
 
 typedef struct WaitReq {
     task_Thread *thd;
@@ -19,6 +17,8 @@ typedef struct WaitReq {
 } WaitReq;
 
 cpu_declarevar(SafeList, task_sche_reqs);
+
+__always_inline__ void _sche_syncVRutnime(task_Thread *thd) { thd->vRuntime = task_cur->vRuntime; }
 
 void _sche_init();
 

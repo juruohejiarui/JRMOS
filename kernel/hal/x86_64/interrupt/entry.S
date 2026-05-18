@@ -59,9 +59,6 @@ ENTRY(hal_intr_retFromIntr)
     movq task_Thread_signal(%rax), %rbx
     testq %rbx, %rbx
     jz hal_intr_trySchedule
-    movq task_Thread_signalHandle(%rax), %rbx
-    testq %rbx, %rbx
-    jnz hal_intr_trySchedule
     callq task_signal_scan
 hal_intr_trySchedule:
     leaq cpu_var(task_sche_msk)(%rip), %rax

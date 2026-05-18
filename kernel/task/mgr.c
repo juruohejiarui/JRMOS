@@ -9,38 +9,27 @@ Atomic task_thdCnt, task_procCnt;
 
 task_Process *task_rootProc;
 
-SafeList task_freeThds;
-
 cpu_definevar(task_Thread *, task_idleThd);
 cpu_definevar(task_Thread *, task_curThd);
-
-void _mgrTask(void *arg) {
-    while (1) {
-        while (__unlikely__(!SafeList_isEmpty(&task_freeThds))) {
-
-        }
-        
-    }
-}
 
 void _mgr_init() {
     task_thdCnt.value = task_procCnt.value = 0;
 
     task_rootProc = task_newProc(task_attr_Root | task_attr_Builtin);
-
-    SafeList_init(&task_freeThds);
-
-    _freeMgrThd = task_newThd(_mgrTask, NULL, task_attr_Builtin, task_rootProc);
-
-    task_sche_launch(_freeMgrThd);
 }
 
 __always_inline__ void _addNewThd(task_Process *proc, task_Thread *thd) {
     printk(screen_log, "task: mgr: _addNewThd(): proc #%d add thread #%d:%p\n", proc->id, thd->pid, thd);
     SafeList_insTail(&proc->thdLst, &thd->thdNd);
     thd->proc = proc;
+    if (SafeList_getHead(&proc->thdLst) == &thd->thdNd)
+        proc->mainThd = thd;
 }
 
+__always_inline__ void _delThd(task_Process *proc, task_Thread *thd) {
+    printk(screen_log, "task: mgr: _delThd(): proc #%d del thread #%d:%p\n", proc->id, thd->pid, thd);
+    SafeList_del(&proc->thdLst, &thd->thdNd);
+}
 task_Thread *task_newThd(void *entryAddr, void *arg, u64 attr, task_Process *proc) {
     task_Union *uPtr = mm_kmalloc(sizeof(task_Union), mm_Attr_Shared, NULL);
     if (uPtr == NULL) {
@@ -60,6 +49,8 @@ task_Thread *task_newThd(void *entryAddr, void *arg, u64 attr, task_Process *pro
     thd->priority = 0;
     thd->pid = task_thdCnt.value;
     thd->state = task_state_Idle;
+
+    _sche_syncVRutnime(thd);
 
     List_init(&thd->scheNd);
 
@@ -133,4 +124,26 @@ void task_initIdleThd() {
     hal_task_initIdleThd();
 
     printk(screen_log, "task: mgr: task_initIdleThd(): initialize idle task of cpu %d\n", cpu_getvar(cpu_id));
+}
+
+void _setZombie(task_Process *proc) {
+    proc->state = task_state_Zombie;
+    if (proc->parent) {
+        
+    }
+}
+
+int task_freeProc(task_Process *proc) {
+
+}
+
+int task_freeThd(task_Thread *thd) {
+    task_Process *proc = thd->proc;
+    
+    _delThd(proc, thd);
+
+    hal_task_freeThd(thd);
+
+    if (proc->mainThd == thd) _setZombie(proc);
+    return res_SUCC;
 }

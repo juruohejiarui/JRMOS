@@ -17,6 +17,10 @@ task_Thread *task_newThd(void *entryAddr, void *arg, u64 attr, task_Process *pro
 
 task_Process *task_newProc(u64 attr);
 
+int task_freeProc(task_Process *proc);
+
+int task_freeThd(task_Thread *thd);
+
 // exit this thread with the specific return
 void task_exit(i64 res);
 
