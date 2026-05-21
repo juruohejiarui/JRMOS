@@ -34,7 +34,7 @@ int hal_task_freeThread(task_Process *proc) {
 	return res_SUCC;
 }
 
-int hal_task_freeTask(task_Thread *tsk) {
+int hal_task_freeThd(task_Thread *tsk) {
 	return res_SUCC;
 }
 

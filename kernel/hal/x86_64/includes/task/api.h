@@ -32,7 +32,7 @@ void hal_task_newProc(task_Process *proc, u64 attr);
 
 int hal_task_freeThread(task_Process *proc);
 
-int hal_task_freeTask(task_Thread *task);
+int hal_task_freeThd(task_Thread *task);
 
 void hal_task_exit(u64 res);
 

@@ -70,6 +70,7 @@ task_Process *task_newProc(u64 attr) {
     memset(proc, 0, sizeof(task_Process));
 
     proc->id = task_procCnt.value;
+    Atomic_inc(&task_procCnt);
     proc->state = task_state_Running;
 
     mm_mgr_init(&proc->mem, attr);
@@ -127,10 +128,9 @@ void task_initIdleThd() {
 }
 
 void _setZombie(task_Process *proc) {
+    printk(screen_log, "task: mgr: _setZombie(): proc #%d zombie\n", proc->id);
     proc->state = task_state_Zombie;
-    if (proc->parent) {
-        
-    }
+    if (proc->parent) ;
 }
 
 int task_freeProc(task_Process *proc) {
@@ -138,12 +138,14 @@ int task_freeProc(task_Process *proc) {
 }
 
 int task_freeThd(task_Thread *thd) {
+    printk(screen_log, "task: mgr: task_freeThd(): free #%d\n", thd->pid);
     task_Process *proc = thd->proc;
     
     _delThd(proc, thd);
 
     hal_task_freeThd(thd);
 
-    if (proc->mainThd == thd) _setZombie(proc);
-    return res_SUCC;
+    if (SafeList_isEmpty(&proc->thdLst)) _setZombie(proc);
+
+    return mm_kfree(thd, mm_Attr_Shared);
 }
