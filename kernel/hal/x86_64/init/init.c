@@ -108,6 +108,7 @@ void hal_init_init() {
 
 	while (1) {
 		task_sche_handleReq();
+		task_log();
 		hal_hw_hlt();
 	}
 }

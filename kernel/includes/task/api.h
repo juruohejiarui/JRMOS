@@ -28,4 +28,6 @@ void task_init();
 
 void task_initIdleThd();
 
+void task_log();
+
 #endif

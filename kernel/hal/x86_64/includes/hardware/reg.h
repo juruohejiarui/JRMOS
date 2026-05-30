@@ -24,6 +24,10 @@
 	vl; \
 })
 
+#define hal_hw_cr3 (hal_hw_getCR(3))
+
+#define hal_hw_setCr3(vl) (hal_hw_setCR(3, vl))
+
 #define hal_hw_mfence() __asm__ volatile ("mfence 	\n\t" : : : "memory")
 
 __always_inline__ u64 hal_hw_readMsr(u64 msrAddr) {

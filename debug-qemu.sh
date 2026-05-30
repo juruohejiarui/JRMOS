@@ -8,6 +8,17 @@ sudoFlag=''
 archName=$(uname -m)
 osName=$(uname -s)
 
+QEMU_DBG_ARGS=${1:-'default'}
+
+if [ "$QEMU_DBG_ARGS" = "detail" ]; then
+	QEMU_DBG_ARGS="usb_xhci_run,guest_errors,int,cpu_reset"
+elif [ "$QEMU_DBG_ARGS" = "default" ]; then
+	QEMU_DBG_ARGS="usb_xhci_run,guest_errors,cpu_reset"
+else
+	echo "debug_qemu: invalid qemu debug args : $QEMU_DBG_ARGS use \"default\""
+	QEMU_DBG_ARGS="usb_xhci_run,guest_errors,cpu_reset"
+fi
+
 debug(){
 	if [ "$osName" = "Linux" ]; then
 		echo "debug-qemu: under Linux"
@@ -53,7 +64,7 @@ debug(){
 			-D qemu.log \
 			-no-reboot -no-shutdown \
 			-d \
-				trace:usb_xhci_run,guest_errors,int,cpu_reset \
+				trace:$QEMU_DBG_ARGS \
 			-smp 4"
 
 

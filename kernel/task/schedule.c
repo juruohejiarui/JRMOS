@@ -1,5 +1,6 @@
 #include "inner.h"
 #include <mm/mm.h>
+#include <hal/hardware/reg.h>
 #include <lib/string.h>
 #include <screen/screen.h>
 #include <hal/task/schedule.h>
@@ -61,7 +62,7 @@ void _sche_init() {
         List_init(cpu_cpuPtr(i, task_sche_rdyPreemptThds));
         RBTree_init(cpu_cpuPtr(i, task_sche_thds), task_sche_thds_insert, NULL);
         cpu_cpuPtr(i, task_sche_msk)->value = 0;
-        *cpu_cpuPtr(i, task_sche_switchCnt) = 0;
+        cpu_setCpuVar(i, task_sche_switchCnt, 0);
     }
 }
 
@@ -224,10 +225,9 @@ __optimize__ void task_sche_trySche() {
         if (nxt->vRuntime > task_cur->vRuntime) goto no_switch;
         RBTree_del(cpu_ptr(task_sche_thds), nd);
     }
-    (*cpu_ptr(task_sche_switchCnt))++;
     nxt->state = task_state_Running;
     _hangCurThd();
-    // printk(screen_log, "task: sche: task_sche_trySche(): cpu #%d: from %p to %p\n", cpu_getvar(cpu_id), task_cur, nxt);
+    (*cpu_ptr(task_sche_switchCnt))++;
     hal_task_sche_switch(task_cur, nxt);
     return ;
     no_switch:

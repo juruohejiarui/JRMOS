@@ -105,6 +105,10 @@ void init_testFs() {
 	while (cnt.value < 3) task_sche_yield();
 }
 
+void init_testHang() {
+	while (1) task_sche_yield();
+}
+
 void init_init() {	
 	hw_driver_init();
 
@@ -129,9 +133,16 @@ void init_init() {
 	mm_dbg(NULL);
 	task_Thread 
 		*tsk1 = task_newThd(init_testFs, NULL, task_attr_Builtin, task_cur->proc),
-		*tsk2 = task_newThd(init_testFs, NULL, task_attr_Builtin, task_cur->proc);
+		*tsk2 = task_newThd(init_testFs, NULL, task_attr_Builtin, task_cur->proc),
+		*tsk3 = task_newThd(init_testHang, NULL, task_attr_Builtin, task_cur->proc);
 
-	task_Process *thd1 = tsk1->proc, *thd2 = tsk2->proc;
 	task_sche_launch(tsk1);
 	task_sche_launch(tsk2);
+	task_sche_launch(tsk3);
+
+	printk(screen_log, "init: finish init.\n");
+
+	while (1) {
+		task_sche_yield();
+	}
 }

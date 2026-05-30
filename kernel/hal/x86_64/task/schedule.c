@@ -1,8 +1,7 @@
 #include <hal/task/schedule.h>
-#include <task/api.h>
-#include <hal/cpu/desc.h>
-#include <hal/hardware/reg.h>
 #include <hal/interrupt/desc.h>
+#include <hal/simd/api.h>
+#include <task/api.h>
 #include <cpu/api.h>
 #include <screen/screen.h>
 
@@ -16,15 +15,15 @@ int hal_task_sche_dispatch(task_Thread *tsk) {
 	return res_SUCC;
 }
 
-__optimize__ void hal_task_sche_switchTss(task_Thread *prev, task_Thread *next) {
-	{
-		register hal_intr_TSS *cpuTss = cpu_ptr(hal_intr_tss)->tss, *tskTss = &next->hal.tss;
-		cpuTss->rsp0 = tskTss->rsp0;
-		cpuTss->rsp2 = tskTss->rsp2;
-		cpuTss->ist2 = tskTss->ist2;
-		// printk(screen_log, "tss:%p<%p\n", cpuTss, tskTss);
-	}
+__always_inline__ void _switchTSS(task_Thread *prev, task_Thread *next) {
+	hal_intr_TSS *cpuTss = cpu_ptr(hal_intr_tss)->tss, *tskTss = &next->hal.tss;
+	cpuTss->rsp0 = tskTss->rsp0;
+	cpuTss->rsp2 = tskTss->rsp2;
+	cpuTss->ist2 = tskTss->ist2;
+	// printk(screen_log, "tss:%p<%p\n", cpuTss, tskTss);
+}
 
+__always_inline__ void _switchSeg(task_Thread *prev, task_Thread *next) {
 	prev->hal.gsBase = hal_hw_readMsr(hal_msr_IA32_GS_BASE);
 	prev->hal.fsBase = hal_hw_readMsr(hal_msr_IA32_FS_BASE);
 	prev->hal.gsKrlBase = hal_hw_readMsr(hal_msr_IA32_KERNEL_GS_BASE);
@@ -41,6 +40,18 @@ __optimize__ void hal_task_sche_switchTss(task_Thread *prev, task_Thread *next) 
 	hal_hw_writeMsr(hal_msr_IA32_GS_BASE, next->hal.gsBase);
 	hal_hw_writeMsr(hal_msr_IA32_FS_BASE, next->hal.fsBase);
 	hal_hw_writeMsr(hal_msr_IA32_KERNEL_GS_BASE, next->hal.gsKrlBase);
+}
+
+__always_inline__ void _switchSimd(task_Thread *prev, task_Thread *next) {
+	hal_simd_msk();
+}
+
+__optimize__ void hal_task_sche_further(task_Thread *prev, task_Thread *next) {
+	_switchTSS(prev, next);
+
+	_switchSeg(prev, next);
+
+	_switchSimd(prev, next);
 
 	cpu_setvar(task_curThd, next);
 }

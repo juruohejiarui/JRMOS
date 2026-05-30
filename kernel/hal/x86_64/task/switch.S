@@ -15,7 +15,7 @@ ENTRY(hal_task_sche_switch)
 	leaq hal_task_sche_switch_back(%rip), %rcx
 	movq %rcx, hal_task_Thread_rip(%rdi)
 	pushq %rsi
-	callq hal_task_sche_switchTss
+	callq hal_task_sche_further
 	popq %rdi
 	movq task_Thread_thread(%rdi), %rbx
 	movq hal_task_Process_pgd(%rbx), %rax

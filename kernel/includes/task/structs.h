@@ -27,6 +27,7 @@ typedef struct task_MemStruct {
 	
 	SpinLock pgTblLck;
 	hal_task_MemStruct hal;
+	
 } task_MemStruct;
 
 struct task_Process {

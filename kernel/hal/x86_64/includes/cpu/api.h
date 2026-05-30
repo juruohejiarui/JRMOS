@@ -46,11 +46,11 @@
 
 #define hal_cpu_ptr(name) \
     ((__typeof__(cpu_var(name))*) \
-        ((u64)cpu_getvar(cpu_bsAddr) + cpu_varOffset(name)))
+        ((u64)hal_cpu_getvar(cpu_bsAddr) + cpu_varOffset(name)))
 
 #define hal_cpu_cpuPtr(idx, name) \
     ((__typeof__(cpu_var(name))*) \
-        ((u64)cpu_bsAddr[idx] + cpu_varOffset(name)))
+        ((u64)hal_cpu_getCpuVar(idx, cpu_bsAddr) + cpu_varOffset(name)))
 
 
 int hal_cpu_init();

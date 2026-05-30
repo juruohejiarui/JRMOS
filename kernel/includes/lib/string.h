@@ -2,6 +2,7 @@
 #define __LIB_STRING_H__
 
 #include <hal/lib/string.h>
+#include <stdarg.h>
 
 #ifndef HAL_MEMSET
 __always_inline__ void *memset(void *addr, u8 dt, i64 size) {
@@ -84,4 +85,9 @@ __always_inline__ u64 toStr16(u8 *src, u16 *dst) {
 	*dst = '\0';
 	return len;
 }
+
+u64 sprintfv(char *buf, const char *format, va_list args);
+
+u64 sprintf(char *buf, const char *fmt, ...);
+
 #endif

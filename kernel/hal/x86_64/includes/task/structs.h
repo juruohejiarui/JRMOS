@@ -5,6 +5,7 @@
 #include <lib/spinlock.h>
 #include <hal/interrupt/desc.h>
 #include <hal/mm/map.h>
+#include <hal/simd/struct.h>
 
 typedef struct hal_task_MemStruct {
 	u64 pgd;
@@ -22,6 +23,7 @@ typedef struct hal_task_Thread {
 	// storage of IA32_GS_BASE and IA32_FS_BASE
 	u64 gsBase, fsBase, gsKrlBase;
 	hal_intr_TSS tss;
+	hal_simd_SaveBlk *simdBlk;
 } __attribute__ ((packed)) hal_task_Thread;
 
 #endif
