@@ -40,15 +40,16 @@ task_Thread *task_newThd(void *entryAddr, void *arg, u64 attr, task_Process *pro
 
     memset(uPtr, 0, sizeof(task_Union));
     
+    thd->priority = 0;
+    thd->pid = task_thdCnt.value;
+    thd->state = task_state_Idle;
+
     if (hal_task_sche_dispatch(thd) == res_FAIL) {
         mm_kfree(uPtr, mm_Attr_Shared);
         return NULL;
     }
-    _addNewThd(proc, thd);
 
-    thd->priority = 0;
-    thd->pid = task_thdCnt.value;
-    thd->state = task_state_Idle;
+    _addNewThd(proc, thd);
 
     _sche_syncVRutnime(thd);
 
@@ -138,7 +139,7 @@ int task_freeProc(task_Process *proc) {
 }
 
 int task_freeThd(task_Thread *thd) {
-    printk(screen_log, "task: mgr: task_freeThd(): free #%d\n", thd->pid);
+    printk(screen_log, "task: mgr: task_freeThd(): free #%d in cpu #%d\n", thd->pid, thd->cpuId);
     task_Process *proc = thd->proc;
     
     _delThd(proc, thd);

@@ -65,7 +65,7 @@ debug(){
 			-no-reboot -no-shutdown \
 			-d \
 				trace:$QEMU_DBG_ARGS \
-			-smp 4"
+			-smp 3"
 
 
 	$sudoFlag qemu-system-x86_64 \

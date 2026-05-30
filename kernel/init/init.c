@@ -133,16 +133,10 @@ void init_init() {
 	mm_dbg(NULL);
 	task_Thread 
 		*tsk1 = task_newThd(init_testFs, NULL, task_attr_Builtin, task_cur->proc),
-		*tsk2 = task_newThd(init_testFs, NULL, task_attr_Builtin, task_cur->proc),
-		*tsk3 = task_newThd(init_testHang, NULL, task_attr_Builtin, task_cur->proc);
+		*tsk2 = task_newThd(init_testFs, NULL, task_attr_Builtin, task_cur->proc);
 
 	task_sche_launch(tsk1);
 	task_sche_launch(tsk2);
-	task_sche_launch(tsk3);
 
 	printk(screen_log, "init: finish init.\n");
-
-	while (1) {
-		task_sche_yield();
-	}
 }
